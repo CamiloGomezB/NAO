@@ -46,6 +46,6 @@ Regla: cada paso termina con una **confirmación** y un **commit**.
 - [x] **29. GIF/video de la demo** — ✅ `media/demo.gif` aprobado
 
 ## Fase G — Reproducibilidad y entrega
-- [ ] **30. README completo** — ✅ Se entiende al leerlo
+- [x] **30. README completo** — ✅ Se entiende al leerlo
 - [ ] **31. Prueba de instalación limpia** — ✅ Demo corre siguiendo el README al pie de la letra
 - [ ] **32. Push final y revisión en GitHub** — ✅ Repo completo visible
