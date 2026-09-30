@@ -6,8 +6,10 @@
   Convenciones:
   - Ejes y rangos articulares en la convencion oficial de Aldebaran (mismos signos que NAOqi).
   - Todos los <inertial> son los originales; las geometrias NO aportan masa.
-  - Colisiones: cuerpo (contype=2) solo choca con el suelo; piernas (contype=6) chocan
-    con el suelo y entre si (pies/tibias no pueden atravesarse).
+  - Colisiones por grupos (bit en contype, grupos con los que choca en conaffinity):
+      suelo=1, torso/cabeza=2, brazos=4, piernas/pies=8.
+    Torso/cabeza: suelo, brazos, piernas. Brazos: suelo, torso, piernas, otro brazo.
+    Piernas: todo (incluida la otra pierna). Ninguna parte puede atravesar a otra.
 -->
 <mujoco model="nao">
   <compiler angle="radian" autolimits="true"/>
@@ -16,16 +18,19 @@
 
   <default>
     <joint damping="0.1" armature="0.01" frictionloss="0.03"/>
-    <geom contype="2" conaffinity="1" rgba="0.92 0.92 0.92 1"/>
+    <geom contype="2" conaffinity="13" rgba="0.92 0.92 0.92 1"/>
     <position kp="30" kv="0.5" inheritrange="1"/>
+    <default class="arm">
+      <geom contype="4" conaffinity="15"/>
+    </default>
     <default class="leg">
-      <geom contype="6" conaffinity="5"/>
+      <geom contype="8" conaffinity="15"/>
     </default>
     <default class="visual">
       <geom contype="0" conaffinity="0" group="1" rgba="0.35 0.37 0.42 1"/>
     </default>
     <default class="foot">
-      <geom type="box" size="0.075 0.039 0.0075" contype="6" conaffinity="5" condim="3"
+      <geom type="box" size="0.075 0.039 0.0075" contype="8" conaffinity="15" condim="3"
             friction="1.0 0.02 0.01" rgba="0.2 0.22 0.26 1"/>
     </default>
     <!-- Limites de torque (Nm) del modelo original -->
@@ -158,7 +163,7 @@
           <inertial pos="0.02455 0.00563 0.0033" quat="0.467645 0.46185 0.492756 0.570257" mass="0.15777"
                     diaginertia="0.00027823 0.000242894 8.25818e-05"/>
           <joint name="LShoulderRoll" axis="0 0 1" range="-0.314159 1.32645"/>
-          <geom name="LBicep" type="capsule" fromto="0.015 0.005 0 0.085 0.013 0" size="0.024"/>
+          <geom name="LBicep" class="arm" type="capsule" fromto="0.015 0.005 0 0.085 0.013 0" size="0.024"/>
           <body name="LElbow" pos="0.105 0.015 0">
             <inertial pos="-0.02744 0 -0.00014" quat="-0.000545392 0.711779 -0.000696018 0.702403" mass="0.06483"
                       diaginertia="2.76333e-05 2.66179e-05 5.592e-06"/>
@@ -168,12 +173,12 @@
                         diaginertia="3.9183e-05 3.6083e-05 2.37632e-05"/>
               <joint name="LElbowRoll" axis="0 0 1" range="-1.54462 -0.0349066"/>
               <geom class="visual" type="sphere" size="0.021"/>
-              <geom name="LForeArm" type="capsule" fromto="0.008 0 0 0.05 0 0" size="0.02"/>
+              <geom name="LForeArm" class="arm" type="capsule" fromto="0.008 0 0 0.05 0 0" size="0.02"/>
               <!-- Mano rigida (WristYaw y dedos eliminados; masa conservada) -->
               <body name="l_hand" pos="0.05595 0 0">
                 <inertial pos="0.03434 -0.00088 0.00308" quat="0.346526 0.607704 0.329318 0.634165" mass="0.18533"
                           diaginertia="0.000137482 0.000131631 6.85194e-05"/>
-                <geom name="l_hand" type="capsule" fromto="0.012 0 0 0.058 0 -0.006" size="0.019"
+                <geom name="l_hand" class="arm" type="capsule" fromto="0.012 0 0 0.058 0 -0.006" size="0.019"
                       rgba="0.35 0.37 0.42 1"/>
               </body>
             </body>
@@ -191,7 +196,7 @@
           <inertial pos="0.02455 -0.00563 0.0033" quat="0.556969 0.570609 0.359404 0.484788" mass="0.15777"
                     diaginertia="0.000287934 0.00025515 8.56154e-05"/>
           <joint name="RShoulderRoll" axis="0 0 1" range="-1.32645 0.314159"/>
-          <geom name="RBicep" type="capsule" fromto="0.015 -0.005 0 0.085 -0.013 0" size="0.024"/>
+          <geom name="RBicep" class="arm" type="capsule" fromto="0.015 -0.005 0 0.085 -0.013 0" size="0.024"/>
           <body name="RElbow" pos="0.105 -0.015 0">
             <inertial pos="-0.02744 0 -0.00014" quat="-0.000545392 0.711779 -0.000696018 0.702403" mass="0.06483"
                       diaginertia="2.76333e-05 2.66179e-05 5.592e-06"/>
@@ -201,11 +206,11 @@
                         diaginertia="3.92326e-05 3.59586e-05 2.39457e-05"/>
               <joint name="RElbowRoll" axis="0 0 1" range="0.0349066 1.54462"/>
               <geom class="visual" type="sphere" size="0.021"/>
-              <geom name="RForeArm" type="capsule" fromto="0.008 0 0 0.05 0 0" size="0.02"/>
+              <geom name="RForeArm" class="arm" type="capsule" fromto="0.008 0 0 0.05 0 0" size="0.02"/>
               <body name="r_hand" pos="0.05595 0 0">
                 <inertial pos="0.03434 0.00088 0.00308" quat="0.422432 0.617987 0.303847 0.589339" mass="0.18533"
                           diaginertia="0.000139307 0.000131711 6.66137e-05"/>
-                <geom name="r_hand" type="capsule" fromto="0.012 0 0 0.058 0 -0.006" size="0.019"
+                <geom name="r_hand" class="arm" type="capsule" fromto="0.012 0 0 0.058 0 -0.006" size="0.019"
                       rgba="0.35 0.37 0.42 1"/>
               </body>
             </body>
@@ -214,6 +219,12 @@
       </body>
     </body>
   </worldbody>
+
+  <!-- Biceps y antebrazo se tocan en el codo (no son padre-hijo directos: LElbow esta entre ambos) -->
+  <contact>
+    <exclude body1="LBicep" body2="LForeArm"/>
+    <exclude body1="RBicep" body2="RForeArm"/>
+  </contact>
 
   <!-- En el NAO real LHipYawPitch y RHipYawPitch comparten un unico motor: R = L -->
   <equality>

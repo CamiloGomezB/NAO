@@ -19,7 +19,8 @@ Los parámetros cinemáticos y dinámicos (posiciones de articulaciones, ejes, r
 3. **HipYawPitch acoplado.** En el NAO real, `LHipYawPitch` y `RHipYawPitch` los mueve un único motor. Se añade una restricción de igualdad (`RHipYawPitch = LHipYawPitch`) y solo `LHipYawPitch` tiene actuador (21 actuadores en total).
 4. **Convención de ejes de Aldebaran.** El original invertía el eje (y el rango) de varias articulaciones: HipRoll, AnkleRoll, ShoulderRoll, ElbowYaw y todas las de pitch del lado derecho. Se restauró la convención oficial (la misma de NAOqi), de modo que un mismo ángulo significa lo mismo en simulación y en el robot real.
 5. **Muñecas fijas.** `WristYaw` (sin actuador en el original) se eliminó; la mano es un cuerpo rígido que conserva su masa e inercia.
-6. **Actuadores de posición.** Los motores de torque se reemplazaron por servos de posición de MuJoCo (PD: `kp=30`, `kv=0.5`, igual que el controlador del trabajo original), conservando los mismos límites de torque.
+6. **Autocolisiones.** Brazos, torso/cabeza y piernas chocan entre sí (grupos de colisión por `contype`/`conaffinity`), de modo que ninguna parte puede atravesar a otra, por ejemplo la mano no puede atravesar el muslo ni un pie al otro. Solo se excluye el par bíceps-antebrazo, que se tocan en el codo.
+7. **Actuadores de posición.** Los motores de torque se reemplazaron por servos de posición de MuJoCo (PD: `kp=30`, `kv=0.5`, igual que el controlador del trabajo original), conservando los mismos límites de torque.
 
 Masa total: **5.305 kg**, idéntica al original.
 

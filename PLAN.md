@@ -15,7 +15,7 @@ Regla: cada paso termina con una **confirmación** y un **commit**.
 - [x] **7. Verlo en el visor, suspendido** — ✅ Parece un NAO (partes bien ubicadas)
 - [x] **8. Colisiones de pies con el suelo** — ✅ Se apoya sin hundirse ni rebotar
 - [x] **9. Pose de pie con controlador PD** — ✅ Se mantiene de pie ~10 s
-- [ ] **10. Mover cada articulación por separado** — ✅ Direcciones y rangos correctos
+- [x] **10. Mover cada articulación por separado** — ✅ Direcciones y rangos correctos
 
 ## Fase C — Entorno RL
 - [ ] **11. Esqueleto `NaoWalkEnv` (Gymnasium)** — ✅ `check_env()` pasa
