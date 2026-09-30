@@ -6,7 +6,7 @@ Regla: cada paso termina con una **confirmación** y un **commit**.
 ## Fase A — Preparación
 - [x] **1. Estructura del repo y `.gitignore`** — ✅ Carpetas visibles en VSCode
 - [x] **2. Entorno virtual con `uv` + `pyproject.toml` con versiones fijadas** — ✅ `uv sync` sin errores
-- [ ] **3. Instalar MuJoCo y abrir el visor con un modelo de prueba** — ✅ Se abre la ventana 3D
+- [x] **3. Instalar MuJoCo y abrir el visor con un modelo de prueba** — ✅ Se abre la ventana 3D
 - [ ] **4. Push a GitHub** — ✅ Visible en github.com/CamiloGomezB/NAO
 
 ## Fase B — Modelo del NAO
