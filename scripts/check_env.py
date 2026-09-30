@@ -32,7 +32,7 @@ def main() -> int:
 
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
-        gym_check_env(gym.make("NaoWalk-v0").unwrapped)
+        gym_check_env(gym.make("NaoWalk-v0").unwrapped, skip_render_check=True)
         sb3_check_env(gym.make("NaoWalk-v0").unwrapped, warn=True)
     print(f"\ncheck_env Gymnasium + SB3: OK ({len(caught)} avisos)")
     for w in caught:

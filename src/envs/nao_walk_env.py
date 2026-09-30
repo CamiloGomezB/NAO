@@ -4,10 +4,12 @@ La politica controla las articulaciones de las piernas a 50 Hz enviando desviaci
 la pose "home" (de pie, rodillas flexionadas); los servos PD del modelo las siguen a 500 Hz.
 """
 
+import time
 from pathlib import Path
 
 import gymnasium as gym
 import mujoco
+import mujoco.viewer
 import numpy as np
 from gymnasium import spaces
 
@@ -87,7 +89,7 @@ def obs_slices() -> dict[str, slice]:
 
 
 class NaoWalkEnv(gym.Env):
-    metadata = {"render_modes": [], "render_fps": 50}
+    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 50}
 
     def __init__(
         self,
@@ -100,6 +102,7 @@ class NaoWalkEnv(gym.Env):
         target_speed: float = TARGET_SPEED,
         reward_weights: dict | None = None,
         render_mode: str | None = None,
+        render_size: tuple[int, int] = (640, 480),
     ):
         self.model = mujoco.MjModel.from_xml_path(str(SCENE_PATH))
         self.data = mujoco.MjData(self.model)
@@ -115,7 +118,13 @@ class NaoWalkEnv(gym.Env):
         if unknown:
             raise ValueError(f"Terminos de recompensa desconocidos: {sorted(unknown)}")
         self.reward_weights = {**REWARD_WEIGHTS, **(reward_weights or {})}
+        if render_mode is not None and render_mode not in self.metadata["render_modes"]:
+            raise ValueError(f"render_mode debe ser uno de {self.metadata['render_modes']}")
         self.render_mode = render_mode
+        self.render_size = render_size
+        self._renderer = None
+        self._viewer = None
+        self._last_render_time = None
 
         home = self.model.key("home").id
         self._home_qpos = self.model.key_qpos[home].copy()
@@ -149,6 +158,8 @@ class NaoWalkEnv(gym.Env):
         mujoco.mj_forward(self.model, self.data)
         self._prev_action[:] = 0.0
         self._step_count = 0
+        if self.render_mode == "human":
+            self.render()
         return self._get_obs(), {}
 
     def step(self, action):
@@ -167,7 +178,38 @@ class NaoWalkEnv(gym.Env):
             obs = np.nan_to_num(obs, nan=0.0, posinf=0.0, neginf=0.0)
             reward = self.reward_weights["caida"]
         info = {"fall_reason": fall_reason, "reward_terms": terms}
+        if self.render_mode == "human":
+            self.render()
         return obs, float(reward), terminated, False, info
+
+    def render(self):
+        if self.render_mode == "rgb_array":
+            if self._renderer is None:
+                width, height = self.render_size
+                self._renderer = mujoco.Renderer(self.model, height, width)
+            self._renderer.update_scene(self.data, camera="track")
+            return self._renderer.render()
+        if self.render_mode == "human":
+            if self._viewer is None:
+                self._viewer = mujoco.viewer.launch_passive(self.model, self.data)
+                self._viewer.cam.type = mujoco.mjtCamera.mjCAMERA_TRACKING
+                self._viewer.cam.trackbodyid = self._torso_id
+                self._viewer.cam.distance, self._viewer.cam.azimuth, self._viewer.cam.elevation = 1.2, 120, -15
+            self._viewer.sync()
+            # Mantener tiempo real: un paso de control cada dt segundos.
+            now = time.perf_counter()
+            if self._last_render_time is not None:
+                time.sleep(max(0.0, self.dt - (now - self._last_render_time)))
+            self._last_render_time = time.perf_counter()
+        return None
+
+    def close(self):
+        if self._renderer is not None:
+            self._renderer.close()
+            self._renderer = None
+        if self._viewer is not None:
+            self._viewer.close()
+            self._viewer = None
 
     # ------------------------------------------------------------------ Partes del MDP
 

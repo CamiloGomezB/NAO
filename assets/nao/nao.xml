@@ -61,7 +61,7 @@
                 fullinertia="0.00308361 0.0028835 0.0015924 0.00001431 -0.00003302 -0.00002708"/>
       <geom name="torso" type="box" pos="-0.008 0 0.035" size="0.045 0.062 0.085"/>
       <site name="imu" pos="-0.008 0.00606 0.027"/>
-      <camera name="track" mode="trackcom" pos="0.2 -1.0 0.1" xyaxes="0.98 0.2 0 -0.04 0.2 0.98"/>
+      <camera name="track" mode="trackcom" pos="0 -1.18 0.21" xyaxes="1 0 0 0 0.174 0.985"/>
 
       <!-- Cabeza -->
       <body name="Neck" pos="0 0 0.1265">
