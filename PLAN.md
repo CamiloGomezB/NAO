@@ -14,7 +14,7 @@ Regla: cada paso termina con una **confirmación** y un **commit**.
 - [x] **6. Convertir a MJCF y cargar** — ✅ Lista de articulaciones y masa total ≈ 5.3 kg
 - [x] **7. Verlo en el visor, suspendido** — ✅ Parece un NAO (partes bien ubicadas)
 - [x] **8. Colisiones de pies con el suelo** — ✅ Se apoya sin hundirse ni rebotar
-- [ ] **9. Pose de pie con controlador PD** — ✅ Se mantiene de pie ~10 s
+- [x] **9. Pose de pie con controlador PD** — ✅ Se mantiene de pie ~10 s
 - [ ] **10. Mover cada articulación por separado** — ✅ Direcciones y rangos correctos
 
 ## Fase C — Entorno RL

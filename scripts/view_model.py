@@ -11,7 +11,7 @@ Uso:
 
 Teclas:
     Espacio     pausa / reanuda
-    Backspace   reinicia (vuelve a soltar el robot)
+    Enter       reinicia a la pose "home" (vuelve a soltar el robot); Backspace tambien funciona
 """
 
 import argparse
@@ -26,7 +26,7 @@ SUSPEND_HEIGHT = 0.30  # metros extra sobre la pose home
 FRAME_DT = 1 / 60  # segundos reales entre refrescos del visor
 
 KEY_SPACE = 32
-KEY_BACKSPACE = 259
+KEY_ENTER = 257
 
 
 def load_model(mode: str) -> tuple[mujoco.MjModel, mujoco.MjData]:
@@ -66,6 +66,7 @@ def main() -> None:
     model, data = load_model(args.mode)
     drop = args.drop / 100 if args.mode == "free" else 0.0
     reset(model, data, drop)
+    home_ctrl = model.key("home").ctrl.copy()
 
     state = {"paused": False, "reset": False}
 
@@ -73,11 +74,11 @@ def main() -> None:
         if keycode == KEY_SPACE:
             state["paused"] = not state["paused"]
             print("Pausa" if state["paused"] else "Reanuda")
-        elif keycode == KEY_BACKSPACE:
+        elif keycode == KEY_ENTER:
             state["reset"] = True
 
     print(f"Modo: {args.mode} | caida: {args.drop} cm | camara lenta: {args.slowmo}x")
-    print("Espacio: pausa/reanuda | Backspace: reiniciar | cerrar la ventana para terminar")
+    print("Espacio: pausa/reanuda | Enter o Backspace: reiniciar | cerrar la ventana para terminar")
 
     steps_per_frame = max(1, round(FRAME_DT / args.slowmo / model.opt.timestep))
     with mujoco.viewer.launch_passive(model, data, key_callback=on_key) as viewer:
@@ -90,10 +91,20 @@ def main() -> None:
             if state["reset"]:
                 reset(model, data, drop)
                 state["reset"] = False
+            # Sin politica, los servos siempre apuntan a "home". Esto tambien anula la copia de
+            # controles que el visor guarda internamente y que re-aplica tras su reinicio.
+            data.ctrl[:] = home_ctrl
             if not state["paused"]:
                 for _ in range(steps_per_frame):
                     mujoco.mj_step(model, data)
+            prev_time = data.time
             viewer.sync()
+            # Backspace / boton Reset del visor ejecutan mj_resetData dentro de sync() (todo en cero:
+            # brazos al frente, piernas rectas). Si el tiempo retrocedio, se corrige de inmediato.
+            if data.time < prev_time:
+                reset(model, data, drop)
+                data.ctrl[:] = home_ctrl
+                viewer.sync()
             remaining = FRAME_DT - (time.perf_counter() - frame_start)
             if remaining > 0:
                 time.sleep(remaining)
