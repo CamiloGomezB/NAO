@@ -22,7 +22,7 @@ Regla: cada paso termina con una **confirmación** y un **commit**.
 - [x] **12. Observaciones** — ✅ Valores con sentido, sin NaN
 - [x] **13. Acciones (posiciones objetivo sobre pose nominal)** — ✅ Acción 0 = de pie; aleatorias no explotan
 - [x] **14. Detección de caída / terminación** — ✅ El episodio termina al caer
-- [ ] **15. Recompensa inicial desglosada por términos** — ✅ Tabla de términos coherente
+- [x] **15. Recompensa inicial desglosada por términos** — ✅ Tabla de términos coherente
 - [ ] **16. Render de video offscreen** — ✅ `.mp4` visto por el usuario
 - [ ] **17. Benchmark de entornos en paralelo** — ✅ Pasos/s con 1, 8, 12 entornos
 

@@ -45,9 +45,36 @@ OBS_LAYOUT = (
     ("contacto_pies", 2),         # izquierdo, derecho (0/1)
     ("fase_marcha", 2),           # sin, cos del reloj de marcha
 )
+# Pesos de la recompensa (por paso de control). Positivos = premios, negativos = penalizaciones.
+REWARD_WEIGHTS = {
+    "velocidad_avance": 1.0,     # exp(-((vx - v_objetivo) / sigma)^2)
+    "patron_marcha": 0.5,        # fraccion de pies en la fase correcta del reloj de marcha
+    "vivo": 0.1,                 # constante mientras no cae
+    "inclinacion": -2.0,         # gx^2 + gy^2 de la gravedad proyectada
+    "altura": -50.0,             # (z_torso - z_objetivo)^2
+    "vel_lateral": -10.0,        # vy^2
+    "vel_giro": -0.5,            # wz^2
+    "cambio_accion": -0.02,      # ||a_t - a_{t-1}||^2
+    "torque": -0.001,            # sum(tau^2)
+    "caida": -10.0,              # una vez, al terminar por caida
+}
+TARGET_SPEED = 0.15   # m/s
+SPEED_SIGMA = 0.1     # m/s
+TARGET_HEIGHT = 0.31  # m (de pie en "home": ~0.316)
+
 ANG_VEL_SCALE = 0.25
 LIN_VEL_SCALE = 2.0
 JOINT_VEL_SCALE = 0.05
+
+
+def gait_pattern_reward(contacts: np.ndarray, phase: float) -> float:
+    """Fraccion de pies (0, 0.5 o 1) cuyo contacto coincide con el reloj de marcha.
+
+    Primera mitad del ciclo: apoya el pie izquierdo y el derecho va en el aire; segunda mitad al reves.
+    """
+    left_stance = phase < 0.5
+    expected = np.array([left_stance, not left_stance], dtype=float)
+    return float(np.mean(contacts == expected))
 
 
 def obs_slices() -> dict[str, slice]:
@@ -70,6 +97,8 @@ class NaoWalkEnv(gym.Env):
         gait_period: float = 0.6,
         fall_height: float = 0.22,
         fall_tilt_deg: float = 40.0,
+        target_speed: float = TARGET_SPEED,
+        reward_weights: dict | None = None,
         render_mode: str | None = None,
     ):
         self.model = mujoco.MjModel.from_xml_path(str(SCENE_PATH))
@@ -81,6 +110,11 @@ class NaoWalkEnv(gym.Env):
         self.gait_period = gait_period
         self.fall_height = fall_height
         self.fall_tilt_deg = fall_tilt_deg
+        self.target_speed = target_speed
+        unknown = set(reward_weights or {}) - set(REWARD_WEIGHTS)
+        if unknown:
+            raise ValueError(f"Terminos de recompensa desconocidos: {sorted(unknown)}")
+        self.reward_weights = {**REWARD_WEIGHTS, **(reward_weights or {})}
         self.render_mode = render_mode
 
         home = self.model.key("home").id
@@ -121,16 +155,19 @@ class NaoWalkEnv(gym.Env):
         action = np.clip(np.asarray(action, dtype=np.float64), -1.0, 1.0)
         self._apply_action(action)
         mujoco.mj_step(self.model, self.data, nstep=self.frame_skip)
-        self._prev_action[:] = action
-        self._step_count += 1
         fall_reason = self.fall_reason()
         terminated = fall_reason is not None
+        # La recompensa se calcula antes de avanzar el reloj y guardar la accion (usa a_{t-1}).
+        terms = self.reward_terms(action, terminated)
+        reward = sum(terms.values())
+        self._prev_action[:] = action
+        self._step_count += 1
         obs = self._get_obs()
         if fall_reason == "inestabilidad_numerica":
             obs = np.nan_to_num(obs, nan=0.0, posinf=0.0, neginf=0.0)
-        reward = self._compute_reward(terminated)
-        info = {"fall_reason": fall_reason}
-        return obs, reward, terminated, False, info
+            reward = self.reward_weights["caida"]
+        info = {"fall_reason": fall_reason, "reward_terms": terms}
+        return obs, float(reward), terminated, False, info
 
     # ------------------------------------------------------------------ Partes del MDP
 
@@ -174,8 +211,27 @@ class NaoWalkEnv(gym.Env):
         self.data.ctrl[:] = self._home_ctrl
         self.data.ctrl[self._act_ids] = self.action_to_targets(action)
 
-    def _compute_reward(self, fallen: bool) -> float:
-        return 0.0  # Provisional (Paso 15).
+    def reward_terms(self, action: np.ndarray, fallen: bool) -> dict[str, float]:
+        """Cada termino de la recompensa ya multiplicado por su peso."""
+        w = self.reward_weights
+        vx, vy = self.data.qvel[0], self.data.qvel[1]  # velocidad del torso en el mundo
+        wz = self.data.qvel[5]  # velocidad de giro (eje z)
+        torso_rot = self.data.xmat[self._torso_id].reshape(3, 3)
+        gravity = torso_rot.T @ np.array([0.0, 0.0, -1.0])
+        torque = self.data.actuator_force[self._act_ids]
+        raw = {
+            "velocidad_avance": np.exp(-(((vx - self.target_speed) / SPEED_SIGMA) ** 2)),
+            "patron_marcha": gait_pattern_reward(self.foot_contacts(), self.gait_phase()),
+            "vivo": 1.0,
+            "inclinacion": gravity[0] ** 2 + gravity[1] ** 2,
+            "altura": (self.data.qpos[2] - TARGET_HEIGHT) ** 2,
+            "vel_lateral": vy**2,
+            "vel_giro": wz**2,
+            "cambio_accion": float(np.sum((action - self._prev_action) ** 2)),
+            "torque": float(np.sum(torque**2)),
+            "caida": float(fallen),
+        }
+        return {name: float(w[name] * value) for name, value in raw.items()}
 
     def torso_tilt_deg(self) -> float:
         """Angulo entre el eje vertical del torso y la vertical del mundo."""
