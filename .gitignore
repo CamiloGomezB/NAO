@@ -25,3 +25,6 @@ videos/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Capturas del visor de MuJoCo
+screenshot*.png
