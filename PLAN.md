@@ -12,7 +12,7 @@ Regla: cada paso termina con una **confirmación** y un **commit**.
 ## Fase B — Modelo del NAO
 - [x] **5. Buscar el modelo NAO V6 y revisar licencia** — ✅ Fuente y licencia acordadas
 - [x] **6. Convertir a MJCF y cargar** — ✅ Lista de articulaciones y masa total ≈ 5.3 kg
-- [ ] **7. Verlo en el visor, suspendido** — ✅ Parece un NAO (partes bien ubicadas)
+- [x] **7. Verlo en el visor, suspendido** — ✅ Parece un NAO (partes bien ubicadas)
 - [ ] **8. Colisiones de pies con el suelo** — ✅ Se apoya sin hundirse ni rebotar
 - [ ] **9. Pose de pie con controlador PD** — ✅ Se mantiene de pie ~10 s
 - [ ] **10. Mover cada articulación por separado** — ✅ Direcciones y rangos correctos
