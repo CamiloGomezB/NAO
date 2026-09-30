@@ -7,10 +7,10 @@ Regla: cada paso termina con una **confirmación** y un **commit**.
 - [x] **1. Estructura del repo y `.gitignore`** — ✅ Carpetas visibles en VSCode
 - [x] **2. Entorno virtual con `uv` + `pyproject.toml` con versiones fijadas** — ✅ `uv sync` sin errores
 - [x] **3. Instalar MuJoCo y abrir el visor con un modelo de prueba** — ✅ Se abre la ventana 3D
-- [ ] **4. Push a GitHub** — ✅ Visible en github.com/CamiloGomezB/NAO
+- [x] **4. Push a GitHub** — ✅ Visible en github.com/CamiloGomezB/NAO
 
 ## Fase B — Modelo del NAO
-- [ ] **5. Buscar el modelo NAO V6 y revisar licencia** — ✅ Fuente y licencia acordadas
+- [x] **5. Buscar el modelo NAO V6 y revisar licencia** — ✅ Fuente y licencia acordadas
 - [ ] **6. Convertir a MJCF y cargar** — ✅ Lista de articulaciones y masa total ≈ 5.5 kg
 - [ ] **7. Verlo en el visor, suspendido** — ✅ Parece un NAO (partes bien ubicadas)
 - [ ] **8. Colisiones de pies con el suelo** — ✅ Se apoya sin hundirse ni rebotar
