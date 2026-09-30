@@ -16,6 +16,21 @@ Entrenada en **~22 min en CPU** (5M pasos). Camina alternando los pies con una f
 como una marcha humana, y **balancea los brazos en oposición a las piernas**, un comportamiento que la
 política descubrió sola. Detalles y comparación de variantes en la [sección 6](#6-experimentos-y-resultados).
 
+### Inicio rápido
+
+Requiere Python 3.12, Git y [uv](https://docs.astral.sh/uv/getting-started/installation/). No hace falta entrenar: el modelo viene incluido.
+
+```bash
+git clone https://github.com/CamiloGomezB/NAO.git
+cd NAO
+uv sync
+uv run python -m src.evaluate --model checkpoints/best_model.zip --episodes 2 --render
+```
+
+El último comando abre el visor 3D con el NAO caminando. Para una demo en la que se puede **parar y
+reanudar** la caminata con la barra espaciadora: `uv run python scripts/demo_interactive.py`.
+Instalación con pip y más opciones en las secciones [1](#1-instalación) y [2](#2-demo-rápida-sin-entrenar).
+
 ---
 
 ## Contenido
@@ -121,6 +136,20 @@ pulsaciones rápidas simuladas: **399/400 paradas sin caída**. Otras estrategia
 frenar gradualmente o acomodarse hacia la pose de pie una vez detenido) hacían caer al robot en un
 40–100% de los casos. Una parada que junte los pies requeriría entrenar a la política con una orden
 de velocidad (ver siguientes pasos).
+
+### Problemas frecuentes
+
+| Situación | Solución |
+|---|---|
+| **macOS:** el visor falla al abrir (`--render` o `demo_interactive.py`) | En macOS el visor de MuJoCo debe ejecutarse con `mjpython`, que viene con el paquete `mujoco`: `uv run mjpython -m src.evaluate --model checkpoints/best_model.zip --render` y `uv run mjpython scripts/demo_interactive.py` |
+| **Linux sin pantalla** (servidor, SSH): el visor no abre o el video falla | Usa `--video` en lugar de `--render` y activa el render sin pantalla: `MUJOCO_GL=egl uv run python -m src.evaluate --model checkpoints/best_model.zip --video videos/demo.mp4` (o `MUJOCO_GL=osmesa` si no hay GPU) |
+| Aviso `VIRTUAL_ENV=... does not match the project environment` | Inofensivo: aparece si hay otro entorno virtual activo en la terminal. `uv` usa igual el `.venv` del proyecto. Para quitarlo: `deactivate` o abrir una terminal nueva |
+| **Windows + pip:** `OSError ... Windows Long Path support` | Clonar en una ruta corta (por ejemplo `C:\NAO`) o usar `uv` (ver [sección 1](#1-instalación)) |
+| El entrenamiento va lento o el equipo se queda sin memoria | Menos entornos en paralelo: `--n-envs 8` (cada entorno usa ~250 MB de RAM). Cierra programas pesados mientras entrena |
+| La ventana del visor no responde a Espacio o Enter | Haz clic sobre la vista 3D para darle el foco antes de usar el teclado |
+
+> Probado en Windows 11. Las dependencias tienen versiones oficiales para Linux y macOS, pero en esos
+> sistemas no se ejecutó la demo completa.
 
 ---
 
