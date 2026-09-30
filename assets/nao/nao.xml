@@ -1,0 +1,275 @@
+<!--
+  NAO (H25) para MuJoCo: modelo simplificado con primitivas, para locomocion con RL.
+  Derivado de nico-bohlinger/one_policy_to_run_them_all (MIT); dinamica de ros-naoqi/nao_robot (BSD-3).
+  Ver SOURCE.md para origen, licencias y modificaciones.
+
+  Convenciones:
+  - Ejes y rangos articulares en la convencion oficial de Aldebaran (mismos signos que NAOqi).
+  - Todos los <inertial> son los originales; las geometrias NO aportan masa.
+  - Colisiones: cuerpo (contype=2) solo choca con el suelo; piernas (contype=6) chocan
+    con el suelo y entre si (pies/tibias no pueden atravesarse).
+-->
+<mujoco model="nao">
+  <compiler angle="radian" autolimits="true"/>
+
+  <option timestep="0.002" integrator="implicitfast"/>
+
+  <default>
+    <joint damping="0.1" armature="0.01" frictionloss="0.03"/>
+    <geom contype="2" conaffinity="1" rgba="0.92 0.92 0.92 1"/>
+    <position kp="30" kv="0.5" inheritrange="1"/>
+    <default class="leg">
+      <geom contype="6" conaffinity="5"/>
+    </default>
+    <default class="visual">
+      <geom contype="0" conaffinity="0" group="1" rgba="0.35 0.37 0.42 1"/>
+    </default>
+    <default class="foot">
+      <geom type="box" size="0.075 0.039 0.0075" contype="6" conaffinity="5" condim="3"
+            friction="1.0 0.02 0.01" rgba="0.2 0.22 0.26 1"/>
+    </default>
+    <!-- Limites de torque (Nm) del modelo original -->
+    <default class="head">
+      <position forcerange="-1.55 1.55"/>
+    </default>
+    <default class="hip">
+      <position forcerange="-3.348 3.348"/>
+    </default>
+    <default class="pitch">
+      <position forcerange="-3.023 3.023"/>
+    </default>
+    <default class="shoulder_pitch">
+      <position forcerange="-1.329 1.329"/>
+    </default>
+    <default class="shoulder_roll">
+      <position forcerange="-1.7835 1.7835"/>
+    </default>
+    <default class="elbow">
+      <position forcerange="-1.547 1.547"/>
+    </default>
+  </default>
+
+  <worldbody>
+    <body name="torso" pos="0 0 0.335">
+      <freejoint name="root"/>
+      <inertial pos="-0.00413 0.0 0.04342" mass="1.04956"
+                fullinertia="0.00308361 0.0028835 0.0015924 0.00001431 -0.00003302 -0.00002708"/>
+      <geom name="torso" type="box" pos="-0.008 0 0.035" size="0.045 0.062 0.085"/>
+      <site name="imu" pos="-0.008 0.00606 0.027"/>
+      <camera name="track" mode="trackcom" pos="0.2 -1.0 0.1" xyaxes="0.98 0.2 0 -0.04 0.2 0.98"/>
+
+      <!-- Cabeza -->
+      <body name="Neck" pos="0 0 0.1265">
+        <inertial pos="-1e-05 0 -0.02742" quat="0.70765 -0.00173495 0.00151894 0.706559" mass="0.07842"
+                  diaginertia="1.70396e-05 1.60324e-05 5.53348e-06"/>
+        <joint name="HeadYaw" axis="0 0 1" range="-2.08567 2.08567"/>
+        <body name="Head">
+          <inertial pos="-0.00112 0 0.05258" quat="0.463877 0.585354 -0.492966 0.446277" mass="0.60533"
+                    diaginertia="0.000990592 0.000957952 0.000811033"/>
+          <joint name="HeadPitch" axis="0 1 0" range="-0.671952 0.514872"/>
+          <geom name="head" type="sphere" pos="-0.005 0 0.058" size="0.062"/>
+          <geom class="visual" type="capsule" fromto="0.045 -0.03 0.075 0.045 0.03 0.075" size="0.012"/>
+        </body>
+      </body>
+
+      <!-- Pierna izquierda -->
+      <body name="LPelvis" pos="0 0.05 -0.085">
+        <inertial pos="-0.00781 -0.01114 0.02661" quat="0.232303 0.656505 0.182148 0.69416" mass="0.06981"
+                  diaginertia="5.16414e-05 4.58792e-05 2.32239e-05"/>
+        <joint name="LHipYawPitch" axis="0 0.707107 -0.707107" range="-1.14529 0.740718"/>
+        <body name="LHip">
+          <inertial pos="-0.01549 0.00029 -0.00515" quat="0.453959 0.527953 0.574067 0.430853" mass="0.14053"
+                    diaginertia="6.08587e-05 5.59269e-05 2.22526e-05"/>
+          <joint name="LHipRoll" axis="1 0 0" range="-0.379435 0.79046"/>
+          <geom class="visual" type="sphere" size="0.028"/>
+          <body name="LThigh">
+            <inertial pos="0.00138 0.00221 -0.05373" quat="0.992078 -0.0228023 -0.123519 -0.00190301" mass="0.38968"
+                      diaginertia="0.000524114 0.000465732 0.000286453"/>
+            <joint name="LHipPitch" axis="0 1 0" range="-1.53589 0.48398"/>
+            <geom name="LThigh" class="leg" type="capsule" fromto="0 0 -0.01 0 0 -0.09" size="0.03"/>
+            <body name="LTibia" pos="0 0 -0.1">
+              <inertial pos="0.00453 0.00225 -0.04936" quat="0.997907 0.0169027 0.0579417 0.0232071" mass="0.30142"
+                        diaginertia="0.000449928 0.000388139 0.000181704"/>
+              <joint name="LKneePitch" axis="0 1 0" range="-0.0923279 2.11255"/>
+              <geom name="LTibia" class="leg" type="capsule" fromto="0 0 -0.012 0 0 -0.088" size="0.026"/>
+              <body name="LAnklePitch" pos="0 0 -0.1029">
+                <inertial pos="0.00045 0.00029 0.00685" quat="0.447256 0.548803 0.537287 0.458368" mass="0.13416"
+                          diaginertia="6.79494e-05 5.56016e-05 3.14223e-05"/>
+                <joint name="LAnklePitch" axis="0 1 0" range="-1.18944 0.922581"/>
+                <geom class="visual" type="sphere" size="0.022"/>
+                <body name="l_foot">
+                  <inertial pos="0.0254198 0.00330005 -0.0323906" quat="0.0134363 0.704739 -0.00974782 0.709273"
+                            mass="0.171848" diaginertia="0.000412891 0.000353334 8.70025e-05"/>
+                  <joint name="LAnkleRoll" axis="1 0 0" range="-0.397761 0.768992"/>
+                  <geom name="left_foot" class="foot" pos="0.025 0.005 -0.03761"/>
+                  <site name="left_foot" pos="0.025 0.005 -0.04511"/>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+
+      <!-- Pierna derecha -->
+      <body name="RPelvis" pos="0 -0.05 -0.085">
+        <inertial pos="-0.00781 0.01114 0.02661" quat="-0.286295 0.637526 -0.200888 0.686469" mass="0.06981"
+                  diaginertia="6.0003e-05 4.60859e-05 3.15895e-05"/>
+        <joint name="RHipYawPitch" axis="0 0.707107 0.707107" range="-1.14529 0.740718"/>
+        <body name="RHip">
+          <inertial pos="-0.01549 -0.00029 -0.00515" quat="0.431269 0.573083 0.528698 0.453941" mass="0.14053"
+                    diaginertia="6.08554e-05 5.59208e-05 2.2268e-05"/>
+          <joint name="RHipRoll" axis="1 0 0" range="-0.79046 0.379435"/>
+          <geom class="visual" type="sphere" size="0.028"/>
+          <body name="RThigh">
+            <inertial pos="0.00138 -0.00221 -0.05373" quat="0.99203 0.0205489 -0.124311 0.000726212" mass="0.38968"
+                      diaginertia="0.000525121 0.000466802 0.000286518"/>
+            <joint name="RHipPitch" axis="0 1 0" range="-1.53589 0.48398"/>
+            <geom name="RThigh" class="leg" type="capsule" fromto="0 0 -0.01 0 0 -0.09" size="0.03"/>
+            <body name="RTibia" pos="0 0 -0.1">
+              <inertial pos="0.00453 -0.00225 -0.04936" quat="0.99698 -0.0149083 0.0724691 -0.0235809" mass="0.30142"
+                        diaginertia="0.000452851 0.000387699 0.000177824"/>
+              <joint name="RKneePitch" axis="0 1 0" range="-0.0923279 2.11255"/>
+              <geom name="RTibia" class="leg" type="capsule" fromto="0 0 -0.012 0 0 -0.088" size="0.026"/>
+              <body name="RAnklePitch" pos="0 0 -0.1029">
+                <inertial pos="0.00045 -0.00029 0.00685" quat="0.458219 0.537985 0.54818 0.447332" mass="0.13416"
+                          diaginertia="6.79942e-05 5.56532e-05 3.14175e-05"/>
+                <joint name="RAnklePitch" axis="0 1 0" range="-1.1863 0.932006"/>
+                <geom class="visual" type="sphere" size="0.022"/>
+                <body name="r_foot">
+                  <inertial pos="0.0254198 -0.00330005 -0.0323906" quat="-0.0138336 0.704473 0.00894574 0.70954"
+                            mass="0.171848" diaginertia="0.000412175 0.000352454 8.68701e-05"/>
+                  <joint name="RAnkleRoll" axis="1 0 0" range="-0.768992 0.397761"/>
+                  <geom name="right_foot" class="foot" pos="0.025 -0.005 -0.03761"/>
+                  <site name="right_foot" pos="0.025 -0.005 -0.04511"/>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+
+      <!-- Brazo izquierdo -->
+      <body name="LShoulder" pos="0 0.098 0.1">
+        <inertial pos="-0.00165 -0.02663 0.00014" quat="0.353499 0.572853 -0.442525 0.592494" mass="0.09304"
+                  diaginertia="2.02186e-05 1.91002e-05 1.30704e-05"/>
+        <joint name="LShoulderPitch" axis="0 1 0" range="-2.08567 2.08567"/>
+        <geom class="visual" type="sphere" size="0.025"/>
+        <body name="LBicep">
+          <inertial pos="0.02455 0.00563 0.0033" quat="0.467645 0.46185 0.492756 0.570257" mass="0.15777"
+                    diaginertia="0.00027823 0.000242894 8.25818e-05"/>
+          <joint name="LShoulderRoll" axis="0 0 1" range="-0.314159 1.32645"/>
+          <geom name="LBicep" type="capsule" fromto="0.015 0.005 0 0.085 0.013 0" size="0.024"/>
+          <body name="LElbow" pos="0.105 0.015 0">
+            <inertial pos="-0.02744 0 -0.00014" quat="-0.000545392 0.711779 -0.000696018 0.702403" mass="0.06483"
+                      diaginertia="2.76333e-05 2.66179e-05 5.592e-06"/>
+            <joint name="LElbowYaw" axis="1 0 0" range="-2.08567 2.08567"/>
+            <body name="LForeArm">
+              <inertial pos="0.02556 0.00281 0.00076" quat="0.481839 0.619088 0.422287 0.454131" mass="0.07761"
+                        diaginertia="3.9183e-05 3.6083e-05 2.37632e-05"/>
+              <joint name="LElbowRoll" axis="0 0 1" range="-1.54462 -0.0349066"/>
+              <geom class="visual" type="sphere" size="0.021"/>
+              <geom name="LForeArm" type="capsule" fromto="0.008 0 0 0.05 0 0" size="0.02"/>
+              <!-- Mano rigida (WristYaw y dedos eliminados; masa conservada) -->
+              <body name="l_hand" pos="0.05595 0 0">
+                <inertial pos="0.03434 -0.00088 0.00308" quat="0.346526 0.607704 0.329318 0.634165" mass="0.18533"
+                          diaginertia="0.000137482 0.000131631 6.85194e-05"/>
+                <geom name="l_hand" type="capsule" fromto="0.012 0 0 0.058 0 -0.006" size="0.019"
+                      rgba="0.35 0.37 0.42 1"/>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+
+      <!-- Brazo derecho -->
+      <body name="RShoulder" pos="0 -0.098 0.1">
+        <inertial pos="-0.00165 0.02663 0.00014" quat="0.572853 0.353499 -0.592494 0.442525" mass="0.09304"
+                  diaginertia="2.02186e-05 1.91002e-05 1.30704e-05"/>
+        <joint name="RShoulderPitch" axis="0 1 0" range="-2.08567 2.08567"/>
+        <geom class="visual" type="sphere" size="0.025"/>
+        <body name="RBicep">
+          <inertial pos="0.02455 -0.00563 0.0033" quat="0.556969 0.570609 0.359404 0.484788" mass="0.15777"
+                    diaginertia="0.000287934 0.00025515 8.56154e-05"/>
+          <joint name="RShoulderRoll" axis="0 0 1" range="-1.32645 0.314159"/>
+          <geom name="RBicep" type="capsule" fromto="0.015 -0.005 0 0.085 -0.013 0" size="0.024"/>
+          <body name="RElbow" pos="0.105 -0.015 0">
+            <inertial pos="-0.02744 0 -0.00014" quat="-0.000545392 0.711779 -0.000696018 0.702403" mass="0.06483"
+                      diaginertia="2.76333e-05 2.66179e-05 5.592e-06"/>
+            <joint name="RElbowYaw" axis="1 0 0" range="-2.08567 2.08567"/>
+            <body name="RForeArm">
+              <inertial pos="0.02556 -0.00281 0.00076" quat="0.453039 0.428011 0.593606 0.509111" mass="0.07761"
+                        diaginertia="3.92326e-05 3.59586e-05 2.39457e-05"/>
+              <joint name="RElbowRoll" axis="0 0 1" range="0.0349066 1.54462"/>
+              <geom class="visual" type="sphere" size="0.021"/>
+              <geom name="RForeArm" type="capsule" fromto="0.008 0 0 0.05 0 0" size="0.02"/>
+              <body name="r_hand" pos="0.05595 0 0">
+                <inertial pos="0.03434 0.00088 0.00308" quat="0.422432 0.617987 0.303847 0.589339" mass="0.18533"
+                          diaginertia="0.000139307 0.000131711 6.66137e-05"/>
+                <geom name="r_hand" type="capsule" fromto="0.012 0 0 0.058 0 -0.006" size="0.019"
+                      rgba="0.35 0.37 0.42 1"/>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <!-- En el NAO real LHipYawPitch y RHipYawPitch comparten un unico motor: R = L -->
+  <equality>
+    <joint name="hip_yaw_pitch_coupling" joint1="RHipYawPitch" joint2="LHipYawPitch" polycoef="0 1 0 0 0"/>
+  </equality>
+
+  <!-- Servos de posicion (PD): ctrl = angulo objetivo [rad]. RHipYawPitch no tiene actuador propio. -->
+  <actuator>
+    <position name="HeadYaw" joint="HeadYaw" class="head"/>
+    <position name="HeadPitch" joint="HeadPitch" class="head"/>
+    <position name="LHipYawPitch" joint="LHipYawPitch" class="hip"/>
+    <position name="LHipRoll" joint="LHipRoll" class="hip"/>
+    <position name="LHipPitch" joint="LHipPitch" class="pitch"/>
+    <position name="LKneePitch" joint="LKneePitch" class="pitch"/>
+    <position name="LAnklePitch" joint="LAnklePitch" class="pitch"/>
+    <position name="LAnkleRoll" joint="LAnkleRoll" class="hip"/>
+    <position name="RHipRoll" joint="RHipRoll" class="hip"/>
+    <position name="RHipPitch" joint="RHipPitch" class="pitch"/>
+    <position name="RKneePitch" joint="RKneePitch" class="pitch"/>
+    <position name="RAnklePitch" joint="RAnklePitch" class="pitch"/>
+    <position name="RAnkleRoll" joint="RAnkleRoll" class="hip"/>
+    <position name="LShoulderPitch" joint="LShoulderPitch" class="shoulder_pitch"/>
+    <position name="LShoulderRoll" joint="LShoulderRoll" class="shoulder_roll"/>
+    <position name="LElbowYaw" joint="LElbowYaw" class="elbow"/>
+    <position name="LElbowRoll" joint="LElbowRoll" class="elbow"/>
+    <position name="RShoulderPitch" joint="RShoulderPitch" class="shoulder_pitch"/>
+    <position name="RShoulderRoll" joint="RShoulderRoll" class="shoulder_roll"/>
+    <position name="RElbowYaw" joint="RElbowYaw" class="elbow"/>
+    <position name="RElbowRoll" joint="RElbowRoll" class="elbow"/>
+  </actuator>
+
+  <sensor>
+    <framequat name="torso_quat" objtype="site" objname="imu"/>
+    <gyro name="gyro" site="imu"/>
+    <accelerometer name="accelerometer" site="imu"/>
+    <velocimeter name="local_linvel" site="imu"/>
+  </sensor>
+
+  <!--
+    Pose "home": rodillas levemente flexionadas, brazos abajo.
+    qpos: [x y z qw qx qy qz] + HeadYaw HeadPitch
+          + L(HipYawPitch HipRoll HipPitch Knee AnklePitch AnkleRoll) + R(...)
+          + L(ShoulderPitch ShoulderRoll ElbowYaw ElbowRoll) + R(...)
+  -->
+  <keyframe>
+    <key name="home"
+      qpos="0 0 0.3175 1 0 0 0
+            0 0
+            0 0 -0.4 0.8 -0.4 0
+            0 0 -0.4 0.8 -0.4 0
+            1.57 0.2 -1.57 -0.2
+            1.57 -0.2 1.57 0.2"
+      ctrl="0 0
+            0 0 -0.4 0.8 -0.4 0
+            0 -0.4 0.8 -0.4 0
+            1.57 0.2 -1.57 -0.2
+            1.57 -0.2 1.57 0.2"/>
+  </keyframe>
+</mujoco>

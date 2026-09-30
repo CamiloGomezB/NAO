@@ -16,7 +16,12 @@ Los parámetros cinemáticos y dinámicos (posiciones de articulaciones, ejes, r
 
 1. **Sin mallas 3D.** Todas las geometrías de malla (`.stl`) se reemplazaron por primitivas (cápsulas, cajas, esferas). Las mallas originales parecen derivar de [ros-naoqi/nao_meshes](https://github.com/ros-naoqi/nao_meshes), que tiene licencia CC BY-NC-ND 4.0 con redistribución restringida, por lo que **no se incluyen** en este repositorio. Las primitivas también aceleran la simulación de colisiones.
 2. **Sin dedos.** Se eliminaron las 20 articulaciones pasivas de dedos y mano (masa despreciable, ~2e-6 kg cada una), irrelevantes para la locomoción.
-3. **HipYawPitch acoplado.** En el NAO real, `LHipYawPitch` y `RHipYawPitch` los mueve un único motor. Se añade una restricción de igualdad para reproducir ese acoplamiento.
+3. **HipYawPitch acoplado.** En el NAO real, `LHipYawPitch` y `RHipYawPitch` los mueve un único motor. Se añade una restricción de igualdad (`RHipYawPitch = LHipYawPitch`) y solo `LHipYawPitch` tiene actuador (21 actuadores en total).
+4. **Convención de ejes de Aldebaran.** El original invertía el eje (y el rango) de varias articulaciones: HipRoll, AnkleRoll, ShoulderRoll, ElbowYaw y todas las de pitch del lado derecho. Se restauró la convención oficial (la misma de NAOqi), de modo que un mismo ángulo significa lo mismo en simulación y en el robot real.
+5. **Muñecas fijas.** `WristYaw` (sin actuador en el original) se eliminó; la mano es un cuerpo rígido que conserva su masa e inercia.
+6. **Actuadores de posición.** Los motores de torque se reemplazaron por servos de posición de MuJoCo (PD: `kp=30`, `kv=0.5`, igual que el controlador del trabajo original), conservando los mismos límites de torque.
+
+Masa total: **5.305 kg**, idéntica al original.
 
 ## Versión del robot: V5 vs V6
 
