@@ -18,7 +18,7 @@ Regla: cada paso termina con una **confirmación** y un **commit**.
 - [x] **10. Mover cada articulación por separado** — ✅ Direcciones y rangos correctos
 
 ## Fase C — Entorno RL
-- [ ] **11. Esqueleto `NaoWalkEnv` (Gymnasium)** — ✅ `check_env()` pasa
+- [x] **11. Esqueleto `NaoWalkEnv` (Gymnasium)** — ✅ `check_env()` pasa
 - [ ] **12. Observaciones** — ✅ Valores con sentido, sin NaN
 - [ ] **13. Acciones (posiciones objetivo sobre pose nominal)** — ✅ Acción 0 = de pie; aleatorias no explotan
 - [ ] **14. Detección de caída / terminación** — ✅ El episodio termina al caer
