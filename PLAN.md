@@ -27,7 +27,7 @@ Regla: cada paso termina con una **confirmación** y un **commit**.
 - [x] **17. Benchmark de entornos en paralelo** — ✅ Pasos/s con 1, 8, 12 entornos
 
 ## Fase D — Primer entrenamiento
-- [ ] **18. `train.py` + `configs/ppo.yaml`** — ✅ Entrenamiento de 1 min guarda checkpoint
+- [x] **18. `train.py` + `configs/ppo.yaml`** — ✅ Entrenamiento de 1 min guarda checkpoint
 - [ ] **19. `evaluate.py` separado** — ✅ Carga checkpoint e imprime métricas
 - [ ] **20. TensorBoard** — ✅ Curvas visibles en el navegador
 - [ ] **21. Entrenamiento corto (~20–30 min)** — ✅ La recompensa sube; aguanta más de pie

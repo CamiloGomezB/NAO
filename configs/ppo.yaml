@@ -1,0 +1,43 @@
+# Configuracion de entrenamiento PPO para NaoWalk-v0.
+# Uso: uv run python -m src.train --config configs/ppo.yaml
+
+experiment: ppo_base
+seed: 0
+total_timesteps: 30_000_000
+n_envs: 16            # Paso 17: 16 entornos + 4 hilos de torch = ~3500 pasos/s
+torch_threads: 4
+
+# Parametros de NaoWalkEnv (src/envs/nao_walk_env.py)
+env:
+  target_speed: 0.15    # m/s
+  action_scale: 1.0     # multiplica ACTION_SCALES
+  reset_noise: 0.02     # rad de ruido en la pose inicial
+  gait_period: 0.6      # s por ciclo de marcha
+  reward_weights: {}    # sobrescribe pesos de REWARD_WEIGHTS, p. ej. {vel_lateral: -5.0}
+
+normalize:
+  obs: true
+  reward: true
+  clip_obs: 10.0
+
+ppo:
+  learning_rate: 3.0e-4
+  n_steps: 512          # por entorno: 16 x 512 = 8192 pasos por actualizacion
+  batch_size: 2048
+  n_epochs: 5
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  ent_coef: 0.0
+  vf_coef: 0.5
+  max_grad_norm: 1.0
+
+policy:
+  net_arch: [256, 256]  # misma arquitectura para politica y funcion de valor
+  activation: elu
+  log_std_init: -1.0    # exploracion inicial moderada (desviacion estandar ~0.37)
+
+checkpoint_every: 1_000_000   # pasos entre checkpoints
+eval:
+  every: 500_000              # pasos entre evaluaciones (guarda el mejor modelo)
+  n_episodes: 5
