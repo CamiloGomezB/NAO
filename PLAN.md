@@ -28,7 +28,7 @@ Regla: cada paso termina con una **confirmación** y un **commit**.
 
 ## Fase D — Primer entrenamiento
 - [x] **18. `train.py` + `configs/ppo.yaml`** — ✅ Entrenamiento de 1 min guarda checkpoint
-- [ ] **19. `evaluate.py` separado** — ✅ Carga checkpoint e imprime métricas
+- [x] **19. `evaluate.py` separado** — ✅ Carga checkpoint e imprime métricas
 - [ ] **20. TensorBoard** — ✅ Curvas visibles en el navegador
 - [ ] **21. Entrenamiento corto (~20–30 min)** — ✅ La recompensa sube; aguanta más de pie
 
