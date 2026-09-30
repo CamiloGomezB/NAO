@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Logs de entrenamiento (TensorBoard) y ejecuciones intermedias
+runs/
+logs/
+wandb/
+
+# Checkpoints intermedios: solo se versiona el modelo final
+checkpoints/*
+!checkpoints/.gitkeep
+!checkpoints/best_model.zip
+!checkpoints/best_model_vecnormalize.pkl
+
+# Videos temporales (la demo final va en media/)
+videos/
+*.tmp
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
