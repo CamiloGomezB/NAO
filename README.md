@@ -107,6 +107,21 @@ uv run python -m src.evaluate --model checkpoints/best_model.zip --episodes 1 --
 > Controles del visor: clic izquierdo + arrastrar = rotar, clic derecho = desplazar, rueda = zoom.
 > La ventana se cierra sola al terminar los episodios.
 
+**Demo interactiva (parar y reanudar):**
+
+```bash
+uv run python scripts/demo_interactive.py
+```
+
+**Espacio** detiene o reanuda la caminata y **Enter** reinicia. La política se entrenó para caminar
+siempre hacia adelante y no tiene una orden de "parar". Para detenerse, el script espera a que ambos
+pies estén en el suelo (~60 ms) y congela la postura en ese instante. Tras reanudar, una nueva parada se
+aplaza hasta llevar 2 s caminando, porque parar y reanudar muy seguido desestabiliza la marcha. Con
+pulsaciones rápidas simuladas: **399/400 paradas sin caída**. Otras estrategias (volver a la pose de pie,
+frenar gradualmente o acomodarse hacia la pose de pie una vez detenido) hacían caer al robot en un
+40–100% de los casos. Una parada que junte los pies requeriría entrenar a la política con una orden
+de velocidad (ver siguientes pasos).
+
 ---
 
 ## 3. Entrenamiento
@@ -354,7 +369,7 @@ y `scripts/export_model.py` (copia un modelo de `runs/` a `checkpoints/`).
 
 1. **Robustez:** aleatorización de dominio (masas, fricción, ganancias PD, retraso de acciones),
    empujones durante el entrenamiento y terreno irregular.
-2. **Comandos:** velocidad y giro como entrada de la política, para caminar en cualquier dirección.
+2. **Comandos:** velocidad (incluida velocidad 0, para detenerse juntando los pies) y giro como entrada de la política, para caminar en cualquier dirección y parar de forma natural.
 3. **Marcha más natural:** recompensas de altura de pie y longitud de paso, simetría entre piernas y
    balanceo de brazos coordinado.
 4. **Hacia el robot real (sim-to-real):** modelar la dinámica de los servos del NAO (retrasos y límites
