@@ -47,5 +47,5 @@ Regla: cada paso termina con una **confirmación** y un **commit**.
 
 ## Fase G — Reproducibilidad y entrega
 - [x] **30. README completo** — ✅ Se entiende al leerlo
-- [ ] **31. Prueba de instalación limpia** — ✅ Demo corre siguiendo el README al pie de la letra
-- [ ] **32. Push final y revisión en GitHub** — ✅ Repo completo visible
+- [x] **31. Prueba de instalación limpia** — ✅ Demo corre siguiendo el README al pie de la letra
+- [x] **32. Push final y revisión en GitHub** — ✅ Repo completo visible
