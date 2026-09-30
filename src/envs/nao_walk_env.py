@@ -68,6 +68,8 @@ class NaoWalkEnv(gym.Env):
         action_scale: float = 1.0,
         reset_noise: float = 0.02,
         gait_period: float = 0.6,
+        fall_height: float = 0.22,
+        fall_tilt_deg: float = 40.0,
         render_mode: str | None = None,
     ):
         self.model = mujoco.MjModel.from_xml_path(str(SCENE_PATH))
@@ -77,6 +79,8 @@ class NaoWalkEnv(gym.Env):
         self.action_scale = action_scale
         self.reset_noise = reset_noise
         self.gait_period = gait_period
+        self.fall_height = fall_height
+        self.fall_tilt_deg = fall_tilt_deg
         self.render_mode = render_mode
 
         home = self.model.key("home").id
@@ -119,10 +123,14 @@ class NaoWalkEnv(gym.Env):
         mujoco.mj_step(self.model, self.data, nstep=self.frame_skip)
         self._prev_action[:] = action
         self._step_count += 1
+        fall_reason = self.fall_reason()
+        terminated = fall_reason is not None
         obs = self._get_obs()
-        reward = self._compute_reward()
-        terminated = self._is_terminated()
-        return obs, reward, terminated, False, {}
+        if fall_reason == "inestabilidad_numerica":
+            obs = np.nan_to_num(obs, nan=0.0, posinf=0.0, neginf=0.0)
+        reward = self._compute_reward(terminated)
+        info = {"fall_reason": fall_reason}
+        return obs, reward, terminated, False, info
 
     # ------------------------------------------------------------------ Partes del MDP
 
@@ -166,11 +174,29 @@ class NaoWalkEnv(gym.Env):
         self.data.ctrl[:] = self._home_ctrl
         self.data.ctrl[self._act_ids] = self.action_to_targets(action)
 
-    def _compute_reward(self) -> float:
+    def _compute_reward(self, fallen: bool) -> float:
         return 0.0  # Provisional (Paso 15).
 
-    def _is_terminated(self) -> bool:
-        return False  # Provisional (Paso 14: caida).
+    def torso_tilt_deg(self) -> float:
+        """Angulo entre el eje vertical del torso y la vertical del mundo."""
+        cos_tilt = self.data.xmat[self._torso_id][8]  # componente z del eje z del torso
+        return float(np.degrees(np.arccos(np.clip(cos_tilt, -1.0, 1.0))))
+
+    def fall_reason(self) -> str | None:
+        """Motivo de la caida, o None si el robot sigue en pie."""
+        bad_qacc = self.data.warning[mujoco.mjtWarning.mjWARN_BADQACC].number > 0
+        if bad_qacc or not (np.all(np.isfinite(self.data.qpos)) and np.all(np.isfinite(self.data.qvel))):
+            return "inestabilidad_numerica"
+        if self.data.qpos[2] < self.fall_height:
+            return "altura"
+        if self.torso_tilt_deg() > self.fall_tilt_deg:
+            return "inclinacion"
+        for c in self.data.contact[: self.data.ncon]:
+            if self._floor_id in (c.geom1, c.geom2):
+                other = c.geom2 if c.geom1 == self._floor_id else c.geom1
+                if other not in self._foot_ids:
+                    return "contacto_" + self.model.geom(other).name
+        return None
 
     # ------------------------------------------------------------------ Utilidades
 
