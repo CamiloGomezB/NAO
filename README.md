@@ -249,7 +249,38 @@ modelo de `runs/` a `checkpoints/`).
 
 ## 9. Limitaciones y siguientes pasos
 
-<!-- LIMITACIONES -->
+### Limitaciones
+
+- **Solo simulación.** No se probó en el robot físico. La política no se entrenó con aleatorización de
+  dinámica (masas, fricción, retrasos, ruido de sensores), así que no se espera que funcione
+  directamente en el NAO real.
+- **Modelo aproximado.** Es un NAO V5 con geometrías simplificadas; la dinámica de los servos reales
+  (retrasos, límites de velocidad, calentamiento) no está modelada, solo un PD ideal con límites de torque.
+- **Observación privilegiada.** La velocidad lineal del torso se lee directamente de la simulación;
+  en el robot real habría que estimarla.
+- **Tarea acotada.** Camina solo hacia adelante, en línea recta, a una velocidad fija (sin comandos
+  de giro ni de velocidad), sobre suelo plano y sin perturbaciones.
+- **Estilo de marcha.** La política base camina con pasos cortos y sin fase de doble apoyo ("marcha de
+  soldado"), con los brazos fijos. Levanta más un pie que el otro, lo que produce una leve desviación
+  lateral (~13 cm en 3 m). Las variantes de la sección 6 atacan estos puntos.
+- **Presupuesto de cómputo.** Cada variante se entrenó 5M pasos (~22 min en CPU) por el plazo del
+  sprint; no hubo búsqueda de hiperparámetros ni varias semillas por variante.
+
+<!-- LIMITACIONES_VARIANTES -->
+
+### Siguientes pasos
+
+1. **Robustez:** aleatorización de dominio (masas, fricción, ganancias PD, retraso de acciones),
+   empujones durante el entrenamiento y terreno irregular.
+2. **Comandos:** velocidad y giro como entrada de la política, para caminar en cualquier dirección.
+3. **Marcha más natural:** recompensas de altura de pie y longitud de paso, simetría entre piernas y
+   balanceo de brazos coordinado.
+4. **Hacia el robot real (sim-to-real):** modelar la dinámica de los servos del NAO (retrasos y límites
+   de velocidad), quitar observaciones privilegiadas, ejecutar la política a través de NAOqi/LoLA y
+   probar primero con el robot suspendido. Los ángulos ya usan la convención de NAOqi, lo que facilita
+   este paso.
+5. **Escala:** entrenar en GPU con MuJoCo MJX (miles de entornos en paralelo) para explorar más
+   variantes y semillas.
 
 ---
 

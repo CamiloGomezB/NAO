@@ -35,15 +35,15 @@ Regla: cada paso termina con una **confirmación** y un **commit**.
 ## Fase E — Caminata
 
 - [x] **22. Variantes de recompensa/acciones** — V1 `ppo_natural.yaml` (doble apoyo, 0.2 m/s), V2 `ppo_brazos.yaml` (+ hombros)
-- [ ] **23. Entrenar V1 y V2 (5M pasos c/u)** — ✅ Curvas subiendo, checkpoints guardados
-- [ ] **24. Revisar video de las variantes** — ✅ Juicio del usuario: ¿mejora la marcha?
-- [ ] **25. Comparar base vs V1 vs V2** — ✅ Tabla comparativa con las mismas métricas
-- [ ] **26. Seleccionar `checkpoints/best_model.zip`** — ✅ Justificado con métricas
+- [x] **23. Entrenar V1 y V2 (5M pasos c/u)** — ✅ Curvas subiendo, checkpoints guardados
+- [x] **24. Revisar video de las variantes** — ✅ Juicio del usuario: ¿mejora la marcha?
+- [x] **25. Comparar base vs V1 vs V2** — ✅ Tabla comparativa con las mismas métricas
+- [x] **26. Seleccionar `checkpoints/best_model.zip`** — ✅ Justificado con métricas
 
 ## Fase F — Evaluación y evidencia
-- [ ] **27. Evaluación en 20+ episodios con seeds fijas** — ✅ `results/metrics.json`
-- [ ] **28. Gráficas de entrenamiento** — ✅ `results/training_curves.png`
-- [ ] **29. GIF/video de la demo** — ✅ `media/demo.gif` aprobado
+- [x] **27. Evaluación en 20+ episodios con seeds fijas** — ✅ `results/metrics.json`
+- [x] **28. Gráficas de entrenamiento** — ✅ `results/training_curves.png`
+- [x] **29. GIF/video de la demo** — ✅ `media/demo.gif` aprobado
 
 ## Fase G — Reproducibilidad y entrega
 - [ ] **30. README completo** — ✅ Se entiende al leerlo
