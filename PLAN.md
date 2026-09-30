@@ -24,7 +24,7 @@ Regla: cada paso termina con una **confirmación** y un **commit**.
 - [x] **14. Detección de caída / terminación** — ✅ El episodio termina al caer
 - [x] **15. Recompensa inicial desglosada por términos** — ✅ Tabla de términos coherente
 - [x] **16. Render de video offscreen** — ✅ `.mp4` visto por el usuario
-- [ ] **17. Benchmark de entornos en paralelo** — ✅ Pasos/s con 1, 8, 12 entornos
+- [x] **17. Benchmark de entornos en paralelo** — ✅ Pasos/s con 1, 8, 12 entornos
 
 ## Fase D — Primer entrenamiento
 - [ ] **18. `train.py` + `configs/ppo.yaml`** — ✅ Entrenamiento de 1 min guarda checkpoint
