@@ -58,6 +58,7 @@ def run_episode(env, model, vecnorm, seed: int, deterministic: bool, frames: lis
     obs, _ = env.reset(seed=seed)
     x0, y0 = base.data.qpos[0], base.data.qpos[1]
     ret, steps, max_tilt, effort, reason = 0.0, 0, 0.0, 0.0, None
+    double_support, foot_max = 0, np.zeros(2)  # calidad de marcha
     terminated = truncated = False
     while not (terminated or truncated):
         norm_obs = vecnorm.normalize_obs(obs) if vecnorm is not None else obs
@@ -67,6 +68,9 @@ def run_episode(env, model, vecnorm, seed: int, deterministic: bool, frames: lis
         steps += 1
         max_tilt = max(max_tilt, base.torso_tilt_deg())
         effort += float(np.sum(base.data.actuator_force[base._act_ids] ** 2))
+        double_support += int(base.foot_contacts().all())
+        feet_z = [base.data.site(f).xpos[2] for f in ("left_foot", "right_foot")]
+        foot_max = np.maximum(foot_max, feet_z)
         reason = info["fall_reason"]
         if frames is not None:
             t = steps * base.dt
@@ -88,6 +92,9 @@ def run_episode(env, model, vecnorm, seed: int, deterministic: bool, frames: lis
         "retorno": round(float(ret), 2),
         "inclinacion_max_deg": round(max_tilt, 2),
         "esfuerzo_medio": round(effort / steps, 4),  # media por paso de sum(tau^2) [N^2 m^2]
+        "doble_apoyo_pct": round(100 * double_support / steps, 1),  # % del tiempo con ambos pies en el suelo
+        "altura_pie_izq_cm": round(100 * float(foot_max[0]), 2),  # altura maxima de la suela al levantarlo
+        "altura_pie_der_cm": round(100 * float(foot_max[1]), 2),
     }
 
 
@@ -98,7 +105,7 @@ def summarize(episodes: list[dict]) -> dict:
                 "min": round(float(values.min()), 4), "max": round(float(values.max()), 4)}
 
     keys = ("distancia_m", "velocidad_media_ms", "duracion_s", "retorno", "desviacion_lateral_m",
-            "inclinacion_max_deg", "esfuerzo_medio")
+            "inclinacion_max_deg", "esfuerzo_medio", "doble_apoyo_pct", "altura_pie_izq_cm", "altura_pie_der_cm")
     summary = {key: stats(key) for key in keys}
     summary["tasa_caidas"] = round(sum(e["cayo"] for e in episodes) / len(episodes), 4)
     return summary
@@ -159,7 +166,10 @@ def main() -> int:
     for key, label in (("distancia_m", "distancia recorrida [m]"), ("velocidad_media_ms", "velocidad media [m/s]"),
                        ("duracion_s", "duracion del episodio [s]"), ("retorno", "retorno"),
                        ("desviacion_lateral_m", "desviacion lateral [m]"),
-                       ("inclinacion_max_deg", "inclinacion maxima [grados]")):
+                       ("inclinacion_max_deg", "inclinacion maxima [grados]"),
+                       ("doble_apoyo_pct", "doble apoyo [% del tiempo]"),
+                       ("altura_pie_izq_cm", "altura max. pie izquierdo [cm]"),
+                       ("altura_pie_der_cm", "altura max. pie derecho [cm]")):
         print(f"  {label:<30}{summary[key]['media']:>+9.3f} +- {summary[key]['desv']:.3f}")
     print(f"  {'tasa de caidas':<30}{summary['tasa_caidas'] * 100:>8.0f} %")
 

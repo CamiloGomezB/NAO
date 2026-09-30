@@ -29,14 +29,15 @@ Regla: cada paso termina con una **confirmación** y un **commit**.
 ## Fase D — Primer entrenamiento
 - [x] **18. `train.py` + `configs/ppo.yaml`** — ✅ Entrenamiento de 1 min guarda checkpoint
 - [x] **19. `evaluate.py` separado** — ✅ Carga checkpoint e imprime métricas
-- [ ] **20. TensorBoard** — ✅ Curvas visibles en el navegador
-- [ ] **21. Entrenamiento corto (~20–30 min)** — ✅ La recompensa sube; aguanta más de pie
+- [x] **20. TensorBoard** — ✅ Curvas visibles en el navegador
+- [x] **21. Entrenamiento corto (~20–30 min)** — ✅ La recompensa sube; aguanta más de pie
 
 ## Fase E — Caminata
-- [ ] **22. Entrenamiento largo (1–3 h o nocturno)** — ✅ Curvas subiendo, checkpoints guardados
-- [ ] **23. Revisar video del mejor checkpoint** — ✅ Juicio del usuario: ¿avanza?
-- [ ] **24. Ajuste de reward (1ª iteración)** — ✅ Mejora medible
-- [ ] **25. Comparar 2–3 variantes** — ✅ Tabla comparativa
+
+- [x] **22. Variantes de recompensa/acciones** — V1 `ppo_natural.yaml` (doble apoyo, 0.2 m/s), V2 `ppo_brazos.yaml` (+ hombros)
+- [ ] **23. Entrenar V1 y V2 (5M pasos c/u)** — ✅ Curvas subiendo, checkpoints guardados
+- [ ] **24. Revisar video de las variantes** — ✅ Juicio del usuario: ¿mejora la marcha?
+- [ ] **25. Comparar base vs V1 vs V2** — ✅ Tabla comparativa con las mismas métricas
 - [ ] **26. Seleccionar `checkpoints/best_model.zip`** — ✅ Justificado con métricas
 
 ## Fase F — Evaluación y evidencia

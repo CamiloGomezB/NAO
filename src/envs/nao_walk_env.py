@@ -22,8 +22,10 @@ LEG_ACTUATORS = (
     "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll",
 )
 
+# Opcional (control_arms=True): hombros para que la politica pueda balancear los brazos.
+ARM_ACTUATORS = ("LShoulderPitch", "RShoulderPitch")
 
-N_ACT = len(LEG_ACTUATORS)
+N_ACT = len(LEG_ACTUATORS)  # dimension de la accion por defecto (solo piernas)
 
 # Desviacion maxima respecto a "home" [rad] para accion = +-1, por tipo de articulacion.
 # Pitch (cadera, rodilla, tobillo) necesita amplitud para dar pasos; roll solo traslada el peso.
@@ -34,19 +36,25 @@ ACTION_SCALES = {
     "KneePitch": 0.5,
     "AnklePitch": 0.4,
     "AnkleRoll": 0.25,
+    "ShoulderPitch": 0.5,
 }
 
-# Componentes de la observacion, en orden, con su dimension. Las escalas dejan cada valor ~O(1).
-OBS_LAYOUT = (
-    ("gravedad_proyectada", 3),   # vector "abajo" en el marco del torso (inclinacion)
-    ("vel_angular_torso", 3),     # giroscopio [rad/s] * 0.25
-    ("vel_lineal_torso", 3),      # velocidad en el marco del torso [m/s] * 2
-    ("q_articular", N_ACT),       # angulo - angulo en home [rad]
-    ("dq_articular", N_ACT),      # velocidad articular [rad/s] * 0.05
-    ("accion_anterior", N_ACT),   # ultima accion en [-1, 1]
-    ("contacto_pies", 2),         # izquierdo, derecho (0/1)
-    ("fase_marcha", 2),           # sin, cos del reloj de marcha
-)
+
+def obs_layout(n_act: int = N_ACT) -> tuple:
+    """Componentes de la observacion, en orden, con su dimension. Las escalas dejan cada valor ~O(1)."""
+    return (
+        ("gravedad_proyectada", 3),   # vector "abajo" en el marco del torso (inclinacion)
+        ("vel_angular_torso", 3),     # giroscopio [rad/s] * 0.25
+        ("vel_lineal_torso", 3),      # velocidad en el marco del torso [m/s] * 2
+        ("q_articular", n_act),       # angulo - angulo en home [rad]
+        ("dq_articular", n_act),      # velocidad articular [rad/s] * 0.05
+        ("accion_anterior", n_act),   # ultima accion en [-1, 1]
+        ("contacto_pies", 2),         # izquierdo, derecho (0/1)
+        ("fase_marcha", 2),           # sin, cos del reloj de marcha
+    )
+
+
+OBS_LAYOUT = obs_layout()
 # Pesos de la recompensa (por paso de control). Positivos = premios, negativos = penalizaciones.
 REWARD_WEIGHTS = {
     "velocidad_avance": 1.0,     # exp(-((vx - v_objetivo) / sigma)^2)
@@ -69,20 +77,22 @@ LIN_VEL_SCALE = 2.0
 JOINT_VEL_SCALE = 0.05
 
 
-def gait_pattern_reward(contacts: np.ndarray, phase: float) -> float:
+def gait_pattern_reward(contacts: np.ndarray, phase: float, stance_fraction: float = 0.5) -> float:
     """Fraccion de pies (0, 0.5 o 1) cuyo contacto coincide con el reloj de marcha.
 
-    Primera mitad del ciclo: apoya el pie izquierdo y el derecho va en el aire; segunda mitad al reves.
+    El pie izquierdo apoya en la fase [0, stance_fraction) y el derecho en [0.5, 0.5 + stance_fraction)
+    (modulo 1). Con 0.5 nunca hay doble apoyo; con 0.6 hay un 20% de doble apoyo, como al caminar.
     """
-    left_stance = phase < 0.5
-    expected = np.array([left_stance, not left_stance], dtype=float)
+    left_stance = phase < stance_fraction
+    right_stance = phase >= 0.5 or phase < stance_fraction - 0.5
+    expected = np.array([left_stance, right_stance], dtype=float)
     return float(np.mean(contacts == expected))
 
 
-def obs_slices() -> dict[str, slice]:
+def obs_slices(n_act: int = N_ACT) -> dict[str, slice]:
     """Posicion de cada componente dentro del vector de observacion."""
     slices, start = {}, 0
-    for name, dim in OBS_LAYOUT:
+    for name, dim in obs_layout(n_act):
         slices[name] = slice(start, start + dim)
         start += dim
     return slices
@@ -100,6 +110,8 @@ class NaoWalkEnv(gym.Env):
         fall_height: float = 0.22,
         fall_tilt_deg: float = 40.0,
         target_speed: float = TARGET_SPEED,
+        stance_fraction: float = 0.5,
+        control_arms: bool = False,
         reward_weights: dict | None = None,
         render_mode: str | None = None,
         render_size: tuple[int, int] = (640, 480),
@@ -129,9 +141,12 @@ class NaoWalkEnv(gym.Env):
         home = self.model.key("home").id
         self._home_qpos = self.model.key_qpos[home].copy()
         self._home_ctrl = self.model.key_ctrl[home].copy()
-        self._act_ids = np.array([self.model.actuator(name).id for name in LEG_ACTUATORS])
+        self.stance_fraction = stance_fraction
+        self.controlled_actuators = LEG_ACTUATORS + (ARM_ACTUATORS if control_arms else ())
+        self.n_act = len(self.controlled_actuators)
+        self._act_ids = np.array([self.model.actuator(name).id for name in self.controlled_actuators])
         # "LHipPitch" -> "HipPitch"; action_scale multiplica todas las escalas (para experimentos).
-        self._action_scales = action_scale * np.array([ACTION_SCALES[name[1:]] for name in LEG_ACTUATORS])
+        self._action_scales = action_scale * np.array([ACTION_SCALES[name[1:]] for name in self.controlled_actuators])
         joint_ids = self.model.actuator_trnid[self._act_ids, 0]
         self._qpos_ids = self.model.jnt_qposadr[joint_ids]
         self._qvel_ids = self.model.jnt_dofadr[joint_ids]
@@ -139,13 +154,13 @@ class NaoWalkEnv(gym.Env):
         self._floor_id = self.model.geom("floor").id
         self._foot_ids = (self.model.geom("left_foot").id, self.model.geom("right_foot").id)
 
-        self._prev_action = np.zeros(N_ACT)
+        self._prev_action = np.zeros(self.n_act)
         self._step_count = 0
 
-        self.action_space = spaces.Box(-1.0, 1.0, shape=(N_ACT,), dtype=np.float32)
+        self.action_space = spaces.Box(-1.0, 1.0, shape=(self.n_act,), dtype=np.float32)
         self._reset_to_home()
         obs_dim = self._get_obs().shape[0]
-        assert obs_dim == sum(dim for _, dim in OBS_LAYOUT)
+        assert obs_dim == sum(dim for _, dim in obs_layout(self.n_act))
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=(obs_dim,), dtype=np.float32)
 
     # ------------------------------------------------------------------ API Gymnasium
@@ -263,7 +278,7 @@ class NaoWalkEnv(gym.Env):
         torque = self.data.actuator_force[self._act_ids]
         raw = {
             "velocidad_avance": np.exp(-(((vx - self.target_speed) / SPEED_SIGMA) ** 2)),
-            "patron_marcha": gait_pattern_reward(self.foot_contacts(), self.gait_phase()),
+            "patron_marcha": gait_pattern_reward(self.foot_contacts(), self.gait_phase(), self.stance_fraction),
             "vivo": 1.0,
             "inclinacion": gravity[0] ** 2 + gravity[1] ** 2,
             "altura": (self.data.qpos[2] - TARGET_HEIGHT) ** 2,
