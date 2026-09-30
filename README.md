@@ -62,6 +62,11 @@ pip install -r requirements.txt
 
 Con pip, omite el prefijo `uv run` en los comandos de abajo.
 
+> **Windows y rutas largas:** si pip falla con `OSError ... Windows Long Path support`, clona el
+> repositorio en una ruta corta (por ejemplo `C:\NAO`) o
+> [habilita las rutas largas](https://pip.pypa.io/warnings/enable-long-paths). Algunos archivos de
+> PyTorch superan el límite de 260 caracteres de Windows. `uv` (opción A) no tiene este problema.
+
 ### Versiones principales
 
 | Paquete | Versión |
