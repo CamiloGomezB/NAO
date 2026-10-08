@@ -219,6 +219,10 @@ reentrenar.
 
 ## 5. Diseño del problema de RL
 
+> **Explicación sin código ni matemáticas:** [`docs/variables_rl.md`](docs/variables_rl.md) describe qué
+> variables usa el aprendizaje (física, observación, acción, recompensa, reglas y parámetros de PPO),
+> cuáles se dejaron fuera y por qué, y qué cambiaría para enseñarle otra habilidad, por ejemplo saltar.
+
 Entorno Gymnasium `NaoWalk-v0` en [`src/envs/nao_walk_env.py`](src/envs/nao_walk_env.py).
 
 | Elemento | Diseño |
@@ -329,6 +333,7 @@ NAO/
 ├── checkpoints/         # Política entregada: modelo, normalización, config y metadatos
 ├── results/             # Métricas, comparación y curvas de entrenamiento
 ├── media/               # GIF de la demo
+├── docs/                # Explicación de las variables del RL (sin código)
 ├── PLAN.md              # Plan de trabajo paso a paso del sprint
 └── pyproject.toml / uv.lock / requirements.txt
 ```

@@ -10,7 +10,7 @@ import mujoco
 import numpy as np
 
 SCENE_PATH = Path(__file__).resolve().parents[1] / "assets" / "nao" / "scene.xml"
-EXPECTED_MASS_KG = 5.305  # NAO H25 V5 (modelo original)
+EXPECTED_MASS_KG = 5.360  # NAO V6 (H25) segun NaoV6H25.rsi3 de B-Human
 
 
 def main() -> None:

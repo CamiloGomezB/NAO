@@ -49,3 +49,14 @@ Regla: cada paso termina con una **confirmación** y un **commit**.
 - [x] **30. README completo** — ✅ Se entiende al leerlo
 - [x] **31. Prueba de instalación limpia** — ✅ Demo corre siguiendo el README al pie de la letra
 - [x] **32. Push final y revisión en GitHub** — ✅ Repo completo visible
+
+## Fase H — Correcciones tras la entrega
+Retroalimentación: (1) el modelo debe ser específicamente el **NAO V6 completo**, no una aproximación del V5;
+(2) explicar **qué variables usa el RL**, cuáles no y por qué (sin código ni matemáticas).
+
+- [ ] **33. Documento de variables del RL** (`docs/variables_rl.md`) — ✅ Se entiende sin leer código
+- [ ] **34. Física V6 oficial** (`NAOH25V60.urdf`: cabeza, sensores, dedos) + verificación automática contra el URDF — ✅ Masa 5.360 kg y cada cuerpo coincide con el URDF
+- [ ] **35. Mallas V6 oficiales** (script que descarga el SDK de Aldebaran y convierte las mallas) — ✅ En el visor se ve como un NAO V6 real
+- [ ] **36. Revalidar el modelo** (contactos, de pie, barrido articular) — ✅ Scripts de verificación en OK
+- [ ] **37. Reentrenar V2 brazos en el V6** (5M pasos) y evaluar 20 episodios — ✅ Camina sin caídas; métricas comparadas con el V5
+- [ ] **38. Actualizar README, SOURCE.md, resultados y GIF** — ✅ Todo el repo habla del V6
