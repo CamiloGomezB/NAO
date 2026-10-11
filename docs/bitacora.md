@@ -772,3 +772,34 @@ sin salida y cómo se resolvieron. Tiene tres usos:
   decía el plan.
 - **Errores en este paso:** ninguno.
 - **Siguiente:** paso 41.
+
+### 2026-10-10 — Revisión de la documentación antes del paso 41, y errores con su salida de consola
+- **Autor:** Camilo, con Claude Code.
+- **Indicación:**
+  - cada vez que empiece un paso nuevo, revisar todo lo documentado para el paper;
+  - si salió un error en consola, poner el error textual y cómo se solucionó.
+- **Qué se hizo:**
+  - **`docs/paper/registro_errores.md`:**
+    - se agregó la **salida de consola textual** en los errores que la tuvieron: E10, E13, E14, E15, E21,
+      E22, E24, E25, E28, E29, E32, E33. Se dice explícitamente que la de E01–E12 no se conservó;
+    - errores nuevos que no estaban registrados: **E38** (no se podía leer el PDF del reglamento:
+      `pdftoppm is not installed`, `ModuleNotFoundError: No module named 'pypdf'`, `FileNotFoundError` por una
+      ruta relativa) y **E39** (`KeyError: 'piso'` en la primera corrida de `scripts/check_vision.py`);
+    - E14 completado: además del "Filename too long", `git restore` dejó el clon con todos los archivos
+      marcados como borrados, y se resolvió con `git reset --hard HEAD`;
+    - E33 completado: la primera captura no encontró la ventana porque el `python.exe` de uv lanza un proceso
+      hijo.
+  - **`CLAUDE.md`:**
+    - nueva sección "**Revisión de la documentación al empezar CADA paso**", con una lista de 6 puntos;
+    - la regla de copiar el texto exacto de consola de cada error.
+  - **Revisión completa, primera aplicación de la regla:**
+    - **chequeo automático de los 23 `.md`:** 0 enlaces rotos a archivos y 0 anclas de sección rotas;
+    - **búsqueda de datos viejos** (cámara "pendiente", 51 observaciones, numeración vieja, dos personas o
+      máquinas, `wz_cmd`, baseline ALMotion): sin contradicciones. Las coincidencias que quedan son
+      históricas y correctas;
+    - **dos documentos que inducían a error**, ahora con un aviso al inicio:
+      - `assets/nao/SOURCE.md` describía el modelo V5 como si fuera el actual (se reescribe en el paso 44);
+      - `docs/variables_rl.md` describe la política del sprint, no la de carrera;
+    - el `historial_pasos.md` ahora registra también el trabajo de documentación de hoy.
+- **Errores en este paso:** ninguno nuevo.
+- **Siguiente:** paso 41, contrato v1 en código.

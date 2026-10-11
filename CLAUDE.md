@@ -28,6 +28,23 @@ ramas. Todos los entrenamientos corren en **un solo PC**, la laptop Ryzen 7 5800
 5. Para lo que exige el repo final: [`docs/integracion_penaltystack.md`](docs/integracion_penaltystack.md).
    De PenaltyStack solo se usa lo que sirve para la **caminata**. No se trae nada de penales.
 
+## Revisión de la documentación al empezar CADA paso (obligatoria)
+
+Antes de tocar código de un paso nuevo, se revisa **toda** la documentación y se corrige lo que esté
+desactualizado. Esa revisión se registra en la bitácora como parte del paso. Lista de revisión:
+
+1. **`docs/paper/`:**
+   - ¿el `historial_pasos.md` tiene el paso anterior completo (qué, cómo, verificación, commit)?
+   - ¿el `registro_errores.md` tiene todos los errores vistos, **con su salida de consola textual**?
+   - ¿`fuentes_y_repositorios.md` registra todo lo tomado de otra fuente?
+   - ¿`vision_carril.md` está al día?
+2. **`PLAN.md`:** las casillas, la línea "Paso actual" y la ruta crítica coinciden con la realidad.
+3. **README:** la línea de estado y la tabla de los 3 carriles.
+4. **`docs/plan_rl_carrera.md`, `docs/integracion_penaltystack.md` y `docs/camara_y_carriles.md`:** sin
+   datos contradictorios con lo último decidido.
+5. **Enlaces:** no hay enlaces rotos entre documentos.
+6. **Bitácora:** la última entrada dice cuál es el siguiente paso.
+
 ## Protocolo de trabajo (obligatorio)
 
 - Se trabaja **un paso del `PLAN.md` a la vez**. Al empezarlo, se marca `[~]`.
@@ -45,7 +62,8 @@ ramas. Todos los entrenamientos corren en **un solo PC**, la laptop Ryzen 7 5800
   5. **Material del paper** ([`docs/paper/`](docs/paper/README.md)):
      - **todo** error, fallo o callejón sin salida va también a `docs/paper/registro_errores.md`, con el
        siguiente ID `E##`, síntoma, causa, solución y evidencia. Incluye errores de herramientas y del
-       sistema operativo;
+       sistema operativo. **Si salió en consola, se copia el texto exacto** (traceback, mensaje de git o
+       del sistema) en un bloque de código, seguido de cómo se solucionó;
      - al cerrar un paso, se agrega su resumen a `docs/paper/historial_pasos.md` (qué se hizo, cómo se
        verificó, resultado y commit);
      - si cambia algo de la cámara o la visión, se actualiza `docs/paper/vision_carril.md`;

@@ -13,6 +13,8 @@ Es material directo para la sección de lecciones aprendidas del paper.
 - Cada error nuevo se agrega aquí con el siguiente número (`E38`, `E39`, …), **además** de su entrada en la
   [bitácora](../bitacora.md).
 - No se borran errores. Si una solución resulta mala, se agrega un error nuevo que lo diga.
+- **Si el error salió en consola, se copia el texto exacto** (traceback, mensaje de git o del sistema) en un
+  bloque de código, y después cómo se solucionó. Si la salida no se conservó, se dice.
 - **Estado:** ✅ resuelto · ⚠️ resuelto parcialmente o mitigado · ⏳ pendiente (con el paso del plan donde se
   resuelve) · ℹ️ hallazgo o limitación documentada.
 
@@ -24,6 +26,9 @@ Es material directo para la sección de lecciones aprendidas del paper.
 - **Entorno:** software y sistema operativo.
 - **Integración:** entre repositorios.
 - **Proceso:** herramientas y flujo de trabajo.
+
+**Errores del sprint inicial (E01–E12):** la salida de consola de esos días no se conservó. Se reconstruyeron
+a partir de los commits, `assets/nao/SOURCE.md`, el README y las notas de las sesiones.
 
 Fuentes: historial de Git, [`PLAN.md`](../../PLAN.md), [`bitacora.md`](../bitacora.md), README, `assets/nao/SOURCE.md` y,
 para la visión, el trabajo de Daniel en [danielpaya/nao_linea](https://github.com/danielpaya/nao_linea).
@@ -71,6 +76,8 @@ para la visión, el trabajo de Daniel en [danielpaya/nao_linea](https://github.c
 | E35 | 2026-10-09 | Visión | Visión | Falsos positivos de la meta roja sobre madera oscura | ✅ |
 | E36 | 2026-10-09 | Visión | Visión | La autocorrección de la pose de la cámara no mejoró | ℹ️ |
 | E37 | 2026-10-09 | Visión | RL | El "truco del giroscopio" se invierte con señales grandes | ⚠️ 58b |
+| E38 | 2026-10-08 | 39 | Proceso | No se podía leer el PDF del reglamento desde el asistente | ✅ |
+| E39 | 2026-10-10 | 40 | Proceso | `scripts/check_vision.py` falló en su primera corrida con `KeyError` | ✅ |
 
 ---
 
@@ -173,6 +180,11 @@ para la visión, el trabajo de Daniel en [danielpaya/nao_linea](https://github.c
 
 ### E10 — `pip` falla en Windows por rutas largas
 - **Fecha / paso:** 2026-09-30, paso 31, prueba de instalación limpia (commit `c388b50`).
+- **Salida de consola** (textual):
+  ```text
+  OSError ... Windows Long Path support
+  (solo se conservó este fragmento del mensaje de pip, citado en el README)
+  ```
 - **Síntoma:** `OSError ... Windows Long Path support` al instalar PyTorch con `pip`.
 - **Causa:** algunos archivos de PyTorch superan el límite de 260 caracteres de Windows.
 - **Solución:** nota en el README: clonar en una ruta corta (`C:\NAO`), habilitar las rutas largas o usar
@@ -211,6 +223,16 @@ para la visión, el trabajo de Daniel en [danielpaya/nao_linea](https://github.c
 
 ### E13 — DLL de MuJoCo bloqueado dentro del sandbox de Claude Code
 - **Fecha / paso:** 2026-10-08, paso 39.
+- **Salida de consola** (textual):
+  ```text
+  Traceback (most recent call last):
+    File "<string>", line 2, in <module>
+    File "C:\Users\camil\Documents\GitHub\NAO\.venv\Lib\site-packages\mujoco\__init__.py", line 254, in <module>
+      _load_all_bundled_plugins()
+    File "C:\Users\camil\Documents\GitHub\NAO\.venv\Lib\site-packages\mujoco\__init__.py", line 247, in _load_all_bundled_plugins
+      PLUGIN_HANDLES.append(ctypes.CDLL(os.path.join(directory, filename)))
+  OSError: [WinError 4551] Una directiva de Control de aplicaciones bloqueó este archivo
+  ```
 - **Síntoma:** `OSError: [WinError 4551] Una directiva de Control de aplicaciones bloqueó este archivo` al
   importar `mujoco` desde el asistente.
 - **Causa:** el bloqueo ocurría solo dentro del entorno aislado del asistente.
@@ -218,11 +240,27 @@ para la visión, el trabajo de Daniel en [danielpaya/nao_linea](https://github.c
 
 ### E14 — Clonar PenaltyStack falla en Windows: "Filename too long"
 - **Fecha / paso:** 2026-10-08, paso 39.
+- **Salida de consola** (textual):
+  ```text
+  error: unable to create file baseline/bhuman/Src/Modules/MotionControl/KeyframeMotionEngine/KeyframeMotionLibs/KeyframePhaseJointCompensationImpl.cpp: Filename too long
+  fatal: unable to checkout working tree
+  warning: Clone succeeded, but checkout failed.
+  You can inspect what was checked out with 'git status'
+  and retry with 'git restore --source=HEAD :/'
+  ```
+- **Segundo problema:** después de `git config core.longpaths true` y `git restore --source=HEAD :/`, `git ls-files`
+  devolvía 0 archivos y `git status` mostraba todos los archivos como `deleted` en el área de preparación.
+  Se resolvió con `git reset --hard HEAD` en el clon temporal.
 - **Causa:** el código de B-Human incluido en PenaltyStack tiene rutas que superan los 260 caracteres.
 - **Solución:** `git config core.longpaths true` antes del checkout. Lo mismo se usó con nao_linea.
 
 ### E15 — Un script de diagnóstico no terminaba nunca
 - **Fecha / paso:** 2026-10-08, paso 39.
+- **Salida de consola** (textual):
+  ```text
+  Command did not complete within its 300s timeout and was moved to the background
+  (mensaje de la herramienta del asistente; el script no imprimió ningún error, simplemente no terminaba)
+  ```
 - **Síntoma:** al evaluar la política sobre el V6 con un script propio, el primer episodio no terminaba.
 - **Causa:** `NaoWalkEnv`, creado directamente y no con `gym.make`, **no tiene límite de duración**. El límite
   de 1000 pasos lo pone el registro de Gymnasium. Como el robot no se caía, el episodio seguía para siempre.
@@ -274,6 +312,21 @@ para la visión, el trabajo de Daniel en [danielpaya/nao_linea](https://github.c
 
 ### E21 — Smart App Control de Windows bloqueó PyTorch
 - **Fecha / paso:** 2026-10-10, paso 40.
+- **Salida de consola** (textual):
+  ```text
+  Traceback (most recent call last):
+    File "C:\Users\camil\Documents\GitHub\NAO\demo\run_demo.py", line 32, in <module>
+      from stable_baselines3 import PPO
+    ...
+    File "C:\Users\camil\Documents\GitHub\NAO\.venv\Lib\site-packages\torch\__init__.py", line 292, in _load_dll_libraries
+      raise err
+  OSError: [WinError 4551] Una directiva de Control de aplicaciones bloqueó este archivo. Error loading "C:\Users\camil\Documents\GitHub\NAO\.venv\Lib\site-packages\torch\lib\torch_python.dll" or one of its dependencies.
+  
+  Registro de Windows (Microsoft-Windows-CodeIntegrity/Operational), 10/10/2026 10:09:31 p. m.:
+    Id 3118  Smart App Control Block Deteails
+    Id 3077  Code Integrity determined that a process (\Device\HarddiskVolume3\Users\camil\AppData\Local\Programs\Python\Python312\python.exe) attempted to load \Device\HarddiskVolume3\Users\camil\Documents\GitHub\NAO\.venv\Lib\site-...
+  VerifiedAndReputablePolicyState = 1
+  ```
 - **Síntoma:** `OSError: [WinError 4551] ... torch_python.dll`. Pasaba también fuera del entorno del
   asistente, desde Bash y desde PowerShell. El 2026-10-08 PyTorch sí cargaba en el mismo PC.
 - **Diagnóstico:**
@@ -288,6 +341,16 @@ para la visión, el trabajo de Daniel en [danielpaya/nao_linea](https://github.c
 
 ### E22 — La prueba "de pie con μ = 0.4" falló por otra causa
 - **Fecha / paso:** 2026-10-10, paso 47.
+- **Salida de consola** (textual):
+  ```text
+  4. De pie con mu = 0.4 (piso resbaloso)
+     3 s de pie: caida = None, deslizamiento maximo de los pies 4.97 mm -> FALLA
+  
+  RESULTADO: FALLA
+  
+  Medicion de control (ruido inicial 0.02):  mu=0.4 -> 4.97 mm | mu=0.6 -> 4.67 mm | mu=1.0 -> 4.46 mm | mu=1.2 -> 4.44 mm
+  Medicion de control (ruido inicial 0.0):   mu=0.4 -> 0.03 mm | mu=0.6 -> 0.02 mm | mu=1.0 -> 0.01 mm | mu=1.2 -> 0.02 mm
+  ```
 - **Síntoma:** 4.97 mm de deslizamiento de los pies en 3 s de pie con μ = 0.4, cuando el criterio era < 2 mm.
 - **Diagnóstico:** con μ = 1.2 el deslizamiento era casi igual, 4.44 mm. Sin ruido en la pose inicial, era de
   0.01–0.03 mm con cualquier μ.
@@ -306,6 +369,14 @@ para la visión, el trabajo de Daniel en [danielpaya/nao_linea](https://github.c
 
 ### E24 — La visión solo miraba el brillo
 - **Fecha / paso:** 2026-10-10, paso 48.
+- **Salida de consola** (textual):
+  ```text
+  (primera corrida de scripts/cambiar_colores.py --matriz, extracto)
+    piso verde         linea azul      contraste    26: **FALLA** (0 % validas)
+    piso verde         linea verde     contraste     4: **FALLA** (0 % validas)
+    piso azul          linea rojo      contraste     7: **FALLA** (0 % validas)
+  | madera_clara | OK 1.4 cm | OK 1.4 cm | OK 1.5 cm | OK 1.4 cm | OK 1.4 cm | **FALLA** (0 % validas) | **FALLA** (0 % validas) |
+  ```
 - **Síntoma:** en la matriz de 63 combinaciones de piso × línea, **solo 30 daban OK**. Por ejemplo, línea verde
   o gris sobre madera clara daba 0 % de mediciones válidas.
 - **Causa:** el detector convierte la imagen a escala de grises. Una línea de color con brillo parecido al
@@ -317,6 +388,11 @@ para la visión, el trabajo de Daniel en [danielpaya/nao_linea](https://github.c
 - **Por qué importa:** la organización avisa los colores poco antes del evento.
 
 ### E25 — La regla para elegir el modo fallaba con verde sobre madera
+- **Salida de consola** (textual):
+  ```text
+  (segunda corrida de la matriz, con la primera regla del modo color)
+  | madera_clara | OK 1.4 cm | OK 1.4 cm | OK 1.4 cm (color) | OK 1.4 cm | OK 1.4 cm | **FALLA** (0 % validas) | **FALLA** (89 % validas (color)) |
+  ```
 - **Síntoma:** la primera regla, "modo color si el contraste de brillo es < 45", dejaba verde sobre madera
   clara en modo brillo (contraste 54), y daba 0 % de detecciones.
 - **Causa:** el detector por brillo no solo exige contraste: exige que la línea sea más oscura que el 62 %
@@ -336,6 +412,26 @@ para la visión, el trabajo de Daniel en [danielpaya/nao_linea](https://github.c
 
 ### E28 — Los parches con heredocs de Bash rompieron dos archivos
 - **Fecha:** 2026-10-10.
+- **Salida de consola** (textual):
+  ```text
+    File "C:\Users\camil\Documents\GitHub\NAO\scripts\check_vision.py", line 130
+      return "
+             ^
+  SyntaxError: unterminated string literal (detected at line 130)
+  
+      meta_rgb=list(info["meta_rgb"])), indent=2, ensure_ascii=False) + "
+                                                                        ^
+  SyntaxError: unterminated string literal (detected at line 193)        <- demo/build_scene.py
+  
+  /usr/bin/bash: -c: line 1: unexpected EOF while looking for matching `''   <- 2026-10-08, al reescribir PLAN.md
+  /usr/bin/bash: -c: line 136: unexpected EOF while looking for matching `'' <- 2026-10-10, parche de documentación
+  
+  AssertionError:           f"maximo {MAX_EPISODE_STEPS * env.unwrapped.dt:.0f   <- reemplazo que no encontró el texto por los escapes
+  <stdin>:3: SyntaxWarning: invalid escape sequence '\S'
+  AssertionError: no
+  ```
+- **Dato:** ningún parche roto llegó a un commit. Antes de cada commit se verificó la sintaxis con
+  `ast.parse` y los parches fallidos abortaban antes de escribir, gracias a los `assert`.
 - **Síntoma:** `SyntaxError: unterminated string literal` en `scripts/check_vision.py` y
   `demo/build_scene.py`.
 - **Causa:** las secuencias `\n` del código, escritas dentro de un heredoc de Bash que a su vez contenía un
@@ -346,6 +442,14 @@ para la visión, el trabajo de Daniel en [danielpaya/nao_linea](https://github.c
   - escribir los parches largos como archivos y ejecutarlos.
 
 ### E29 — Finales de línea CRLF y comentarios desalineados
+- **Salida de consola** (textual):
+  ```text
+  warning: in the working copy of 'PLAN.md', LF will be replaced by CRLF the next time Git touches it
+  (aviso de git, inofensivo; aparece en casi todos los commits en Windows)
+  
+  diff pista_backup.yaml config/pista.yaml
+  1,22c1,22      <- las 22 lineas "distintas" solo por el final de linea
+  ```
 - **Síntoma:** `config/pista.yaml`, reescrito por `cambiar_colores.py`, aparecía completo como distinto en
   `diff`, y los comentarios quedaban desalineados.
 - **Causa:** `Path.write_text` en Windows escribe CRLF, y el reemplazo de valores no conservaba la columna de
@@ -375,6 +479,16 @@ para la visión, el trabajo de Daniel en [danielpaya/nao_linea](https://github.c
 
 ### E32 — El visor de MuJoCo se dibujaba roto: usaba la GPU integrada AMD
 - **Fecha / paso:** 2026-10-10, paso 40 (reportado por el usuario, con captura).
+- **Salida de consola** (textual):
+  ```text
+  (no hubo error en consola: el visor abria, pero dibujaba mal)
+  Diagnostico con GLFW + PyOpenGL:
+  GL_VENDOR  : ATI Technologies Inc.
+  GL_RENDERER: AMD Radeon(TM) Graphics
+  GL_VERSION : 4.6.0 Compatibility Profile Context 22.20.44.221025
+  Con SHIM_MCCOMPAT=0x800000001:
+  GL_RENDERER: NVIDIA GeForce RTX 3060 Laptop GPU/PCIe/SSE2
+  ```
 - **Síntoma:** la ventana del visor se veía negra, con la escena aplastada en una franja arriba a la
   izquierda.
 - **Diagnóstico, por eliminación:**
@@ -390,6 +504,13 @@ para la visión, el trabajo de Daniel en [danielpaya/nao_linea](https://github.c
 - **Ajustes de presentación:** visor sin paneles laterales y texto arriba a la izquierda.
 
 ### E33 — La captura de la ventana tomó lo que estaba encima en la pantalla
+- **Salida de consola** (textual):
+  ```text
+  ventanas del proceso:      <- primer intento: lista vacia
+  ```
+- **Primer problema:** el script buscaba la ventana por el número del proceso, pero `.venv\Scripts\python.exe` de
+  `uv` lanza un proceso hijo, el intérprete real, que es el dueño de la ventana. Se pasó a buscar por el título
+  ("MuJoCo").
 - **Causa:** `CopyFromScreen` copia la región de la pantalla. Como la ventana de MuJoCo no estaba al frente,
   capturó la ventana que la tapaba.
 - **Solución:** `PrintWindow`, que captura el contenido de la ventana aunque esté tapada y sin tomar nada más
@@ -423,3 +544,41 @@ para la visión, el trabajo de Daniel en [danielpaya/nao_linea](https://github.c
 - **Mitigación:** sesgo limitado a ±0.35.
 - **Solución definitiva:** ⏳ La política nueva recibe `d` y `psi` como observación (pasos 53 y 58b) y el
   truco desaparece.
+
+### E38 — No se podía leer el PDF del reglamento desde el asistente
+- **Fecha / paso:** 2026-10-08, paso 39.
+- **Salida de consola** (textual):
+  ```text
+  pdftoppm is not installed. Install poppler-utils (e.g. `brew install poppler` or `apt-get install poppler-utils`) to enable PDF page rendering.
+  
+  ModuleNotFoundError: No module named 'pypdf'
+  
+  FileNotFoundError: [Errno 2] No such file or directory: '/c/Users/camil/AppData/Local/Temp/claude/.../scratchpad/regl_flat.txt'
+  ```
+- **Causa:**
+  1. El lector de PDF del asistente necesita `pdftoppm`, que no está instalado en Windows.
+  2. `pypdf` no estaba en el entorno.
+  3. La terminal volvía a la carpeta del repo entre comandos, y una ruta relativa apuntaba a otro lugar.
+- **Solución:**
+  1. `pypdf` instalado **en una carpeta temporal**, fuera del proyecto (`uv pip install --target …/pylib pypdf`),
+     para no tocar las dependencias del repo.
+  2. Texto del PDF extraído (21 páginas).
+  3. Rutas absolutas.
+- **Impacto:** ninguno en el repo. El resumen del reglamento está en `docs/plan_rl_carrera.md`, sección 1.
+
+### E39 — `scripts/check_vision.py` falló en su primera corrida
+- **Fecha / paso:** 2026-10-10, paso 40.
+- **Salida de consola** (textual):
+  ```text
+  Traceback (most recent call last):
+    File "C:\Users\camil\Documents\GitHub\NAO\scripts\check_vision.py", line 135, in <module>
+      sys.exit(main())
+    File "C:\Users\camil\Documents\GitHub\NAO\scripts\check_vision.py", line 107, in main
+      f"Generado por `scripts/check_vision.py`. Pista: piso `{info['piso']}`, linea `{info['linea']}`, "
+                                                              ~~~~^^^^^^^^
+  KeyError: 'piso'
+  ```
+- **Causa:** `build_scene.build()` devuelve los colores en RGB (`piso_rgb`, …), no sus nombres. El informe usaba el
+  diccionario equivocado.
+- **Solución:** los nombres se toman de la configuración (`cfg`), y los RGB y la polaridad de `info`. La segunda
+  corrida dio `RESULTADO: OK`.

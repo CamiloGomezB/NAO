@@ -236,6 +236,22 @@ noviembre de 2026.
 
 ---
 
+## Trabajo de documentación (sin número de paso, 2026-10-10)
+
+Pedido por el usuario para el paper. Commits `441dcb0`, `a266095` y el de la revisión previa al paso 41.
+
+1. **Carpeta `docs/paper/`:** este historial, el registro de errores, el capítulo de la visión y su índice.
+2. **`fuentes_y_repositorios.md`:** procedencia verificada con Git de cada pieza externa. Cubre B-Human, el RSI3,
+   PenaltyStack, SabanaHerons2026, nao_linea y el origen de la cámara en este repo.
+3. **Salida de consola textual en el registro de errores**, y dos errores nuevos: E38 (lectura del PDF del
+   reglamento) y E39 (`KeyError` en `check_vision.py`).
+4. **Regla nueva en `CLAUDE.md`:** al empezar **cada** paso se revisa toda la documentación con una lista fija.
+   Primera revisión, antes del paso 41:
+   - 23 archivos `.md`, 0 enlaces rotos y 0 anclas rotas;
+   - sin datos contradictorios con lo decidido;
+   - avisos agregados en `assets/nao/SOURCE.md` (describía el V5) y en `docs/variables_rl.md` (describe la
+     política del sprint).
+
 ## Siguiente
 
 Paso 41, el contrato v1 en código, dentro de la ruta crítica del RL: 41 → 46 → 53–58 → 58b → 59 → 60–63.

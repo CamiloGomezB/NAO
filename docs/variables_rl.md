@@ -1,5 +1,16 @@
 # Variables del aprendizaje por refuerzo en la caminata del NAO
 
+> **Alcance (2026-10-10).** Este documento explica las variables de la **política del sprint inicial**: 43 observaciones,
+> 10 o 12 acciones a 50 Hz, sin cámara y con el modelo V5. El diseño nuevo para la **carrera** está en
+> [`plan_rl_carrera.md`](plan_rl_carrera.md):
+>
+> - 54 observaciones, que incluyen `d`, `psi` y válido de la cámara;
+> - 13 acciones cada 24 ms;
+> - faltas del reglamento en la recompensa;
+> - fricción aleatoria.
+>
+> Los conceptos que se explican aquí siguen valiendo.
+
 Este documento explica **qué variables intervienen** en el entrenamiento con el que el NAO aprendió a
 caminar, **cuáles se usan, cuáles no y por qué**, y **qué cambiaría** si quisiéramos enseñarle otra
 cosa, por ejemplo a saltar. No hace falta leer código ni fórmulas. Los conceptos siguen el

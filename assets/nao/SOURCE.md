@@ -1,5 +1,12 @@
 # Origen y licencia del modelo NAO
 
+> **Aviso (2026-10-10).** Este archivo describe el **modelo V5 del sprint inicial** (septiembre), que ya **no** es el
+> que usa el repo. Desde el 7 de octubre, `nao.xml` y `meshes/` se generan con `scripts/build_nao_v6.py` desde
+> `bhuman/NaoV6H25.rsi3`, la descripción del NAO V6 de B-Human (BHumanCodeRelease `d89d603`, el mismo archivo que
+> usa PenaltyStack). La procedencia completa está en
+> [`docs/paper/fuentes_y_repositorios.md`](../../docs/paper/fuentes_y_repositorios.md). Este archivo se reescribe para
+> el V6 en el paso 44.
+
 ## Fuente
 
 El modelo MuJoCo (MJCF) de este directorio se deriva de:
