@@ -392,3 +392,68 @@ sin salida y cómo se resolvieron. Tiene tres usos:
   - `CLAUDE.md`: una sola persona, solo `main`, un solo PC. El asistente queda autorizado a hacer el commit
     de cada paso en `main`; el push, solo cuando se pida.
 - **Siguiente:** paso 40, integrar nao_linea en `main`.
+
+### 2026-10-10 — Paso 40: integrar nao_linea en `main` (bloqueado en la parte del RL)
+- **Autor:** Camilo, con Claude Code (laptop Ryzen 7 5800H).
+- **Objetivo:** dejar en este repo el MuJoCo de la pista con la cámara del NAO, la visión de carril y las
+  caminatas de los baselines, para ver la cámara funcionando con el RL ya entrenado.
+- **Qué se hizo:**
+  - Copiado desde [danielpaya/nao_linea](https://github.com/danielpaya/nao_linea) (commit `f8e0cc6`),
+    **sin** `__pycache__`, `MUJOCO_LOG.TXT`, `.bundle`, `.zip` ni el `src/` y `checkpoints/` (que eran
+    idénticos a los nuestros). Se copiaron:
+    - `carril/`;
+    - `demo/`: `build_scene.py`, `run_demo.py`, `pista.yaml` y `caminatas/`;
+    - `robot/`;
+    - la escena y la textura de la pista en `assets/nao/`;
+    - resultados en `results/camara/` y `results/benchmark/`;
+    - figuras en `docs/img/`;
+    - GIFs y el video de la carrera en `media/`.
+  - **Ajustes:**
+    - el benchmark escribe en `results/benchmark/` en lugar de `resultados/`;
+    - `.gitignore` ignora `robot/logs/`, `MUJOCO_LOG.TXT` y `*.bundle`.
+  - **Dependencias:** `pyproject.toml` y `uv.lock` de nao_linea son idénticos a los nuestros. No hubo que
+    instalar nada.
+  - **Nuevo `scripts/check_vision.py`:** coloca al NAO en 50 posiciones conocidas (x = 0.5 y 2.5 m; d de
+    −15 a +15 cm; psi de −10 a +10°), renderiza la cámara inferior y compara la visión con la posición real.
+    No necesita PyTorch.
+  - **Nueva guía `docs/camara_y_carriles.md`**, con el crédito a Daniel.
+- **Resultado:**
+  - Pista regenerada con `demo/build_scene.py`: madera clara, línea negra, meta roja, contraste 141.
+  - **Visión** (`results/camara/verificacion_vision.md`), 100 % de mediciones válidas en los dos casos:
+
+    | Error de pose de la cámara | Error medio de d | Error medio de psi |
+    |---|---|---|
+    | Ninguno | 0.19 cm | 0.03° |
+    | 1.5° | 1.27 cm (máx. 4.0 cm) | 0.86° (máx. 3.2°) |
+
+    Coincide con el modelo de error de nao_linea (σ = 1.6 cm y 1.2°).
+  - **Caminatas de los baselines** (`demo.caminatas.simular`, μ = 0.8, velocidades por defecto del
+    script). Las dos llegan a la meta:
+
+    | Caminata | Tiempo en 5 m | Velocidad | Desvío máximo |
+    |---|---|---|---|
+    | Tipo NAOqi | 58.4 s | 0.086 m/s | 7.9 cm |
+    | Tipo B-Human | 23.1 s | 0.215 m/s | 5.3 cm |
+
+    Estas no son las velocidades del benchmark, que pide 0.12 y 0.30 m/s.
+- **Problemas y solución:**
+  - **Bloqueante, sin resolver.** **Smart App Control de Windows** (estado 1 = activado) **bloquea
+    PyTorch** en este PC: `OSError: [WinError 4551] Una directiva de Control de aplicaciones bloqueó este
+    archivo ... torch_python.dll`.
+    - Pasa dentro y fuera del sandbox de Claude Code, desde Bash y desde PowerShell.
+    - El registro de Code Integrity de Windows muestra el bloqueo: eventos 3077 y 3118, "Smart App Control
+      Block", a las 22:09 del 2026-10-10.
+    - El 2026-10-08 PyTorch sí cargaba en este mismo PC, porque se evaluó la política en el V6. Smart App
+      Control decide por reputación en la nube, así que su decisión puede cambiar.
+    - **Consecuencia:** no se puede cargar la política de RL (`demo/run_demo.py`, el carril del RL en
+      `carrera_vivo`, `src/evaluate.py`) **ni entrenar**. MuJoCo y todo lo que no usa PyTorch funciona.
+    - **Opciones para el usuario.** Es una configuración de seguridad; el asistente no la cambia.
+      1. Desactivar Smart App Control (Seguridad de Windows → Control de aplicaciones y navegador →
+         Smart App Control). **Ojo:** Windows no permite volver a activarlo sin reinstalar el sistema.
+      2. Correr el proyecto en **WSL2 (Ubuntu)**, donde Smart App Control no aplica.
+      3. Esperar y reintentar, por si la reputación cambia.
+  - Clonar nao_linea en Windows requiere `core.longpaths`, igual que PenaltyStack.
+- **Estado del paso:** `[!]` bloqueado. La integración está hecha y verificada salvo la demo con el RL,
+  que depende de que PyTorch vuelva a cargar.
+- **Siguiente:** resolver el bloqueo de PyTorch (decisión del usuario). Mientras tanto se avanza con los
+  pasos 47 (fricción) y 48 (colores), que se pueden verificar sin PyTorch.

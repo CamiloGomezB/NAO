@@ -30,3 +30,8 @@ Thumbs.db
 
 # Capturas del visor de MuJoCo
 screenshot*.png
+
+# Logs del kit del robot y de MuJoCo
+robot/logs/
+MUJOCO_LOG.TXT
+*.bundle

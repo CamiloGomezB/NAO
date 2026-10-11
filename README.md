@@ -60,6 +60,9 @@ Se actualiza con cada resultado:
 | RL | `v2_brazos` del sprint inicial, con visión (truco del giroscopio) | 24.2–24.3 s | ~0.20 m/s | 0 | — | — | nao_linea, sin regenerar (paso 51) |
 | RL | `carrera_v01` y siguientes | pendiente | — | — | — | — | Fase M |
 
+**Ver la cámara funcionando con el RL actual:** `uv run python demo/run_demo.py --live`. Los 3 carriles:
+`uv run python -m demo.caminatas.carrera_vivo`. Guía completa: [`docs/camara_y_carriles.md`](docs/camara_y_carriles.md).
+
 **Para el equipo:** antes de trabajar, lean [`CLAUDE.md`](CLAUDE.md) (convenciones y protocolo de
 documentación), el paso actual en [`PLAN.md`](PLAN.md) y las últimas entradas de la
 [bitácora](docs/bitacora.md).
@@ -385,7 +388,10 @@ alternativa igual de válida si se prefiere mantener los brazos quietos.
 
 ```
 NAO/
-├── assets/nao/          # Modelo MuJoCo del NAO (nao.xml, scene.xml) y SOURCE.md (origen y licencias)
+├── assets/nao/          # Modelo MuJoCo del NAO (nao.xml, scene.xml), pista de la carrera con cámara (scene_carril.xml, nao_cam.xml) y SOURCE.md
+├── carril/              # Visión de carril (de nao_linea): cámara → d, psi, válido
+├── demo/                # Pista configurable, demo RL + cámara y caminatas de los baselines (3 carriles)
+├── robot/               # Kit para probar la visión en el NAO real
 ├── configs/             # Configuraciones de entrenamiento (base y variantes)
 ├── src/
 │   ├── envs/            # NaoWalkEnv (Gymnasium) y registro de NaoWalk-v0
@@ -396,7 +402,7 @@ NAO/
 ├── checkpoints/         # Política entregada: modelo, normalización, config y metadatos
 ├── results/             # Métricas, comparación y curvas de entrenamiento
 ├── media/               # GIF de la demo
-├── docs/                # Variables del RL, diseño del RL de carrera, integración con PenaltyStack y bitácora
+├── docs/                # Variables del RL, diseño del RL de carrera, guía de cámara y carriles, integración con PenaltyStack y bitácora
 ├── third_party/         # Contrato de articulaciones de PenaltyStack (repo final), copia de referencia
 ├── CLAUDE.md            # Convenciones del equipo y protocolo de documentación (también para asistentes de IA)
 ├── PLAN.md              # Plan de trabajo paso a paso (sprint inicial + carrera)
