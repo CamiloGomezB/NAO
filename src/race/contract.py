@@ -141,6 +141,21 @@ def rumbo_desde_cuaternion(q_wxyz):
     return math.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
 
 
+def rumbo_objetivo_inicial(rumbo_imu, psi_mediciones):
+    """Rumbo objetivo de la IMU al arrancar = direccion del CARRIL (paso 58c, registro de errores E50).
+
+    De pie, antes de arrancar, la camara mide psi (angulo del robot respecto a las lineas, + = girado a la izquierda).
+    La direccion del carril en el marco de la IMU es rumbo_imu - psi. Si el robot arranco torcido, la IMU le pide ir
+    hacia el carril y no mantener el angulo torcido. Sin mediciones validas se usa el rumbo de la IMU (como antes).
+
+    rumbo_imu: rumbo actual de la IMU [rad]. psi_mediciones: lista de psi crudos validos tomados de pie [rad].
+    """
+    if not psi_mediciones:
+        return envolver_angulo(rumbo_imu)
+    psi_medio = sum(psi_mediciones) / float(len(psi_mediciones))
+    return envolver_angulo(rumbo_imu - psi_medio)
+
+
 def carga_pies(fsr8, masa_kg=MASA_ROBOT_KG):
     """(izquierdo, derecho) = suma de los 4 FSR de cada pie [kg] / masa del robot. Orden PenaltyStack:
     izquierdo fl, fr, bl, br y derecho fl, fr, bl, br."""

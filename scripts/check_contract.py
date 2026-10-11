@@ -181,6 +181,12 @@ def main() -> int:
     cam.nueva_medicion(1.1, 0.50, 0.50, False)          # foto sin lineas: se mantiene la anterior
     revisar(cam.observacion(1.25) == (0.10, 0.02, 1.0), "foto sin lineas no cambia el valor; valido dentro de 300 ms")
     revisar(cam.observacion(1.31)[2] == 0.0, "valido = 0 despues de 300 ms sin medicion")
+    # Paso 58c (E50): rumbo objetivo de la IMU = direccion del carril (rumbo de la IMU - psi medio medido de pie).
+    r = C.rumbo_objetivo_inicial(0.30, [0.25, 0.27, 0.26])
+    revisar(abs(r - 0.04) < 1e-9, f"rumbo objetivo = rumbo IMU 0.30 - psi medio 0.26 = {r:.3f} rad (direccion del carril)")
+    revisar(abs(C.rumbo_objetivo_inicial(0.30, []) - 0.30) < 1e-12, "sin mediciones de la camara: rumbo de la IMU (como antes)")
+    r = C.rumbo_objetivo_inicial(3.10, [-0.10])
+    revisar(abs(r - (3.20 - 2 * 3.141592653589793)) < 1e-9, f"se envuelve a [-pi, pi): {r:.3f} rad")
 
     print("8. Compatibilidad con Python 2.7 (revision estatica)")
     arbol = ast.parse((ROOT / "src" / "race" / "contract.py").read_text(encoding="utf-8"))

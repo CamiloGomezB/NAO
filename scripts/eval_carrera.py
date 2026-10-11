@@ -51,10 +51,15 @@ def cargar(modelo: Path):
     return PPO.load(modelo, device="cpu"), vn, env_kwargs, vn_path
 
 
-def correr(model, vn, env_kwargs, mu, semilla, vision, vx, perturbaciones, grabar=False):
+def correr(model, vn, env_kwargs, mu, semilla, vision, vx, perturbaciones, grabar=False, rumbo_objetivo=None,
+           colocacion=None):
+    """rumbo_objetivo: None = el de la config de la politica (o el default del entorno, "carril" desde el paso 58c).
+    colocacion: (y0 [m], rumbo0 [rad]) fija; None = la del benchmark para esa semilla."""
     kw = {**env_kwargs, "friction": mu, "vx_cambio_prob": 0.0, "perturbaciones": perturbaciones, "vision": vision}
+    if rumbo_objetivo is not None:
+        kw["rumbo_objetivo"] = rumbo_objetivo
     env = NaoRaceEnv(**kw)
-    d0, psi0 = inicio(semilla)
+    d0, psi0 = colocacion if colocacion is not None else inicio(semilla)
     obs, info = env.reset(seed=semilla, options={"y0": d0, "yaw0": psi0, "vx_cmd": vx})
     sitios = env._pie_sitios
     hist, resultado, torque2, t_punta, qs = [], "tiempo agotado", 0.0, None, []
@@ -96,6 +101,8 @@ def main() -> int:
     ap.add_argument("--perturbaciones", action="store_true")
     ap.add_argument("--solo-vision", action="store_true")
     ap.add_argument("--salida", type=Path, default=None, help="carpeta de resultados (default results/carrera/<run>)")
+    ap.add_argument("--rumbo-objetivo", choices=("carril", "arranque"), default=None,
+                    help="rumbo objetivo de la IMU (paso 58c); por defecto el de la config de la politica o 'carril'")
     args = ap.parse_args()
 
     model, vn, env_kwargs, vn_path = cargar(args.modelo)
@@ -104,7 +111,8 @@ def main() -> int:
     for vision in ((True,) if args.solo_vision else (False, True)):
         for mu in args.mu:
             for s in range(1000, 1000 + args.semillas):
-                f = correr(model, vn, env_kwargs, mu, s, vision, args.vx, args.perturbaciones)
+                f = correr(model, vn, env_kwargs, mu, s, vision, args.vx, args.perturbaciones,
+                           rumbo_objetivo=args.rumbo_objetivo)
                 filas.append(f)
                 print(f"   vision={'si' if vision else 'no'} mu={mu:.1f} semilla={s}: {f['resultado']:16s} "
                       f"t={f['t']:5.1f} s  v={f['vel_media']:.3f} m/s  desvio max {100 * f['desvio_max']:4.1f} cm  "
@@ -112,6 +120,7 @@ def main() -> int:
     res = resumen(filas)
     meta = info_corrida()
     meta.update(modelo=rel(args.modelo), normalizacion=rel(vn_path), vx_cmd=args.vx,
+                rumbo_objetivo=args.rumbo_objetivo or env_kwargs.get("rumbo_objetivo", "carril"),
                 perturbaciones=args.perturbaciones, seg=round(time.time() - t0, 1),
                 vision_rl="camara simulada de NaoRace-v0 (d, psi crudos con ruido, retardo y perdidas)",
                 friccion_entrenamiento_rl="aleatoria [0.4, 1.2]", rl_friccion_aleatorizada=True)
@@ -120,12 +129,14 @@ def main() -> int:
     nombre = args.modelo.parent.name if args.modelo.parent.name != "checkpoints" else args.modelo.parent.parent.name
     salida = args.salida or ROOT / "results" / "carrera" / nombre
     salida.mkdir(parents=True, exist_ok=True)
-    tag = f"{args.modelo.stem}_vx{args.vx:.2f}{'_pert' if args.perturbaciones else ''}"
+    tag = (f"{args.modelo.stem}_vx{args.vx:.2f}{'_pert' if args.perturbaciones else ''}"
+           f"{'_' + args.rumbo_objetivo if args.rumbo_objetivo else ''}")
     (salida / f"eval_{tag}.json").write_text(json.dumps({"meta": meta, "resumen": res, "corridas": filas}, indent=1),
                                              encoding="utf-8")
     L = [f"# Evaluacion de carrera: `{rel(args.modelo)}`", "",
          f"`scripts/eval_carrera.py`, {meta['fecha']}, commit {meta['commit']}. vx_cmd = {args.vx} m/s, "
-         f"perturbaciones {'si' if args.perturbaciones else 'no'}. Colocacion y meta como `demo/caminatas/benchmark.py`.",
+         f"perturbaciones {'si' if args.perturbaciones else 'no'}, rumbo objetivo de la IMU '{meta['rumbo_objetivo']}'. "
+         "Colocacion y meta como `demo/caminatas/benchmark.py`.",
          "", "| Vision | mu | Metas | Caidas | Salidas | Tiempo a meta [s] | Vel. media [m/s] | Desvio max [cm] | "
          "Rumbo max [deg] | Esfuerzo |", "|---|---|---|---|---|---|---|---|---|---|"]
     for r in res:

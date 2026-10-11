@@ -1,0 +1,68 @@
+# carrera_v03 — Continua desde carrera_v02 (15M) con SALIDAS MUCHO MAS TORCIDAS en el entrenamiento (un solo cambio).
+# Contexto (registro E50, paso 58c): v02 entreno con colocacion normal sigma 2 cm / 2 grados (max +-10 cm / +-8 grados)
+# y con el rumbo objetivo de la IMU = rumbo al arrancar; arrancando torcida >= 8 grados se salia del carril.
+# El paso 58c corrigio el entorno (rumbo objetivo = direccion del carril medida por la camara de pie). Con esa
+# correccion, v02 SIN reentrenar ya llega en 69/70 salidas malas con vision (results/carrera/carrera_v02/
+# salida_mala_model_carril.md). Esa es la referencia de esta generacion: "v02 + 58c".
+# Cambio de v03 respecto a esa referencia: solo la COLOCACION del entrenamiento (sigma 6 cm / 10 grados, max +-15 cm /
+# +-25 grados). Lo demas es igual a v02 (pesos, perdida de vision, friccion, perturbaciones, PPO).
+# Hipotesis: viendo salidas malas en el entrenamiento, la politica las corrige tambien con perturbaciones y friccion
+# baja, sin caerse en los casos extremos y sin perder velocidad ni rectitud en las salidas buenas.
+# Uso: uv run python -m src.train --config configs/carrera_v03.yaml --continuar policies/carrera_v02 --run-name carrera_v03
+
+experiment: carrera_v03
+env_id: NaoRace-v0
+seed: 3
+total_timesteps: 20_000_000    # pasos NUEVOS sobre los de v02 (~2 h en este PC); checkpoints cada 5M
+n_envs: 16
+torch_threads: 4
+
+env:
+  pesos: {}
+  vx_rango: [0.15, 0.50]
+  vx_cambio_prob: 0.3
+  friction_range: [0.4, 1.2]
+  friction_asym: 0.1
+  gait_period: 0.5
+  stance_fraction: 0.6
+  perturbaciones: true
+  rumbo_objetivo: carril         # paso 58c: rumbo objetivo de la IMU = direccion del carril (v01 y v02: arranque)
+  # --- heredado de v02 (perdida de vision) ---
+  sin_vision_prob: 0.15                 # 15 % de los episodios sin camara de principio a fin (v01: 0)
+  camara:
+    apagon_prob: 0.6                    # v01: 0.3
+    apagon_s: [1.0, 8.0]                # v01: 0.5-2 s
+    apagon_inicio_s: [0.0, 20.0]        # v01: 0.5-20 s
+  # --- el cambio de v03 ---
+  rectitud:
+    colocacion_sigma_m: 0.06            # v01/v02: 0.02
+    colocacion_max_m: 0.15              # v01/v02: 0.10
+    colocacion_sigma_grados: 10.0       # v01/v02: 2.0
+    colocacion_max_grados: 25.0         # v01/v02: 8.0
+
+normalize:
+  obs: true
+  reward: true
+  clip_obs: 10.0
+
+ppo:
+  learning_rate: 3.0e-4
+  n_steps: 512
+  batch_size: 2048
+  n_epochs: 5
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  ent_coef: 0.0
+  vf_coef: 0.5
+  max_grad_norm: 1.0
+
+policy:
+  net_arch: [256, 256]
+  activation: elu
+  log_std_init: -1.0
+
+checkpoint_every: 5_000_000
+eval:
+  every: 1_000_000
+  n_episodes: 5

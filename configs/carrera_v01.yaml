@@ -22,6 +22,7 @@ env:
   gait_period: 0.5              # contrato v1 (2 pasos de 250 ms, como B-Human)
   stance_fraction: 0.6          # 20 % de doble apoyo (aprendido en el sprint)
   perturbaciones: true          # asimetrias, empujones, suelo inclinado, deriva de la IMU, apagones de vision
+  rumbo_objetivo: arranque       # asi se entreno (rumbo de la IMU al arrancar). Desde el paso 58c el default es "carril"
 
 normalize:
   obs: true

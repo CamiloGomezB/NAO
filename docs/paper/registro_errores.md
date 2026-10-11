@@ -89,6 +89,8 @@ para la visión, el trabajo de Daniel en [danielpaya/nao_linea](https://github.c
 | E48 | 2026-10-11 | 59b | RL | Entrenar más (25–40M) empeoró la robustez de `carrera_v02` | ℹ️ se elige por batería |
 | E49 | 2026-10-11 | 59/59b | RL | La política usa acciones saturadas: brazos fijos y asimétricos, caderas hacia adentro en el límite | ⏳ candidato a generación |
 | E50 | 2026-10-11 | 56/59b | RL | La política no se recupera si arranca torcida ≥ 8°: la IMU le pide mantener el ángulo equivocado | ⏳ 58c |
+| E51 | 2026-10-11 | 58c | Proceso | Prueba nueva de `check_contract.py` comparaba ángulos con `==` y falló por redondeo | ✅ |
+| E52 | 2026-10-11 | 59c | RL | `carrera_v03` no pasa todas las salidas malas con perturbaciones: 5 caídas en el mismo caso extremo | ℹ️ aceptado; opción 59d |
 
 ---
 
@@ -882,3 +884,39 @@ para la visión, el trabajo de Daniel en [danielpaya/nao_linea](https://github.c
     válidas); sin medición válida, el rumbo de la IMU;
   - igual en el entrenamiento, la demo y el robot (función compartida en `src/race/contract.py`);
   - en la siguiente generación, además, colocación más amplia, para que vea salidas torcidas.
+
+### E51 — Prueba nueva de `check_contract.py` comparaba ángulos con `==` y falló por redondeo
+- **Fecha / paso:** 2026-10-11, paso 58c, al probar `contract.rumbo_objetivo_inicial`.
+- **Salida de consola:**
+  ```
+     FALLA sin mediciones de la camara: rumbo de la IMU (como antes)
+  RESULTADO: FALLA
+  ```
+  `envolver_angulo(0.30)` devuelve `0.2999999999999998`: `(a + pi) % (2 pi) - pi` no es exacto en punto flotante.
+- **Causa:** error de la prueba; la función es correcta.
+- **Solución:** comparar con tolerancia (`abs(x - 0.30) < 1e-12`). Segunda corrida: `RESULTADO: OK`.
+
+### E52 — `carrera_v03` no pasa todas las salidas malas con perturbaciones: 5 caídas en el mismo caso extremo
+- **Fecha / paso:** 2026-10-11, paso 59c.
+- **Síntoma:** checkpoint de 5M (el elegido), batería de salidas malas con perturbaciones (μ 0.4 y 1.2, 2 semillas,
+  `results/carrera/carrera_v03/salida_mala_model_5000000_steps_carril_pert.md`): 135/140. Las 5 fallas:
+  ```
+  0 -25 0.4 1001 CAIDA 1.1 inclinacion
+  10 -25 0.4 1001 CAIDA 1.2 inclinacion
+  -10 -25 0.4 1001 CAIDA 1.0 altura
+  15 -25 0.4 1001 CAIDA 1.1 altura
+  -15 -25 0.4 1001 CAIDA 1.3 altura
+  ```
+  (corrimiento en cm, rumbo inicial en grados, μ, semilla, resultado, tiempo en s y motivo)
+- **Lectura:**
+  - es **un solo caso**: arranque girado −25° (a la derecha), el piso más resbaloso y el sorteo de perturbaciones de
+    la semilla 1001;
+  - se cae al ~1.1 s, al girar fuerte para corregir;
+  - con otra semilla, o con μ 1.2, el mismo arranque llega;
+  - el checkpoint de 10M tiene 3 caídas, pero en la batería grande se sale 2 veces; los de 15M y 20M son peores
+    (oscilación, como E48);
+  - con la cámara renderizada (sin perturbaciones), 30/30.
+- **Decisión:**
+  - se acepta el de 5M, porque una salida tan torcida (25°) no es realista con colocación a mano;
+  - queda como opción un **paso 59d**: más entrenamiento enfocado en arranques muy girados con fricción baja, o
+    limitar el giro inicial (rampa de `vx_cmd` en el primer segundo).

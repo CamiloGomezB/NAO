@@ -9,6 +9,7 @@
      la camara midiendo, friccion sorteada, 30 s como maximo.
   6. Camara simulada (paso 57): convencion de signos (seccion 6.7), 10 Hz, validez de 300 ms, y estadistica del
      ruido (media y sigma medidas frente a las sorteadas), reproducible con semilla.
+  7. Rumbo objetivo de la IMU alineado al carril con las fotos tomadas de pie (paso 58c).
 Termina con RESULTADO: OK o FALLA.
 
 Uso:
@@ -220,6 +221,20 @@ def main() -> int:
     for _ in range(50):
         o, *_ = env.step(np.zeros(13))
     revisar(o[7] == 0 and o[8] == 0 and o[9] == 0, "sin vision: d = psi = valido = 0")
+
+    print("7. Rumbo objetivo de la IMU al arrancar (paso 58c, E50)")
+    for yaw_g in (15.0, -25.0):
+        e = NaoRaceEnv(perturbaciones=False, camara_perfecta=True, rumbo_objetivo="carril")
+        o, info = e.reset(seed=1, options={"y0": 0.0, "yaw0": math.radians(yaw_g)})
+        revisar(abs(math.degrees(o[6]) + yaw_g) < 1.5 and len(e._psi_de_pie) >= 4,
+                f"arranca girado {yaw_g:+.0f} grados: error de rumbo de la IMU = {math.degrees(o[6]):+.1f} grados "
+                f"(apunta al carril; {len(e._psi_de_pie)} fotos de pie)")
+        e = NaoRaceEnv(perturbaciones=False, camara_perfecta=True, rumbo_objetivo="arranque")
+        o, _ = e.reset(seed=1, options={"y0": 0.0, "yaw0": math.radians(yaw_g)})
+        revisar(abs(math.degrees(o[6])) < 0.5, f"modo 'arranque' (v01/v02): error de rumbo {math.degrees(o[6]):+.1f} grados")
+    e = NaoRaceEnv(perturbaciones=False, vision=False)
+    o, _ = e.reset(seed=1, options={"y0": 0.0, "yaw0": math.radians(15)})
+    revisar(abs(math.degrees(o[6])) < 0.5 and not e._psi_de_pie, "sin camara de pie: se usa el rumbo de la IMU")
 
     print(f"\nRESULTADO: {'OK' if not FALLAS else 'FALLA'}")
     return 0 if not FALLAS else 1

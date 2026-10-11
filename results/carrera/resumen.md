@@ -42,6 +42,8 @@ Batería: μ 0.4–1.2, colocación del benchmark (semillas 1000…). **Pasa** =
 | sí | sí | 0.40 | `runs/carrera_v02/checkpoints/model_35000000_steps.zip` | 15/20 | 0 | 5 | no | 12.58 ± 0.55 | 14.3 |
 | sí | sí | 0.40 | `runs/carrera_v02/checkpoints/model_5000000_steps.zip` | 20/20 | 0 | 0 | **sí** | 12.23 ± 0.36 | 15.1 |
 | sí | sí | 0.40 | `runs/carrera_v02/final_model.zip` | 15/20 | 1 | 4 | no | 12.26 ± 0.23 | 11.6 |
+| sí | sí | 0.40 | `runs/carrera_v03/checkpoints/model_10000000_steps.zip` | 98/100 | 0 | 2 | no | 12.83 ± 0.34 | 8.2 |
+| sí | sí | 0.40 | `runs/carrera_v03/checkpoints/model_5000000_steps.zip` | 100/100 | 0 | 0 | **sí** | 12.82 ± 0.44 | 7.4 |
 | sí | sí | 0.30 | `runs/carrera_v01/checkpoints/model_5000000_steps.zip` | 20/20 | 0 | 0 | **sí** | 16.81 ± 0.30 | 15.5 |
 | no | no | 0.50 | `runs/carrera_v01/checkpoints/model_10000000_steps.zip` | 0/10 | 0 | 10 | no | — | 25.5 |
 | no | no | 0.50 | `runs/carrera_v01/checkpoints/model_15000000_steps.zip` | 0/10 | 6 | 4 | no | — | 14.3 |
@@ -73,3 +75,5 @@ Batería: μ 0.4–1.2, colocación del benchmark (semillas 1000…). **Pasa** =
 | no | sí | 0.40 | `runs/carrera_v02/checkpoints/model_35000000_steps.zip` | 15/20 | 0 | 5 | no | 12.78 ± 0.40 | 16.2 |
 | no | sí | 0.40 | `runs/carrera_v02/checkpoints/model_5000000_steps.zip` | 6/20 | 0 | 14 | no | 11.87 ± 0.36 | 20.8 |
 | no | sí | 0.40 | `runs/carrera_v02/final_model.zip` | 15/20 | 0 | 5 | no | 11.90 ± 0.32 | 16.8 |
+| no | sí | 0.40 | `runs/carrera_v03/checkpoints/model_10000000_steps.zip` | 87/100 | 0 | 13 | no | 13.10 ± 0.47 | 13.8 |
+| no | sí | 0.40 | `runs/carrera_v03/checkpoints/model_5000000_steps.zip` | 82/100 | 0 | 18 | no | 12.55 ± 0.38 | 14.4 |

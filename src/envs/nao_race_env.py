@@ -103,6 +103,8 @@ class NaoRaceEnv(gym.Env):
         camara_perfecta: bool = False,      # d y psi reales sin ruido ni retardo (pruebas)
         vision: bool = True,                # False: la camara simulada nunca mide (sin vision, o camara externa)
         sin_vision_prob: float = 0.0,       # probabilidad de un episodio ENTERO sin camara (carrera_v02)
+        rumbo_objetivo: str = "carril",     # "carril": rumbo de la IMU - psi medido de pie (paso 58c, E50);
+                                            # "arranque": rumbo de la IMU al arrancar (como se entrenaron v01 y v02)
         escena: str | None = None,          # MJCF de la escena (default assets/nao/scene.xml); la demo usa la pista
         render_mode: str | None = None,
         render_size: tuple[int, int] = (640, 480),
@@ -127,6 +129,9 @@ class NaoRaceEnv(gym.Env):
         self.vision = vision
         self.sin_vision_prob = sin_vision_prob
         self._vision_ep = vision
+        if rumbo_objetivo not in ("carril", "arranque"):
+            raise ValueError(f"rumbo_objetivo debe ser 'carril' o 'arranque', no {rumbo_objetivo!r}")
+        self.rumbo_objetivo = rumbo_objetivo
         self.render_mode = render_mode
         self.render_size = render_size
         self._renderer = None
@@ -203,6 +208,7 @@ class NaoRaceEnv(gym.Env):
         self._meta = False
         self.tiempo_meta = None
         self._hist = []                        # (t, d, psi) reales para el retardo de la camara
+        self._psi_de_pie = []                  # psi medidos por la camara antes de arrancar (paso 58c)
         self.camara = C.EstadoCamara()
         mujoco.mj_forward(m, d)
 
@@ -214,7 +220,12 @@ class NaoRaceEnv(gym.Env):
             mujoco.mj_step(m, d, nstep=self.frame_skip)
             self._medir()
             self._avanzar_tiempo()
-        self._rumbo_objetivo = self._rumbo_imu()   # el robot guarda el rumbo de la IMU al arrancar
+        # Rumbo objetivo de la IMU. Paso 58c (E50): la direccion del CARRIL medida por la camara de pie; antes era el
+        # rumbo con que arranco el robot, y si arrancaba torcido la IMU le pedia mantener el angulo equivocado.
+        if self.rumbo_objetivo == "carril":
+            self._rumbo_objetivo = C.rumbo_objetivo_inicial(self._rumbo_imu(), self._psi_de_pie)
+        else:
+            self._rumbo_objetivo = self._rumbo_imu()
         return self._obs(), self._info()
 
     def step(self, action):
@@ -320,6 +331,8 @@ class NaoRaceEnv(gym.Env):
         if self.camara_perfecta:
             _, dv, pv = self._hist[-1]
             self.camara.nueva_medicion(t_foto, dv, pv, True)
+            if t_foto < 0:
+                self._psi_de_pie.append(pv)
             return
         if self._apagon and self._apagon[0] <= t_foto <= self._apagon[1]:
             return
@@ -332,6 +345,8 @@ class NaoRaceEnv(gym.Env):
         if rng.random() < c["malas"]:
             dm += _u(rng, (-self.cam_cfg["mala_max_m"], self.cam_cfg["mala_max_m"]))
         self.camara.nueva_medicion(t_foto, dm, pm, True)
+        if t_foto < 0:
+            self._psi_de_pie.append(pm)        # de pie: sirve para fijar la direccion del carril (paso 58c)
 
     def _rumbo_imu(self):
         rumbo = C.rumbo_desde_cuaternion(self.data.sensor("torso_quat").data)

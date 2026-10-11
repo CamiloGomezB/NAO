@@ -435,6 +435,27 @@ noviembre de 2026.
   la robustez (E48); se eligió por batería.
 - **Verificación:** baterías de 100 episodios con perturbaciones y lazo cerrado con la cámara renderizada (36/36).
 
+### Commit de los pasos 44–60 (2026-10-11)
+- **Commit:** `d9733e5`, "Pasos 44-60: entorno NaoRace-v0 y políticas carrera_v01/v02 más rápidas que B-Human",
+  hecho por Camilo.
+- **Incluye:**
+  - pasos 44, 45, 48b, 49 (parte automática), 50 (bloqueado), 51–54, 55 (`[!]`), 56–58b (en curso), 57, 59, 59b y 60;
+  - el capítulo `docs/paper/entrenamiento_rl.md`;
+  - los errores E42–E50.
+
+### Paso 58c — Rumbo objetivo de la IMU alineado al carril (2026-10-11)
+- **Qué se hizo:** `contract.rumbo_objetivo_inicial`. Al arrancar, rumbo objetivo = rumbo de la IMU − `psi` medio
+  medido de pie. Va en el entorno (`rumbo_objetivo="carril"`) y en la demo. Batería nueva `scripts/eval_salida_mala.py`.
+- **Verificación:** `check_contract.py` y `check_race_env.py` en OK. `v02` sin reentrenar pasó de 16/70 a 69/70 salidas
+  malas; `v03` 70/70; con la cámara renderizada, 30/30.
+- **Errores:** E50 (causa), E51 (prueba).
+
+### Paso 59c — `carrera_v03`: salidas torcidas en el entrenamiento (2026-10-11): `[!]`
+- **Qué se hizo:** 20M pasos desde `v02`, con colocación de hasta ±15 cm / ±25°. Elegido el checkpoint de 5M.
+- **Resultado:**
+  - batería grande 100/100 en 12.8 s;
+  - salidas malas 70/70 sin perturbaciones y 135/140 con ellas (5 caídas en un solo caso extremo, E52).
+
 ## Trabajo de documentación (sin número de paso, 2026-10-10)
 
 Pedido por el usuario para el paper. Commits `441dcb0`, `a266095` y el de la revisión previa al paso 41.

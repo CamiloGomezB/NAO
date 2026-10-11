@@ -22,6 +22,7 @@ env:
   gait_period: 0.5
   stance_fraction: 0.6
   perturbaciones: true
+  rumbo_objetivo: arranque       # asi se entreno (rumbo de la IMU al arrancar). Desde el paso 58c el default es "carril"
   # --- el cambio de v02 ---
   sin_vision_prob: 0.15                 # 15 % de los episodios sin camara de principio a fin (v01: 0)
   camara:

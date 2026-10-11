@@ -12,6 +12,7 @@ Cada número tiene su archivo de origen entre corchetes o en la columna "Fuente"
 |---|---|---|---|---|
 | `carrera_v01` | 2026-10-11, 00:26–02:00 | 15.3M | cero | [`policies/carrera_v01/`](../../policies/carrera_v01/) (checkpoint de 15M) |
 | `carrera_v02` | 2026-10-11, 02:05–05:53 | 40M | `v01` a 15M | [`policies/carrera_v02/`](../../policies/carrera_v02/) (checkpoint de 15M) |
+| `carrera_v03` | 2026-10-11, 12:40–14:18 | 20M | `v02` a 15M, con el paso 58c | [`policies/carrera_v03/`](../../policies/carrera_v03/) (checkpoint de 5M) |
 
 Antes de esto, la política del sprint (`checkpoints/best_model.zip`, entorno `NaoWalk-v0`, modelo aproximado V5)
 caminaba a 0.20 m/s sin cámara. Se describe en la bitácora (etapa 1) y no se repite aquí.
@@ -436,6 +437,74 @@ Con el rumbo objetivo de la IMU alineado al carril (rumbo al arrancar − `psi` 
 12/12 salidas torcidas hasta ±25° [`results/carrera/carrera_v02/rumbo_objetivo_carril.json`]. Detalle en E50 y en el
 paso 58c.
 
+### 12c. Paso 58c: rumbo objetivo de la IMU = dirección del carril
+
+Cambio en el entorno y en el contrato (no es una generación):
+- de pie, la cámara mide `psi`;
+- al arrancar, rumbo objetivo = rumbo de la IMU − `psi` medio (`contract.rumbo_objetivo_inicial`, también para el
+  robot).
+
+Batería de 70 salidas malas con `v02` sin reentrenar (`scripts/eval_salida_mala.py`, μ 0.8, `vx_cmd` 0.40, 2 semillas
+por celda) [`results/carrera/carrera_v02/salida_mala_model_{arranque,carril}.md`]:
+
+| Rumbo objetivo de la IMU | Con visión (70 salidas) | Sin visión (70) |
+|---|---|---|
+| `arranque` (como se entrenó `v02`) | 16/70 metas, 54 salidas | 10/70 (solo las salidas rectas) |
+| **`carril` (paso 58c)** | **69/70 metas**, 1 caída (y −15 cm, rumbo −25°), 0 salidas; 12.7–13.5 s | 10/70 (solo las salidas rectas) |
+
+Sin visión no se puede corregir una salida torcida: sin la cámara, el robot no sabe que arrancó torcido.
+
+## 12d. `carrera_v03`: salidas torcidas en el entrenamiento (paso 59c)
+
+- **Config:** `configs/carrera_v03.yaml`.
+- **Igual que `v02` salvo un cambio:** colocación del entrenamiento con σ 6 cm / 10°, máximo ±15 cm / ±25° (antes, σ
+  2 cm / 2°, máximo ±10 cm / ±8°).
+- **Base y entorno:** usa el rumbo objetivo del paso 58c (`carril`). La referencia de comparación es "`v02` + 58c",
+  evaluada con el mismo entorno.
+- **Corrida:** semilla 3, 20M pasos desde `policies/carrera_v02` en 1.65 h (3,375 pasos/s).
+- **Hipótesis:** viendo salidas malas, las corrige también con perturbaciones y fricción baja, sin perder velocidad.
+
+**Etapas** [`results/carrera/carrera_v03/curvas_entrenamiento.csv` y `.png`]:
+
+| Tramo | Episodio medio | Retorno | Con falta | Salidas | Metas | seguim. vx | rumbo | barrera | σ acción |
+|---|---|---|---|---|---|---|---|---|---|
+| 0–2M | 26.0 s | 1,692 | 20 % | 24 % | 82 % | 0.81 | 0.45 | −0.08 | 0.100 |
+| 2–5M | 25.7 s | 1,686 | 21 % | 23 % | 83 % | 0.81 | 0.45 | −0.07 | 0.097 |
+| 5–10M | 25.6 s | 1,661 | 23 % | 24 % | 81 % | 0.82 | 0.45 | −0.10 | 0.095 |
+| 10–15M | 26.0 s | 1,682 | 23 % | 26 % | 83 % | 0.82 | 0.44 | −0.11 | 0.096 |
+| 15–20M | 25.7 s | 1,635 | 22 % | 24 % | 82 % | 0.81 | 0.44 | −0.11 | 0.100 |
+
+Las medias casi no cambian: el entrenamiento parte de una política que ya camina. Lo que mejora se ve en las
+baterías.
+
+**Evaluación de los checkpoints** [`results/carrera/carrera_v03/`; batería grande en `seleccion_100/`]:
+
+| Checkpoint | Salidas malas, sin perturb. (70) | Salidas malas, con perturb. (140) | Batería grande, con visión (100) | Batería grande, sin visión (100) |
+|---|---|---|---|---|
+| `v02` + 58c (referencia) | 69/70 (1 caída) | 128/140 (12 caídas) | 100/100, 13.0 s | 89/100 |
+| **`v03` 5M (elegido)** | **70/70** | 135/140 (5 caídas) | **100/100, 12.8 ± 0.4 s, desvío 7.4 cm** | 82/100, 0 caídas |
+| `v03` 10M | 70/70 | 137/140 (3 caídas) | 98/100 (2 salidas) | 87/100 |
+| `v03` 15M | 70/70 | 122/140 (18 salidas) | — | — |
+| `v03` 20M (final) | 69/70 (1 salida) | 133/140 (3 caídas, 4 salidas) | — | — |
+
+**Elegido: 5M.** Es el único que pasa el filtro duro de la batería grande, y es más rápido y más recto que `v02`. Con
+la cámara renderizada real, en salidas malas (y 0/±15 cm × rumbo 0/±15/±25° × μ 0.4/1.2): **30/30 metas** en
+12.3–12.9 s [`results/carrera/carrera_v03/camara_renderizada_salida_mala.json`].
+
+**Hipótesis cumplida en parte:**
+- sin perturbaciones, todas las salidas malas;
+- con perturbaciones, las caídas bajan de 12 a 5, todas en el mismo caso extremo (E52).
+
+Entrenar más de 5M volvió a oscilar (15M y 20M peores), como en E48.
+
+**Qué aprendió (uso de las acciones):** igual que `v02`.
+- Brazos fijos (99–100 % saturados);
+- RHipRoll hacia adentro, en el límite (99.4 %);
+- marcha con 28.5 % de doble apoyo, 2.03 pasos/s por pie y pies que suben 46–49 mm
+  [`results/carrera/analisis_politicas.json`].
+
+Lo de E49 sigue igual, como era de esperar: no se cambió nada de eso.
+
 ## 13. Fallos y callejones de este entrenamiento
 
 | ID | Qué pasó | Qué se hizo |
@@ -447,6 +516,8 @@ paso 58c.
 | E48 | Entrenar más (25–40M) empeoró la robustez de `v02`; `v01` tuvo un retroceso a los 9–11M | Elegir por batería externa; considerar una tasa de aprendizaje decreciente |
 | E49 | La política usa acciones saturadas (brazos fijos, caderas al límite) | Documentado; candidato a una generación propia |
 | E50 | No se recupera si arranca torcida ≥ 8°: la IMU le pide mantener el ángulo con que arrancó | Paso 58c: rumbo objetivo = dirección del carril medida por la cámara al arrancar |
+| E51 | Prueba de `check_contract.py` comparaba ángulos con `==` | Tolerancia |
+| E52 | `v03`: 5 caídas en un solo caso extremo de salida mala con perturbaciones (−25°, μ 0.4) | Aceptado; opción 59d |
 
 Detalle y salidas de consola en [`registro_errores.md`](registro_errores.md).
 
@@ -484,6 +555,14 @@ uv run python -m src.train --config configs/carrera_v02.yaml --continuar runs/ca
 ```
 
 ```bash
+uv run python -m src.train --config configs/carrera_v03.yaml --continuar policies/carrera_v02 --run-name carrera_v03
+```
+
+```bash
+uv run python scripts/eval_salida_mala.py --modelo policies/carrera_v03/model.zip --perturbaciones --mu 0.4 1.2
+```
+
+```bash
 uv run python scripts/eval_carrera.py --modelo policies/carrera_v02/model.zip --vx 0.40 --semillas 20 --perturbaciones
 ```
 
@@ -506,6 +585,8 @@ uv run python scripts/resumen_carrera.py
 | `policies/carrera_v01/model_vecnormalize.pkl` | `a60675a1251f9530e39e70b9e6ad30ddbfaea7fe0dbf846a9ab7a0468653cf1f` |
 | `policies/carrera_v02/model.zip` | `1491947356c9937f63aee6a7d22d9a85c977ff74af5e7b5f69812df4f16dc728` |
 | `policies/carrera_v02/model_vecnormalize.pkl` | `6e667e792b84fd9d79da673994c4d4ddb225d1d72661af922ab302f58ef983bf` |
+| `policies/carrera_v03/model.zip` | `73ba8474fc3bb17eaf55c9602db71daf7ed59f9efe78f5224136c54c371af818` |
+| `policies/carrera_v03/model_vecnormalize.pkl` | `67fc03eb4a77a69b34290cb205fbaf5e215c8bcddfd8c57fc8906e22a5f1304c` |
 
 ## 16. Índice de archivos
 

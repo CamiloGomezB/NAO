@@ -15,6 +15,9 @@ articulares programadas a mano.
 >   - **Sin visión no sirve** (E45).
 > - **`carrera_v02`** ([`policies/carrera_v02/`](policies/carrera_v02/)), con más pérdida de visión en el entrenamiento:
 >   igual de rápida con visión (13.0 s a 0.40 m/s, 100/100) y **sin visión llega en 89/100 sin caerse**.
+> - **`carrera_v03`** ([`policies/carrera_v03/`](policies/carrera_v03/), **recomendada**): entrenada con salidas torcidas y con el
+>   rumbo de la IMU alineado al carril (paso 58c). **Llega aunque arranque girado hasta ±25° y corrido ±15 cm** (70/70;
+>   30/30 con la cámara renderizada), y en la batería grande hace 100/100 en **12.8 s** con 0 faltas.
 > - Hechos: 40–48b, 51–54, 57 y 60. Revisión del usuario pendiente en 49, 56 y 58b. 50 bloqueado (faltan VS Build
 >   Tools). 55 con hallazgo (E47 → 55b).
 >
@@ -56,11 +59,12 @@ Cada archivo tiene su enlace y una línea que dice qué contiene. Se mantiene al
 | Archivo o carpeta | Qué tiene |
 |---|---|
 | [`results/carrera/resumen.md`](results/carrera/resumen.md) | **Tabla de todas las evaluaciones** de las políticas de carrera (metas, caídas, salidas, tiempo, desvío) con la referencia de B-Human |
-| [`results/carrera/carrera_v01/`](results/carrera/carrera_v01/) y [`carrera_v02/`](results/carrera/carrera_v02/) | Por generación: cada evaluación de cada checkpoint (`eval_*.md` legible y `.json` con cada corrida), las **curvas completas del entrenamiento** (`curvas_entrenamiento.csv` y `.png`), pruebas con la cámara renderizada, la prueba de rectitud de 100 episodios (`rectitud_58/`) y la batería de selección (`seleccion_100/`) |
+| [`results/carrera/carrera_v01/`](results/carrera/carrera_v01/), [`carrera_v02/`](results/carrera/carrera_v02/) y [`carrera_v03/`](results/carrera/carrera_v03/) | Por generación: cada evaluación de cada checkpoint (`eval_*.md` legible y `.json` con cada corrida), las **curvas completas del entrenamiento** (`curvas_entrenamiento.csv` y `.png`), pruebas con la cámara renderizada, la prueba de rectitud de 100 episodios (`rectitud_58/`) y la batería de selección (`seleccion_100/`) |
 | [`results/carrera/analisis_politicas.json`](results/carrera/analisis_politicas.json) | Qué aprendió cada política: normalización de las 54 observaciones, uso de cada acción y métricas de la marcha |
 | [`results/carrera/orden_recompensa.json`](results/carrera/orden_recompensa.json) | Prueba de si salirse siempre es peor que ir lento (E47) |
 | [`results/carrera/prueba_brazos_home.json`](results/carrera/prueba_brazos_home.json) | Prueba de la política con los brazos forzados a la pose de pie (E49) |
 | [`results/carrera/carrera_v02/salida_mala.json`](results/carrera/carrera_v02/salida_mala.json) y [`rumbo_objetivo_carril.json`](results/carrera/carrera_v02/rumbo_objetivo_carril.json) | Salidas malas (corrida hasta ±15 cm, torcida hasta ±25°) y la prueba de alinear la IMU con el carril (E50) |
+| [`results/carrera/carrera_v02/salida_mala_model_arranque.md`](results/carrera/carrera_v02/salida_mala_model_arranque.md) y [`salida_mala_model_carril.md`](results/carrera/carrera_v02/salida_mala_model_carril.md) | Batería de 70 salidas malas (`scripts/eval_salida_mala.py`) con `v02`, antes y después del paso 58c |
 | [`results/benchmark/benchmark.md`](results/benchmark/benchmark.md) | **Benchmark de los 3 carriles** (RL del sprint, B-Human, NAOqi): 150 corridas, 5 fricciones, con y sin visión; datos en `benchmark.json` y `corridas.csv` |
 | [`results/diagnostico_45.md`](results/diagnostico_45.md) | Diagnóstico de las caídas al pausar la demo y del choque entre piernas en el V6 |
 | [`results/camara/`](results/camara/) | Validación de la visión: modelo de error, matriz de colores, lazo cerrado, cámara simulada contra renderizada |
@@ -71,9 +75,10 @@ Cada archivo tiene su enlace y una línea que dice qué contiene. Se mantiene al
 
 | Archivo o carpeta | Qué tiene |
 |---|---|
-| [`policies/carrera_v02/`](policies/carrera_v02/README.md) | **Política de carrera recomendada**: modelo, normalización, config, metadatos y README con su origen y resultados |
+| [`policies/carrera_v03/`](policies/carrera_v03/README.md) | **Política de carrera recomendada**: corrige salidas torcidas hasta ±25°. Modelo, normalización, config, metadatos y README con su origen y resultados |
+| [`policies/carrera_v02/`](policies/carrera_v02/README.md) | Política anterior: la base de `v03`, la primera que camina sin visión sin caerse |
 | [`policies/carrera_v01/`](policies/carrera_v01/README.md) | Primera política de carrera (la más recta; se cae sin visión) |
-| [`configs/carrera_v01.yaml`](configs/carrera_v01.yaml), [`configs/carrera_v02.yaml`](configs/carrera_v02.yaml) | Config completa de cada generación, con su hipótesis escrita |
+| [`configs/carrera_v01.yaml`](configs/carrera_v01.yaml), [`carrera_v02.yaml`](configs/carrera_v02.yaml), [`carrera_v03.yaml`](configs/carrera_v03.yaml) | Config completa de cada generación, con su hipótesis escrita |
 | [`configs/carrera/pesos.yaml`](configs/carrera/pesos.yaml) | Pesos de la recompensa y rangos para el barrido de agentes (un solo archivo) |
 | [`config/pista.yaml`](config/pista.yaml) | Colores de la pista; se cambian con `scripts/cambiar_colores.py` |
 
@@ -128,6 +133,7 @@ Se actualiza con cada resultado:
 | RL | `v2_brazos` del sprint inicial, con visión (truco del giroscopio) | 24.2–24.3 s (25/25) | ~0.20 m/s | 0 | — | — | [`results/benchmark/`](results/benchmark/benchmark.md) (paso 51) |
 | **RL** | **`carrera_v01`** (15M pasos, NaoRace-v0, cámara simulada, fricción aleatoria), con visión, `vx_cmd` 0.5 | **10.5–10.6 s** (10/10); con perturbaciones 11.2 s (20/20) | ~0.47 m/s | 0 | — | — | [`results/carrera/carrera_v01/`](results/carrera/carrera_v01/) (paso 59). **Sin visión se cae o se sale** (E45) |
 | **RL** | **`carrera_v02`** (15M pasos sobre `v01`, más pérdida de visión), con visión y perturbaciones, `vx_cmd` 0.40 | **13.0 s** (100/100) | ~0.38 m/s | 0 | — | — | [`results/carrera/carrera_v02/`](results/carrera/carrera_v02/) (paso 59b). **Sin visión: 89/100 metas, 0 caídas.** Cámara renderizada: 36/36 |
+| **RL** | **`carrera_v03`** (5M sobre `v02`, salidas torcidas + rumbo alineado al carril), con visión y perturbaciones, `vx_cmd` 0.40 | **12.8 s** (100/100) | ~0.39 m/s | 0 | — | — | [`results/carrera/carrera_v03/`](results/carrera/carrera_v03/) (pasos 58c y 59c). Salidas malas hasta ±25°: 70/70 (cámara renderizada 30/30). Sin visión 82/100, 0 caídas |
 
 **Cambiar los colores de la pista** (los avisan poco antes del evento): `uv run python scripts/cambiar_colores.py --piso <color> --linea <color>`.
 

@@ -192,6 +192,11 @@ class CorredorRLCarrera(object):
         self.nombre = "rl"
         self.resultado, self.t_fin = None, None
         self._camara()
+        # Paso 58c: rumbo objetivo de la IMU = direccion del carril segun la primera foto de la camara renderizada,
+        # igual que en el entrenamiento (alli con las fotos de los 0.5 s de pie) y en el robot.
+        if self.env.rumbo_objetivo == "carril" and self.vis is not None and self.vis.valida:
+            from src.race.contract import rumbo_objetivo_inicial
+            self.env._rumbo_objetivo = rumbo_objetivo_inicial(self.env._rumbo_imu(), [self.vis.psi_crudo])
         self.obs = self.env._obs()
 
     def _camara(self):
@@ -356,7 +361,7 @@ def agregar_argumentos(ap):
     ap.add_argument("--sin-camaras", action="store_true", help="no abrir la ventana 'Lo que ve cada NAO'")
     ap.add_argument("--rl", default=None,
                     help="modelo .zip de la politica de carrera (NaoRace-v0) para el carril central; por defecto "
-                         "policies/carrera_v02 o carrera_v01 si existen, si no la politica del sprint (checkpoints/)")
+                         "la politica de carrera mas nueva en policies/ (carrera_v03, v02 o v01), si no la politica del sprint (checkpoints/)")
     ap.add_argument("--rl-vx", type=float, default=0.40,
                     help="vx_cmd de la politica de carrera [m/s] (perilla de seguridad; 0.40 = sin faltas en la bateria)")
     ap.add_argument("--captura", default=None,
@@ -381,7 +386,7 @@ def main(argv=None):
 
     print("Preparando los 3 robots (vision: %s, mu = %.2f, colocacion d = %+.1f cm, psi = %+.1f grados)..."
           % (vision, a.mu, 100 * d0, math.degrees(psi0)))
-    rl = a.rl or next((ROOT / "policies" / g / "model.zip" for g in ("carrera_v02", "carrera_v01")
+    rl = a.rl or next((ROOT / "policies" / g / "model.zip" for g in ("carrera_v03", "carrera_v02", "carrera_v01")
                        if (ROOT / "policies" / g / "model.zip").exists()), ROOT / "policies" / "carrera_v01" / "model.zip")
     if Path(rl).exists():                                      # politica de carrera con su propia camara (paso 58b)
         print("RL: politica de carrera %s" % rl)

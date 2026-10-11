@@ -1452,3 +1452,88 @@ sin salida y cómo se resolvieron. Tiene tres usos:
   - En este repo el silbato no está implementado: el plan actual es la activación manual (táctil), que cumple el
     reglamento.
   - Queda a decisión del equipo si se implementa un detector automático.
+
+### 2026-10-11 ~12:00–12:45 — Paso 58c: rumbo de la IMU alineado al carril; lanzamiento de `carrera_v03`
+- **Autor:** Claude Code, con Camilo.
+- **Pedido del usuario:**
+  - seguir con los RL, primero con salidas torcidas, para confirmar que la cámara corrige al robot sin importar cómo
+    arranque;
+  - **el silbato se pospone** hasta hablar con Luis Mario. Queda como paso 68b.
+- **Revisión previa (protocolo):**
+  - `git pull`: al día; último commit `d9733e5`, del usuario, con los pasos 44–60;
+  - 0 enlaces rotos en los `.md`;
+  - se anotó el commit en `historial_pasos.md`;
+  - el `PLAN.md` no tenía paso del silbato: se agregó el 68b.
+- **Qué se hizo (58c):**
+  - **`src/race/contract.py`:** `rumbo_objetivo_inicial(rumbo_imu, psi_mediciones)`, compatible con Python 2.7, para
+    el robot.
+  - **`NaoRace-v0`:**
+    - parámetro `rumbo_objetivo` (`carril`, nuevo default; `arranque` = como antes);
+    - guarda las `psi` medidas de pie y las usa al arrancar;
+    - `configs/carrera_v01.yaml` y `carrera_v02.yaml` quedan con `rumbo_objetivo: arranque`, para reproducirlas tal
+      como se entrenaron.
+    - Las políticas guardadas en `policies/` no tienen esa clave, así que **ahora se evalúan con `carril`**. Las
+      evaluaciones anteriores se hicieron con `arranque`.
+  - **`demo/caminatas/carrera_vivo.py`:** el corredor RL alinea la IMU con la primera foto de su cámara renderizada.
+  - **`scripts/eval_carrera.py`:** opciones `--rumbo-objetivo` y colocación fija (`correr(..., colocacion=...)`).
+  - **`scripts/eval_salida_mala.py` (nuevo):** batería de 70 salidas malas (y 0/±10/±15 cm × rumbo
+    0/±8/±15/±25°), con y sin visión.
+  - **Pruebas:**
+    - `check_contract.py` en OK, con 3 pruebas nuevas; la primera vez falló por redondeo en la prueba (**E51**);
+    - `check_race_env.py` en OK, con la sección 7 nueva: arrancando girado +15°, el error de rumbo de la IMU es
+      −14.6°, o sea que apunta al carril.
+- **Resultado con `v02` sin reentrenar** (`results/carrera/carrera_v02/salida_mala_model_*.md`):
+
+| Rumbo objetivo de la IMU | Con visión (70 salidas) | Sin visión (70) |
+|---|---|---|
+| `arranque` (como se entrenó `v02`) | 16/70 metas, 54 salidas | 10/70 (solo las salidas rectas) |
+| **`carril` (paso 58c)** | **69/70 metas**, 1 caída (y −15 cm, rumbo −25°), 0 salidas; 12.7–13.5 s | 10/70 (solo las salidas rectas) |
+
+- **`carrera_v03` lanzado a las 12:40** (`configs/carrera_v03.yaml`, desde `policies/carrera_v02`, 20M pasos, ~2 h,
+  semilla 3).
+  - **Un solo cambio respecto a "v02 + 58c":** colocación de entrenamiento con σ 6 cm / 10°, máximo ±15 cm / ±25°
+    (antes, σ 2 cm / 2°, máximo ±10 cm / ±8°).
+  - **Hipótesis:** viendo salidas malas, las corrige también con perturbaciones y fricción baja, sin caerse en los
+    casos extremos y sin perder velocidad en las salidas buenas.
+- **En curso:** batería de salidas malas con perturbaciones (μ 0.4 y 1.2) para `v02` + 58c, como referencia de `v03`.
+- **Siguiente:** evaluar `v03` cada 5M con la batería de salidas malas y la batería grande; cerrar 58c y 59c.
+
+### 2026-10-11 ~13:05–14:45 — `carrera_v03` terminado; se elige el de 5M; paso 58c cerrado
+- **Autor:** Claude Code, con Camilo.
+- **Referencia "`v02` + 58c" con perturbaciones** (`results/carrera/carrera_v02/salida_mala_model_carril_pert.md`):
+  - con visión: 128/140, 12 caídas (en +15° y +25°), 0 salidas;
+  - sin visión: 19/140.
+- **`carrera_v03`:** 20M pasos en 1.65 h (3,375 pasos/s), 12:40–14:18. Curvas en
+  `results/carrera/carrera_v03/curvas_entrenamiento.{csv,png}`: planas, porque parte de una política que ya camina.
+- **Checkpoints:**
+
+| Checkpoint | Salidas malas, sin perturb. (70) | Salidas malas, con perturb. (140) | Batería grande, con visión (100) | Batería grande, sin visión (100) |
+|---|---|---|---|---|
+| `v02` + 58c (referencia) | 69/70 (1 caída) | 128/140 (12 caídas) | 100/100, 13.0 s | 89/100 |
+| **`v03` 5M (elegido)** | **70/70** | 135/140 (5 caídas) | **100/100, 12.8 ± 0.4 s, desvío 7.4 cm** | 82/100, 0 caídas |
+| `v03` 10M | 70/70 | 137/140 (3 caídas) | 98/100 (2 salidas) | 87/100 |
+| `v03` 15M | 70/70 | 122/140 (18 salidas) | — | — |
+| `v03` 20M (final) | 69/70 (1 salida) | 133/140 (3 caídas, 4 salidas) | — | — |
+
+- **Elegido: 5M** → `policies/carrera_v03/`.
+  - Único que pasa el filtro de la batería grande.
+  - Más rápido (12.8 contra 13.0 s) y más recto (7.4 contra ~10 cm) que `v02`.
+- **Cámara renderizada real** (`results/carrera/carrera_v03/camara_renderizada_salida_mala.json`): 30/30 salidas
+  malas (y 0/±15 cm × rumbo 0/±15/±25° × μ 0.4/1.2), en 12.3–12.9 s, con desvío máximo de 23.3 cm. **Confirma que la
+  cámara corrige al robot sin importar cómo arranque.**
+- **Pasos:**
+  - **58c `[x]`:** 70/70 salidas malas con visión.
+  - **59c `[!]`:** con perturbaciones quedan 5 caídas, todas el mismo caso (−25°, μ 0.4, semilla 1001); E52. Se acepta
+    el de 5M. El paso 59d queda como opción.
+- **Qué aprendió `v03`:** igual que `v02` (brazos fijos y RHipRoll en el límite; E49 sigue). Marcha con 28.5 % de
+  doble apoyo y 2.03 pasos/s por pie.
+- **Documentación:**
+  - capítulo `docs/paper/entrenamiento_rl.md` (secciones 12c y 12d, huellas y comandos);
+  - `PLAN.md` (58c, 59c y paso actual);
+  - README (estado, tabla de carriles y mapa);
+  - registro de errores (E52);
+  - historial.
+- **Siguiente:**
+  - paso 61, ronda de 100 agentes (~11–12 h), cuando el usuario decida; la base sería `policies/carrera_v03`;
+  - pendientes de revisión: 49, 56, 58 y 58b;
+  - silbato pospuesto (68b).

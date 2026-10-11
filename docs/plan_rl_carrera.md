@@ -374,7 +374,7 @@ Código: [`src/envs/nao_race_env.py`](../src/envs/nao_race_env.py). Pruebas: `sc
 | Salida de carril | Una **esquina de la suela** pasa el borde interior de la línea (\|y\| > 0.35 m). Es más estricto que el benchmark, que usa el centro del pie + 4.5 cm |
 | Meta | La punta de un pie llega a x ≥ 5 m: +20 una vez. El episodio sigue. `scripts/eval_carrera.py` mide el tiempo con el criterio del benchmark (centro de la suela) para comparar con B-Human |
 | Inicio | Colocación normal de σ 2 cm / 2°, recortada a ±10 cm / ±8°. **0.5 s de pie dentro de `reset`**: la cámara mide y la política empieza con el reloj de marcha en 0 |
-| Rumbo objetivo de la IMU | El que mide la IMU al arrancar, con su deriva. La cámara corrige el error de colocación |
+| Rumbo objetivo de la IMU | **Desde el paso 58c (E50):** la dirección del carril = rumbo de la IMU − `psi` medio de las fotos tomadas en los 0.5 s de pie (`contract.rumbo_objetivo_inicial`); sin fotos válidas, el rumbo de la IMU. Antes (v01, v02) era el rumbo con que arrancó el robot: si arrancaba torcido, la IMU le pedía mantener el ángulo equivocado |
 | `vx_cmd` | Uniforme en [0.15, 0.5] m/s por episodio; en el 30 % cambia una vez entre 3 y 20 s |
 | Carga de los pies | Fuerza normal pie-suelo / g / 5.36 kg, como la suma de los FSR, recortada a [0, 2] |
 | Cámara simulada | Por episodio: σ_d U(1, 5) cm, σ_psi U(1, 4)°, retardo U(50, 250) ms, pérdidas U(0, 30) %, malas U(0, 8) % con hasta ±15 cm. Apagón de 0.5–2 s en el 30 % de los episodios |
@@ -384,8 +384,8 @@ Código: [`src/envs/nao_race_env.py`](../src/envs/nao_race_env.py). Pruebas: `sc
 | IMU y sensores | Deriva del rumbo de 0.003 rad/√s (paseo aleatorio) + ruido de 0.005 rad; giroscopio ±0.02 rad/s y ángulos ±0.002 rad (σ) |
 | Rendimiento | 0.61 ms por paso (la física sola, 0.34 ms); ~2,400 pasos/s de PPO con 16 entornos |
 
-En el robot real, el rumbo objetivo de la IMU también se toma al arrancar, al tocar la cabeza. La cámara hace el
-resto.
+En el robot real se hace igual: de pie, antes de tocar la cabeza, la cámara mide `psi`. Al arrancar, el rumbo objetivo
+es el rumbo de la IMU menos ese `psi`. Así la IMU y la cámara apuntan al mismo lugar: el carril.
 
 ---
 
