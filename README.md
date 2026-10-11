@@ -6,8 +6,8 @@ articulares programadas a mano.
 
 ## Proyecto actual: Carrera Individual — Copa NAO CCM MX 2026
 
-> **Estado:** Fase I, **paso 40 de 76** (contrato v1 en código). Paso 39 (documentación y replanificación) terminado.
-> Actualizado el 2026-10-08.
+> **Estado:** Fase I, **paso 40 de 80** (integrar la visión de carril y las 3 caminatas de Daniel).
+> Actualizado el 2026-10-10.
 >
 > - Plan: [`PLAN.md`](PLAN.md)
 > - Diseño del RL: [`docs/plan_rl_carrera.md`](docs/plan_rl_carrera.md)
@@ -15,53 +15,50 @@ articulares programadas a mano.
 > - Historial, errores y soluciones: [`docs/bitacora.md`](docs/bitacora.md)
 
 **Objetivo.** Entrenar por RL una caminata para que un **NAO V6 real** recorra el carril de **5 m × 70 cm**
-de la Carrera Individual lo más **rápido** y lo más **recto** posible, **sin caer**. Reglamento V1.0,
-sección 3.2; evento el **3 de noviembre de 2026**.
+de la Carrera Individual **más rápido que los dos baselines, NAOqi (1) y B-Human (2)**, sin salirse del carril y
+sin caer. Reglamento V1.0, sección 3.2; evento el **3 de noviembre de 2026**.
 
-Este repo se dedica **solo al RL de la caminata**. La política se diseña para integrarse en
-[PenaltyStack](https://github.com/Limao0521/PenaltyStack), el repo final del equipo, que aporta:
-- la app;
-- el arranque y paro por sensores;
-- el despliegue en el NAO;
-- la cámara, cuando su método esté definido.
+Este repo se dedica al RL de la caminata. La visión de carril y el simulador de la pista vienen de
+[danielpaya/nao_linea](https://github.com/danielpaya/nao_linea) (Daniel) y se integran aquí. La versión final se
+lleva a [PenaltyStack](https://github.com/Limao0521/PenaltyStack), el repo final del equipo.
 
 **Cómo funciona** (detalle en [`docs/plan_rl_carrera.md`](docs/plan_rl_carrera.md)):
 
 ```mermaid
 flowchart LR
-    SENS["IMU, ángulos y velocidades<br/>articulares, 8 FSR"] --> POL["Política de RL<br/>(PPO, cada 24 ms)"]
-    RUMBO["Error de rumbo (IMU)"] --> POL
+    CAM["Cámara inferior"] --> VIS["Visión de carril"]
+    PISTA["config/pista.yaml<br/>(colores)"] -.-> VIS
+    VIS -- "d, psi, válido" --> POL["Política de RL<br/>(PPO, cada 24 ms)"]
+    SENS["IMU, ángulos y velocidades<br/>articulares, 8 FSR"] --> POL
     VX["Velocidad vx_cmd"] --> POL
-    CAM["Cámara (método pendiente,<br/>entrada reservada)"] -.-> POL
     POL -- "13 ángulos objetivo" --> NAO["Servos del NAO V6"]
 ```
 
 1. **Política de RL.**
-   - Observa 51 valores, todos medibles en el NAO real.
-   - Controla 13 articulaciones: piernas, HipYawPitch para corregir el rumbo y hombros.
-   - Recibe una velocidad objetivo y el error de rumbo.
-   - Se entrena en MuJoCo con el modelo V6 de B-Human, el mismo que usa PenaltyStack.
-2. **Ir recto sin cámara.** En simulación se provoca la pérdida de rectitud:
-   - asimetrías entre piernas;
-   - empujones de giro;
-   - error inicial;
-   - estimación de rumbo con ruido gaussiano y deriva.
+   - Observa 54 valores medibles en el NAO, incluidos los de la cámara: desplazamiento lateral `d`, ángulo
+     `psi` y válido.
+   - Controla 13 articulaciones.
+2. **Faltas del reglamento.** Salirse del carril, caerse y chocar con otro robot terminan el episodio con
+   castigos grandes, y **descartan** al agente en la selección. La comunicación externa queda imposible por
+   diseño.
+3. **Cámara simulada con ruido gaussiano.** En el entrenamiento no se renderizan imágenes: la salida de la
+   visión se simula con el error medido (σ = 1.6 cm y 1.2°), hasta 3 veces peor.
+4. **Fricción aleatoria** entre 0.4 y 1.2 al entrenar. Batería fija de pruebas: 0.4, 0.6, 0.8, 1.0 y 1.2.
+5. **Colores de la pista en un solo archivo.** La política no ve colores, así que cambiarlos antes del
+   evento no obliga a reentrenar.
+6. **100 agentes.** Desde una base común se entrenan 100 variantes con distintos pesos y fricciones, y se
+   eliminan por rondas con la misma batería.
 
-   Así la política aprende a corregirse sola con la IMU.
-3. **Cámara: pendiente.** Cuando se defina su método, su salida se simulará con ruido gaussiano y entrará
-   a la política como entrada adicional.
-4. **Mejora por generaciones.** Cada generación (`carrera_vNN`) prueba una hipótesis y cambia una sola
-   cosa. Se compara con el baseline y queda registrada abajo y en la bitácora, aunque salga peor.
-5. **Baseline y plan B.** La caminata de PenaltyStack, el WalkingEngine de B-Human, con un tope teórico
-   de ~18.7 s en 5 m a 300 mm/s. Se mide con el mismo protocolo, en simulación y en el robot real.
+**Tres carriles de comparación.** Simulación: carril de 5 m, batería común. Robot real: pista réplica.
+Se actualiza con cada resultado:
 
-**Generaciones de políticas para la carrera.** Simulación: carril de 5 m, semillas fijas. Robot real:
-pista de 5 m marcada con cinta. Se actualiza con cada generación:
-
-| Generación | Hipótesis / cambio | Tiempo 5 m (sim) | Deriva lateral (sim) | Caídas (sim) | Tiempo 5 m (real) | Caídas / salidas (real) | Estado |
+| Carril | Caminata | Tiempo 5 m (sim) | Velocidad (sim) | Faltas (sim) | Tiempo 5 m (real) | Faltas (real) | Fuente |
 |---|---|---|---|---|---|---|---|
-| **Baseline PenaltyStack** | WalkingEngine de B-Human (pasos 47 y 67) | pendiente (~18.7 s teórico) | pendiente | pendiente | pendiente | pendiente | Pendiente |
-| `v2_brazos` (sprint inicial) | Referencia histórica; entrenada en el modelo aproximado, 0.2 m/s fijos | ~25 s (estimado a 0.200 m/s) | +5 cm en 4 m (modelo aproximado) | 0 % (también 0/3 en el V6) | — | — | Referencia |
+| **Baseline 1: NAOqi** | Réplica tipo NAOqi (ZMP), con visión | 45–50 s | ~0.10 m/s | 0 | pendiente | pendiente | nao_linea, sin regenerar (paso 51) |
+| **Baseline 2: B-Human** | Réplica tipo B-Human (parámetros de PenaltyStack), con visión | 16.2–18.3 s | ~0.30 m/s | 0 | pendiente | pendiente | nao_linea, sin regenerar (paso 51) |
+| **Baseline 2: B-Human** | WalkingEngine original (PenaltyStack) | pendiente (~18.7 s teórico) | — | — | — | — | Pasos 50 y 73 |
+| RL | `v2_brazos` del sprint inicial, con visión (truco del giroscopio) | 24.2–24.3 s | ~0.20 m/s | 0 | — | — | nao_linea, sin regenerar (paso 51) |
+| RL | `carrera_v01` y siguientes | pendiente | — | — | — | — | Fase M |
 
 **Para el equipo:** antes de trabajar, lean [`CLAUDE.md`](CLAUDE.md) (convenciones y protocolo de
 documentación), el paso actual en [`PLAN.md`](PLAN.md) y las últimas entradas de la
@@ -487,7 +484,7 @@ y `scripts/export_model.py` (copia un modelo de `runs/` a `checkpoints/`).
 
 > **Desactualizado (2026-10-08):** esta sección describe el modelo V5 del sprint inicial. Desde el commit
 > `d9207ec`, `assets/nao/nao.xml` se genera desde la descripción del NAO V6 de B-Human
-> (`scripts/build_nao_v6.py`). Se actualizará al validar ese modelo (paso 42 de [`PLAN.md`](PLAN.md)).
+> (`scripts/build_nao_v6.py`). Se actualizará al validar ese modelo (paso 44 de [`PLAN.md`](PLAN.md)).
 
 - **Modelo MuJoCo del NAO:** derivado de
   [nico-bohlinger/one_policy_to_run_them_all](https://github.com/nico-bohlinger/one_policy_to_run_them_all)

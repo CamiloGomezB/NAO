@@ -271,3 +271,124 @@ sin salida y cómo se resolvieron. Tiene tres usos:
 - **Decisión:** las caídas al reanudar muestran que la política **no sabe arrancar desde quieto**, y la
   carrera empieza justo así. El episodio de carrera arranca siempre desde quieto (paso 51).
 - **Siguiente:** confirmar el paso 39 y pasar al paso 40 (contrato v1 en código).
+
+### 2026-10-10 — Replanificación: cámara, tres carriles, fricción, faltas y 100 agentes
+- **Autor:** Camilo, con Claude Code.
+- **Contexto (indicaciones del equipo):**
+  1. Revisar [danielpaya/nao_linea](https://github.com/danielpaya/nao_linea), basado en este repo, que
+     trae la implementación de la cámara.
+  2. **Tres carriles de comparación:** el RL del equipo, B-Human y NAOqi. Lo esperado:
+     - NAOqi, la más lenta;
+     - B-Human, más rápida;
+     - el RL tiene que ser **el más rápido**.
+  3. Replantear el RL con la cámara, el camino y las dos comparaciones.
+  4. Pruebas con **distintos coeficientes de fricción**.
+  5. Pesos importantes para las faltas del reglamento (3.2.6):
+     - salir del carril (carrera anulada);
+     - choque con otro robot (descalificación del equipo);
+     - comunicación externa o control remoto (descalificación).
+  6. **Los colores de líneas y piso se avisan poco antes del evento**: tienen que ser fáciles de cambiar.
+  7. **~100 agentes** en pruebas distintas, variando pesos y fricción, para sacar el mejor RL.
+- **Revisión de nao_linea** (commit `f8e0cc6`, 2026-10-10, autor Daniel):
+  - **Visión de carril completa:**
+    - busca la cinta por contraste local y filtra por su ancho;
+    - proyecta al piso y ajusta las rectas con RANSAC;
+    - devuelve `d`, `psi`, válido y la distancia a la meta.
+  - **Precisión en simulación:** σ(d) = 1.6 cm y σ(psi) = 1.2°, con 1.5° de error de pose. Con un robot
+    vecino tapando, σ(d) = 4.8 cm. Tiene versión en Python puro: 13 ms por imagen en PC.
+  - **Lazo cerrado con la cámara renderizada:** solo RL llega en 3 de 18 corridas; RL + visión, en 18 de 18.
+  - **Pista con colores configurables** (`demo/pista.yaml`). La visión decide sola si la línea es más
+    oscura o más clara que el piso.
+  - **Sí tiene los tres carriles** (`demo/caminatas/`):
+    - **tipo B-Human:** réplica del esquema Walk2014, pasos de 250 ms, 0.30 m/s;
+    - **RL:** la política del sprint inicial, 0.20 m/s;
+    - **tipo NAOqi:** réplica de ZMP + control preview, 0.10–0.12 m/s.
+
+    Están en `carrera_vivo.py` (los 3 en el visor) y `benchmark.py`. Resultados con visión, en 5 m:
+
+    | Caminata | Tiempo en 5 m |
+    |---|---|
+    | Tipo B-Human | 16.2–18.3 s |
+    | RL | 24.2–24.3 s |
+    | Tipo NAOqi | 45–50 s |
+
+    **Hoy el RL pierde contra B-Human.**
+  - **Kit para el robot real** (`robot/`): diagnóstico, `race_nao.py --dry-run` y `--medir`, y guía
+    `LUNES.md`.
+  - La propuesta para **este** repo viene en `fase-p-camara-carril.bundle`: rama `fase-p-camara-carril`,
+    3 commits sobre nuestro `4ca136d`, con `camara/`, `docs/fase_p_camara.md` y `results/camara/`.
+    Todavía no está en GitHub.
+- **Limitaciones encontradas en nao_linea:**
+  - Las caminatas tipo B-Human y tipo NAOqi son **reimplementaciones**, no el código original, y su
+    velocidad la impone el comando.
+  - El `resultados/benchmark/benchmark.md` guardado es la **versión corta** (12 corridas). Las 150 que cita
+    el README no están guardadas.
+  - La corrección del rumbo usa un **truco** (sesgo en el giroscopio) que se invierte con señales grandes.
+  - El RL usado es el del modelo aproximado, sin fricción aleatoria.
+  - Cada robot va en su propia física, así que **los choques entre robots no se pueden medir** ahí.
+  - Hay archivos que no deberían versionarse: `__pycache__`, `MUJOCO_LOG.TXT`, `.bundle` y `.zip`.
+- **Qué se hizo:**
+  - **`docs/plan_rl_carrera.md` reescrito:**
+    - faltas del reglamento con su tratamiento en recompensa, selección y diseño;
+    - tres carriles con protocolo común;
+    - contrato v1 con **54 observaciones** (suma `d`, `psi` y válido de la cámara) y 13 acciones;
+    - pesos iniciales **con rangos** para el barrido;
+    - cámara simulada con ruido gaussiano (nominal de nao_linea, rango hasta 3×);
+    - fricción;
+    - colores en un solo archivo;
+    - entrenamiento por población de 100 agentes con puntaje de selección.
+  - **`PLAN.md` reestructurado:** pasos 40–80, fases I a P, con una tabla de equivalencias con la
+    numeración anterior, para leer la rama de Daniel.
+  - README, `CLAUDE.md` y `docs/integracion_penaltystack.md` actualizados.
+- **Decisiones:**
+  1. **La política recibe `d`, `psi` y válido como observación** (contrato v1 con cámara). Reemplaza el
+     truco del giroscopio y el controlador externo de giro. La visión sigue fuera de la red.
+  2. **Faltas en dos capas:**
+     - en la recompensa, salida −200, caída −100 y choque −400 de referencia, todas terminales, más una
+       barrera de margen a menos de 10 cm de la línea;
+     - en la selección, cualquier falta en la batería descarta al agente.
+
+     La comunicación externa no es un peso: queda imposible por diseño, porque solo hay sensores propios,
+     todo corre a bordo y no hay Wi-Fi, y se verifica con una lista de chequeo (paso 76).
+  3. **Fricción:** entrenamiento en [0.4, 1.2] con asimetría entre pies; batería de 0.4, 0.6, 0.8, 1.0 y
+     1.2, la misma de nao_linea; μ de la duela medido en el robot.
+  4. **Colores:** un solo archivo `config/pista.yaml` para la escena, la visión y el benchmark. La política
+     no ve colores y se entrena con ruido de visión hasta 3×, así que cambiar colores no obliga a
+     reentrenar. Procedimiento de menos de 1 hora (paso 75).
+  5. **100 agentes:**
+     - base común `carrera_v01`;
+     - ronda 1: 100 agentes × ~2M pasos;
+     - ronda 2: 20 × ~10M;
+     - ronda 3: 5 × ~30M;
+     - campeón.
+
+     Varían pesos, rango de fricción, velocidad máxima, ruido de cámara y semilla. Estimado: 2–3 noches
+     con las dos máquinas, a medir en el paso 43.
+  6. **Meta de velocidad:** < 15 s en 5 m (≥ 0.35 m/s de media), para superar a la réplica de B-Human
+     (16.2–18.3 s).
+  7. **Plan B:** B-Human + visión, que en simulación ya llega siempre.
+- **Siguiente:** paso 40, integrar el trabajo de Daniel en `main`.
+
+### 2026-10-10 — Ajustes a la replanificación: baselines, un solo PC, solo `main`
+- **Autor:** Camilo, con Claude Code.
+- **Indicaciones:**
+  1. **Baseline 1:** la caminata de **NAOqi**. **Baseline 2:** la de **B-Human**, sacada de PenaltyStack.
+     Las dos se comparan contra nuestro RL.
+  2. La cámara tiene que quedar integrada en el MuJoCo de este repo, para ver cómo funciona con el RL ya
+     entrenado. **El MuJoCo de la pista es el de nao_linea.**
+  3. **Todos los entrenamientos corren en el PC de Camilo** (laptop Ryzen 7 5800H). La torre con RTX 5060
+     no está disponible.
+  4. **Todo va en `main`.** La rama de cámara que se creó en este repo fue un error y no se usa. Camilo
+     trabaja solo.
+  5. **Todo entrenamiento de RL usa fricciones distintas**, porque no se sabe qué piso habrá.
+  6. El cambio de colores antes de la competencia tiene que quedar implementado.
+- **Cambios en el plan:**
+  - Pasos 40 (integrar nao_linea), 43 (rendimiento en un solo PC), 60 (cola de agentes reanudable en este
+    PC) y 65 (reducir costo, sin la torre) reescritos.
+  - **Rondas del barrido acortadas para un solo PC:** 100 × 1M, 20 × 5M y 5 × 20M pasos. Son ~7.5 h cada
+    una, unas 3 noches en total. Reemplaza el 100 × 2M / 20 × 10M / 5 × 30M de la entrada anterior.
+  - Baselines nombrados como **baseline 1 (NAOqi)** y **baseline 2 (B-Human)** en el diseño, el README y
+    `CLAUDE.md`.
+  - `CLAUDE.md`: una sola persona, solo `main`, un solo PC. El asistente queda autorizado a hacer el commit
+    de cada paso en `main`; el push, solo cuando se pida.
+- **Siguiente:** paso 40, integrar nao_linea en `main`.

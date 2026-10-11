@@ -6,16 +6,22 @@ Stack: MuJoCo + Stable-Baselines3 (PPO), Python 3.12 con `uv`, Windows, entrenam
 
 **Este repo solo hace el RL de la caminata.** El repo final es
 [PenaltyStack](https://github.com/Limao0521/PenaltyStack). Todo lo que se haga aquí tiene que poder
-pasarse allá y funcionar. El baseline es la caminata de PenaltyStack, el WalkingEngine de B-Human.
-La cámara está **pendiente de definir**: no se implementa nada de cámara hasta que el equipo traiga el
-método (Fase P del plan).
+pasarse allá y funcionar.
+
+**Tres carriles de comparación:** RL (este repo), B-Human y NAOqi. El RL tiene que ser el más rápido sin
+faltas. **Baseline 1:** NAOqi. **Baseline 2:** B-Human, la de PenaltyStack. La **cámara** y el
+simulador de la pista vienen de [danielpaya/nao_linea](https://github.com/danielpaya/nao_linea) (Daniel)
+y viven en `carril/` y `demo/`. Entrega `d`, `psi` y válido, que la
+política recibe como observación. En el entrenamiento se simula con ruido gaussiano, sin renderizar
+imágenes.
 
 Este repo será la base de un **paper**: todo el proceso tiene que quedar documentado, incluidos los
-errores. Lo trabajan **dos personas en paralelo**, cada una con su asistente.
+errores. Por ahora lo trabaja **una sola persona** (Camilo), **solo en la rama `main`**. No se crean
+ramas. Todos los entrenamientos corren en **un solo PC**, la laptop Ryzen 7 5800H.
 
 ## Antes de empezar a trabajar
 
-1. Hacer `git pull`. La otra persona pudo haber avanzado.
+1. Hacer `git pull` en `main`.
 2. Leer en [`PLAN.md`](PLAN.md) cuál es el **paso actual** y cuáles están `[~]` en curso, para no duplicar trabajo.
 3. Leer las **últimas entradas** de [`docs/bitacora.md`](docs/bitacora.md).
 4. Para entender el diseño del sistema: [`docs/plan_rl_carrera.md`](docs/plan_rl_carrera.md).
@@ -39,8 +45,8 @@ errores. Lo trabajan **dos personas en paralelo**, cada una con su asistente.
 - **Los fallos no se borran.** Un paso fallido se marca `[!]` y se documenta. Si hace falta corregirlo, se
   agrega un paso nuevo (p. ej. `56b`). Las entradas viejas de la bitácora no se editan; se corrigen con
   una entrada nueva.
-- **Commits:** los hace la persona del equipo, **uno por paso**. El asistente no hace commit ni push:
-  al terminar el paso, resume qué cambió y propone el mensaje del commit.
+- **Commits:** **uno por paso, en `main`**. Desde el 2026-10-10 el usuario autoriza al asistente a hacer
+  el commit de cada paso terminado en `main`. El **push** se hace solo cuando el usuario lo pide.
 
 ## Convenciones
 
@@ -55,7 +61,7 @@ errores. Lo trabajan **dos personas en paralelo**, cada una con su asistente.
 - **Qué se versiona:**
   - código;
   - configs;
-  - políticas seleccionadas (`policies/carrera_vNN/`, desde el paso 41);
+  - políticas seleccionadas (`policies/carrera_vNN/`, desde el paso 42);
   - métricas (`results/`);
   - datos del robot real (`data/real/sesion_NN/`);
   - documentación.
@@ -66,7 +72,7 @@ errores. Lo trabajan **dos personas en paralelo**, cada una con su asistente.
 - **Modelo del robot:** `assets/nao/nao.xml` se **genera** con `scripts/build_nao_v6.py` y no se edita a
   mano. Sale del mismo `NaoV6H25.rsi3` que el modelo de PenaltyStack. Los ángulos usan la convención de
   NAOqi y B-Human. No usar valores del modelo aproximado del sprint inicial: el V6 tiene piernas más
-  anchas y solo ~3 cm entre ellas (ver `docs/plan_rl_carrera.md`, sección 8).
+  anchas y solo ~3 cm entre ellas (ver `docs/plan_rl_carrera.md`, sección 12).
 - **Compatibilidad con PenaltyStack** (no romperla sin documentarlo):
   - La observación usa **solo** sensores que da su `SensorAdapter` o ALMemory: ángulos, velocidades,
     giroscopio, acelerómetro, orientación y 8 FSR en kg. Nada de velocidad lineal ni posición global.
@@ -74,6 +80,11 @@ errores. Lo trabajan **dos personas en paralelo**, cada una con su asistente.
   - La política actúa en múltiplos del ciclo de 12 ms (24 ms).
   - La inferencia exportada debe correr en Python 2.7 a bordo, sin torch.
   - El arranque es por el táctil frontal de la cabeza (0.25 s) y el paro por el botón del pecho (0.3 s).
+- **Colores de la pista:** solo en `config/pista.yaml` (desde el paso 48). Nunca escribir un color de piso,
+  línea o meta en el código: la organización los avisa poco antes del evento.
+- **Fricción:** siempre explícita, en el piso y en los pies. Nunca depender del 1.0 por defecto de MuJoCo.
+- **Faltas del reglamento:** salida de carril, caída y choque entre robots son terminales en la recompensa y
+  **descartan** al agente en la selección. Ver `docs/plan_rl_carrera.md`, sección 1.2.
 - **`third_party/penaltystack/`:** solo el contrato de articulaciones, como copia exacta de referencia. No
   se edita ni se importa. No se agregan archivos de penales.
 - **Robot real:**

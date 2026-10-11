@@ -4,7 +4,7 @@ Stack: **MuJoCo + Stable-Baselines3 (PPO)**, Windows nativo, entrenamiento en CP
 Regla: cada paso termina con una **confirmación**, una **entrada en la bitácora** ([`docs/bitacora.md`](docs/bitacora.md)) y un **commit**.
 
 > **Paso actual: 40** · Objetivo vigente: **caminata por RL para la Carrera Individual de la Copa NAO CCM MX 2026 (3 de noviembre de 2026)**,
-> portable al repo final **PenaltyStack**. Baseline: la caminata de PenaltyStack (WalkingEngine de B-Human).
+> más rápida que las caminatas de **B-Human** y **NAOqi** (tres carriles de comparación), con visión de carril y portable al repo final **PenaltyStack**.
 > Diseño: [`docs/plan_rl_carrera.md`](docs/plan_rl_carrera.md) · Repo final: [`docs/integracion_penaltystack.md`](docs/integracion_penaltystack.md) · Historial, errores y soluciones: [`docs/bitacora.md`](docs/bitacora.md).
 
 **Cómo se usa este plan**
@@ -12,10 +12,11 @@ Regla: cada paso termina con una **confirmación**, una **entrada en la bitácor
 - `[x]` hecho y verificado · `[~]` en curso · `[ ]` pendiente · `[!]` bloqueado o fallido (el motivo va en la bitácora).
 - Después del ✅ va el **criterio de aceptación**: el paso solo se marca hecho cuando se cumple.
 - Si un paso falla, **no se borra**: se marca `[!]`, se documenta en la bitácora y, si hace falta, se agrega un paso nuevo con la corrección (p. ej. `56b`).
-- Dos frentes pueden avanzar en paralelo, uno por persona del equipo:
-  - **Simulación/RL:** fases J, K, L y M.
-  - **Portabilidad y robot real:** fases N y O. El paso 47 (baseline) y el 65 (primera sesión con el robot) conviene hacerlos pronto.
-- La **Fase P (cámara)** espera a que el equipo defina el método y no bloquea a las demás.
+- Todo se trabaja en la rama **`main`**, con un commit por paso. Los entrenamientos corren en **un solo PC**:
+  la laptop Ryzen 7 5800H.
+- La primera sesión con el robot (paso 69) y la precisión de la cámara en pista (paso 70) conviene hacerlas pronto.
+- **Todo entrenamiento de RL usa fricción aleatoria**: no se sabe qué piso habrá en la competencia (paso 47).
+- El paso 75 (colores definitivos) se ejecuta cuando la organización avise, pero el procedimiento se ensaya antes.
 
 ---
 
@@ -74,78 +75,104 @@ Retroalimentación: (1) el modelo debe ser específicamente el **NAO V6 completo
 
 - [x] **33. Documento de variables del RL** (`docs/variables_rl.md`) — ✅ Se entiende sin leer código
 - [x] **34–35. Modelo V6 desde la descripción oficial de B-Human** (`scripts/build_nao_v6.py` genera `nao.xml` y las mallas desde `NaoV6H25.rsi3`) — hecho en el commit `d9207ec`, **sin validar**
-- [ ] ~~36. Revalidar el modelo~~ → pasa a los pasos **43–46**
-- [ ] ~~37. Reentrenar V2 brazos en el V6~~ → reemplazado por las generaciones de carrera (**Fase M**)
-- [ ] ~~38. Actualizar README, SOURCE.md, resultados y GIF~~ → pasa a los pasos **43** y **76**
+- [ ] ~~36. Revalidar el modelo~~ → pasa a los pasos **44–49**
+- [ ] ~~37. Reentrenar V2 brazos en el V6~~ → reemplazado por el entrenamiento por población (**Fase M**)
+- [ ] ~~38. Actualizar README, SOURCE.md, resultados y GIF~~ → pasa a los pasos **44** y **80**
 
 ---
 
-## Proyecto actual: Carrera Individual — Copa NAO CCM MX 2026 (pasos 39–76)
+## Proyecto actual: Carrera Individual — Copa NAO CCM MX 2026 (pasos 39–80)
 
-**Meta:** una política de RL que haga caminar al NAO V6 real por el carril de **5 m × 70 cm** lo más
-**rápido** y lo más **recto** posible, **sin caer**. Debe ser **portable a PenaltyStack**, el repo final del equipo.
+**Meta:** una política de RL que haga caminar al NAO V6 real por el carril de **5 m × 70 cm** más rápido que
+los dos baselines, sin salirse del carril y sin caer. Debe ser **portable a PenaltyStack**, el repo final
+del equipo.
 
-**Alcance de este repo:** solo el RL de la caminata. La cámara está pendiente de definir: sus pasos (Fase P)
-quedan reservados y no bloquean el resto.
-
-**Baseline:** la caminata de PenaltyStack, el WalkingEngine de B-Human.
+**Piezas:**
+- **RL de la caminata:** este repo.
+- **Visión de carril (cámara) y simulador de la pista:** vienen de
+  [danielpaya/nao_linea](https://github.com/danielpaya/nao_linea) y se integran en `main` en el paso 40. Desde
+  ahí, el MuJoCo de la pista es el que se usa en este repo.
+- **Tres carriles de comparación:**
+  - **baseline 1:** caminata de **NAOqi**;
+  - **baseline 2:** caminata de **B-Human**, la de PenaltyStack;
+  - **RL** del equipo.
 
 **Documentos:**
 - Diseño: [`docs/plan_rl_carrera.md`](docs/plan_rl_carrera.md).
 - Condiciones del repo final: [`docs/integracion_penaltystack.md`](docs/integracion_penaltystack.md).
 
-## Fase I — Organización e integración con PenaltyStack
+> **Numeración renovada el 2026-10-10.** Los pasos 40–76 anteriores se reorganizaron como 40–80 al sumar
+> la cámara, los 3 carriles, la fricción y los 100 agentes. Equivalencias para leer documentos
+> anteriores, como los de nao_linea:
+>
+> | Antes | Ahora | | Antes | Ahora |
+> |---|---|---|---|---|
+> | 40 contrato | 41 | | 61 GPU | 65 |
+> | 41 políticas | 42 | | 62–64 portabilidad | 66–68 |
+> | 42 segundo equipo | 43 | | 65 sesión real #1 | 69 |
+> | 43 validar física | 44 | | 66 identificación | 71 |
+> | 44 diagnóstico | 45 | | 67 baseline real | 73 |
+> | 45 valores aproximados | 46 | | 68 pruebas escalonadas | 72 |
+> | 46 revalidar | 49 | | 69 ciclo sim-to-real | 74 |
+> | 47 baseline B-Human en sim | 50 | | 70 método de cámara | 40 (integrar) y 70 (precisión en pista) |
+> | 48–52 entorno de carrera | 53–56 y 52 | | 71 cámara simulada | 57 |
+> | 53–56 rectitud | 58 | | 72 cámara en el robot | 68 y 72 |
+> | 57–60 generaciones | 59–64 | | 73–76 cierre | 77–80 |
+
+## Fase I — Organización e integración
 - [x] **39. Documentación y replanificación** (`CLAUDE.md`, bitácora, `docs/plan_rl_carrera.md`, `docs/integracion_penaltystack.md`, contrato de articulaciones en `third_party/penaltystack/`, README, este plan) — ✅ El compañero entiende el plan, el paso actual, el baseline y las condiciones de PenaltyStack sin preguntar
-- [ ] **40. Contrato v1 en código** (`src/race/contract.py`): orden de articulaciones de B-Human, ciclo de 24 ms, observación de 51 valores armada desde un `frame` con el formato de `SensorAdapter` de PenaltyStack y la acción de 13 ángulos devuelta en ese orden — ✅ Prueba automática: un `frame` de ejemplo produce la observación esperada y la acción vuelve con los nombres correctos
-- [ ] **41. Políticas compartidas en el repo** (`policies/carrera_vNN/`: modelo, normalización, config, metadatos, métricas y README de la generación; `.gitignore` y `scripts/export_model.py` adaptados) — ✅ El compañero clona, evalúa la misma política sin entrenar y puede continuar desde ella
-- [ ] **42. Segundo equipo de entrenamiento** (torre Ryzen + RTX 5060): instalación limpia, benchmark de entornos en paralelo, nombre del equipo en los metadatos — ✅ Pasos/s medidos en ambos equipos y métricas comparables con la misma config
+- [ ] **40. Integrar nao_linea en `main`**: visión de carril (`carril/`), escena MuJoCo de la pista con la cámara del NAO (`demo/build_scene.py`), demo con el RL actual (`demo/run_demo.py`), caminatas de los baselines y benchmark de 3 carriles (`demo/caminatas/`), kit del robot (`robot/`) y resultados. Sin `__pycache__`, `MUJOCO_LOG.TXT`, `.bundle` ni `.zip` — ✅ La demo con cámara y la carrera de 3 carriles corren en este PC con el RL actual; el usuario ve la cámara funcionando
+- [ ] **41. Contrato v1 en código** (`src/race/contract.py`): orden de articulaciones de B-Human, ciclo de 24 ms, observación de 54 valores (incluye `d`, `psi` y válido de la cámara) armada desde un `frame` con el formato de PenaltyStack, y acción de 13 ángulos — ✅ Prueba automática: un `frame` de ejemplo produce la observación esperada y la acción vuelve con los nombres correctos
+- [ ] **42. Políticas compartidas en el repo** (`policies/carrera_vNN/`: modelo, normalización, config, métricas y README de la generación) — ✅ Desde un clon limpio se evalúa la misma política sin entrenar y se puede continuar desde ella
+- [ ] **43. Rendimiento de entrenamiento en este PC** (laptop Ryzen 7 5800H, el único equipo de entrenamiento): pasos/s con el modelo V6 y la fricción aleatoria — ✅ Pasos/s medidos y costo real del barrido de 100 agentes recalculado (sección 11.3 del diseño)
 
-## Fase J — Modelo V6 al día y baseline
-- [ ] **43. Validar la física V6 contra el RSI3** (masa, masa e inercia por cuerpo, ejes y rangos) + actualizar `SOURCE.md` y la sección 10 del README — ✅ Verificación automática en OK; la documentación ya no habla del V5
-- [ ] **44. Diagnóstico de caídas y choque entre piernas en el V6**: (a) reproducir sin visor las caídas de la demo interactiva al **pausar y reanudar** (`scripts/demo_interactive.py`, muchas pausas automáticas) y compararlas con las 399/400 paradas del modelo aproximado; (b) distancia mínima entre piernas y choques con la política actual, con acciones aleatorias y en un entrenamiento corto desde cero — ✅ Informe en `results/` con números: % de caídas al reanudar, motivo (choque entre piernas o equilibrio), cuándo chocan y con qué articulación
-- [ ] **45. Quitar los valores del modelo aproximado**: pose de pie, escalas de acción (HipRoll asimétrico, HipYawPitch), altura objetivo, altura de caída, período de marcha y ciclo de 24 ms, con los valores del V6 y de B-Human como referencia — ✅ `inspect_actions` muestra que ninguna acción extrema cruza las piernas; `check_standing` en OK
-- [ ] **46. Revalidar contactos, de pie y barrido articular con el V6** — ✅ `check_contacts`, `check_standing` y `joint_sweep` en OK + revisión visual del usuario
-- [ ] **47. Medir el baseline de PenaltyStack en simulación** (WalkingEngine de B-Human en su simulador, en línea recta a 0.15, 0.25 y 0.30 m/s, 5 corridas cada una; requiere compilar su runtime con VS 2022 Build Tools) — ✅ `results/baseline_penaltystack.md` con tiempo en 5 m, deriva lateral, rumbo máximo y caídas; fila en la tabla del README
+## Fase J — Modelo V6, fricción y pista
+- [ ] **44. Validar la física V6 contra el RSI3** (masa, masa e inercia por cuerpo, ejes y rangos) + actualizar `SOURCE.md` y la sección 10 del README — ✅ Verificación automática en OK; la documentación ya no habla del V5
+- [ ] **45. Diagnóstico de caídas y choque entre piernas**: (a) caídas de la demo interactiva al pausar y reanudar, reproducidas sin visor; (b) distancia mínima entre piernas y choques, con acciones aleatorias y en un entrenamiento corto desde cero — ✅ Informe en `results/` con % de caídas al reanudar, motivo y articulación
+- [ ] **46. Quitar los valores del modelo aproximado**: pose de pie, escalas de acción (HipRoll asimétrico, HipYawPitch), altura objetivo y de caída, período de marcha y ciclo de 24 ms — ✅ `inspect_actions` muestra que ninguna acción extrema cruza las piernas; `check_standing` en OK
+- [ ] **47. Fricción explícita y configurable** en el piso y en los pies (MuJoCo usa el mayor), aleatoria por episodio en [0.4, 1.2] con asimetría entre pies; probar `condim` 3 contra 4 — ✅ Prueba automática de que el μ pedido es el μ efectivo; decisión de `condim` documentada
+- [ ] **48. Pista en un solo archivo de configuración** (`config/pista.yaml`: colores de piso, línea, salida y meta, más las medidas del reglamento), usado por la escena, la visión y el benchmark. Escena de **3 carriles con física compartida** para medir choques entre robots — ✅ Cambiar colores = editar el archivo + un comando; la escena de 3 carriles detecta contactos entre robots
+- [ ] **49. Revalidar contactos, de pie y barrido articular con el V6** — ✅ `check_contacts`, `check_standing` y `joint_sweep` en OK + revisión visual del usuario
 
-## Fase K — Entorno de carrera `NaoRace` (contrato v1, sin cámara)
-- [ ] **48. Observación v1** (51 valores, solo sensores reales: IMU, error de rumbo, ángulos, velocidades, acción anterior, carga de los pies desde los FSR, reloj, `vx_cmd`; sin velocidad lineal) — ✅ `inspect_obs` en OK y la misma observación sale del contrato del paso 40
-- [ ] **49. Acción v1** (13 ángulos: piernas, HipYawPitch limitado, HipRoll asimétrico y hombros, cada 24 ms) + comando `vx_cmd` — ✅ `inspect_actions` en OK
-- [ ] **50. Recompensa v1** con los pesos iniciales de `docs/plan_rl_carrera.md` (sección 5.4), incluidos rumbo, deriva lateral, choque entre piernas y salida de carril — ✅ `inspect_reward` ordena bien los comportamientos
-- [ ] **51. Episodio de carrera** (arranque desde quieto, rumbo y posición inicial desviados, carril de 70 cm como terminación, 30 s) — ✅ `check_env` en OK + video revisado por el usuario
-- [ ] **52. Métricas de carrera en `evaluate.py`** (tiempo en 5 m, deriva lateral final, rumbo máximo, choques entre piernas, salidas de carril, caídas, consistencia) — ✅ JSON con métricas de carrera
+## Fase K — Benchmark de los tres carriles (RL, B-Human, NAOqi)
+- [ ] **50. WalkingEngine original de B-Human en el simulador de PenaltyStack** a 0.15, 0.25 y 0.30 m/s, para validar la réplica tipo B-Human. Requiere compilar su runtime con VS 2022 Build Tools — ✅ `results/baseline_penaltystack.md`; diferencia con la réplica documentada
+- [ ] **51. Benchmark de 3 carriles completo y regenerado** con la batería común: 5 fricciones × colocaciones fijas por semilla × con y sin visión. Incluye la escena compartida para choques — ✅ `results/benchmark/` con la tabla completa (150+ corridas) y fila de cada caminata en la tabla del README
+- [ ] **52. Métricas de carrera unificadas** en `evaluate.py` y el benchmark (tiempo en 5 m, velocidad, desvío y rumbo máximos, salidas, caídas, choques, consistencia; mismo JSON) — ✅ Las dos herramientas dan los mismos números para la misma corrida
 
-## Fase L — Caminar recto sin cámara (pérdida de rectitud simulada)
-- [ ] **53. Perturbaciones de rumbo**: empujones de giro y laterales, inclinación del suelo y cambios del rumbo objetivo — ✅ Se activan por config y se ven en el video
-- [ ] **54. Asimetrías aleatorias entre lados**: fricción por pie, ganancia de servos por pierna, errores de calibración, centro de masa y holgura — ✅ Deriva medida sin y con asimetrías, con la misma política
-- [ ] **55. Estimación de rumbo imperfecta**: ruido gaussiano, sesgo que deriva, retardo y pérdidas, con wrappers propios de Gymnasium — ✅ Prueba automática de la estadística del ruido, reproducible con semilla
-- [ ] **56. Prueba de rectitud** (100 episodios con todo lo anterior, 5 m) — ✅ Deriva lateral final, rumbo máximo y % dentro del carril registrados; meta inicial ≥ 95 % dentro del carril
+## Fase L — Entorno de carrera `NaoRace` con cámara (contrato v1)
+- [ ] **53. Observación de 54 valores** (IMU, rumbo, `d`, `psi`, válido, articulaciones, acción anterior, carga de los pies, reloj, `vx_cmd`) — ✅ `inspect_obs` en OK y coincide con el contrato del paso 41
+- [ ] **54. Acción de 13 ángulos cada 24 ms** + comando `vx_cmd` — ✅ `inspect_actions` en OK
+- [ ] **55. Recompensa con las faltas del reglamento** (sección 6.4 del diseño): salida de carril, caída y choque como terminales, barrera de margen, bono de meta y pesos configurables por YAML para el barrido — ✅ `inspect_reward` ordena bien los comportamientos: salirse siempre es peor que ir lento
+- [ ] **56. Episodio de carrera** (desde quieto, error de colocación, 0.5 s de medición de la visión, carril, meta, 30 s, fricción sorteada) — ✅ `check_env` en OK + video revisado por el usuario
+- [ ] **57. Cámara simulada**: `d` y `psi` reales + ruido gaussiano, retardo, pérdidas y mediciones malas a 10 Hz, con los σ de nao_linea y su rango hasta 3× — ✅ Prueba automática de la estadística del ruido, reproducible con semilla
+- [ ] **58. Pérdida de rectitud simulada** (asimetrías, perturbaciones, deriva de la IMU, tramos sin visión) + prueba de rectitud de 100 episodios — ✅ Deriva sin visión y desvío con visión registrados
 
-## Fase M — Generaciones de RL ("muchos RL, cada vez mejores")
-- [ ] **57. Generación `carrera_v01`** — ✅ Cruza los 5 m recto y sin caer en simulación; fila en la tabla de generaciones
-- [ ] **58. Currículo de velocidad** (ampliar el rango de `vx_cmd` mientras la marcha siga estable y recta) — ✅ Curva de velocidad máxima estable vs pasos de entrenamiento
-- [ ] **59. Domain randomization general** (fricción de duela, masas, rigidez de servos, retardo, ruido de IMU y FSR) — ✅ 0 caídas en 100 episodios aleatorizados a la velocidad elegida
-- [ ] **60. Ciclo de generaciones** (`v02`, `v03`, …): una hipótesis → un cambio → comparación con el baseline de PenaltyStack — ✅ Cada generación con config, métricas y conclusión en la bitácora
-- [ ] **61. (Opcional) Entrenamiento en GPU** (MJX / MuJoCo Playground en WSL2 con la RTX 5060), solo si el tiempo de entrenamiento limita — ✅ Decisión documentada con mediciones
+## Fase M — Entrenamiento por población: 100 agentes
+- [ ] **59. Base común `carrera_v01`** con los pesos iniciales y fricción aleatoria — ✅ Cruza los 5 m sin caer ni salirse en la batería; fila en la tabla de generaciones
+- [ ] **60. Lanzador de barridos**: sortea pesos, rango de fricción, velocidad máxima, ruido de cámara y semilla por agente; los corre en cola en este PC (reanudable si se interrumpe), evalúa con la batería y guarda todo en `results/barridos/` — ✅ Prueba completa con 4 agentes
+- [ ] **61. Ronda 1: 100 agentes** desde la base (~1M pasos c/u) → batería corta → 20 mejores — ✅ Tabla de los 100 con configuración y puntaje
+- [ ] **62. Ronda 2: 20 agentes** (~5M pasos) → batería completa → 5 mejores — ✅ Tabla y análisis de qué pesos y rangos ganan
+- [ ] **63. Ronda 3: 5 agentes** (~20M pasos) con domain randomization completa, cámara renderizada y escena de 3 carriles con vecinos → campeón — ✅ Campeón con 0 faltas en la batería y tiempo comparado con B-Human y NAOqi
+- [ ] **64. Ciclo de generaciones**: lo aprendido define nuevos rangos y una nueva base — ✅ Cada generación documentada en la bitácora y en la tabla del README
+- [ ] **65. (Opcional) Reducir el costo del barrido** si no alcanza el tiempo en un solo PC: menos pasos por ronda, menos agentes o GPU (la torre con RTX 5060 no está disponible por ahora) — ✅ Decisión documentada con mediciones
 
 ## Fase N — Portabilidad a PenaltyStack
-- [ ] **62. Exportar la política** (pesos y normalización en JSON o `.npz` + versión del contrato) y **módulo de inferencia** compatible con Python 2.7 y 3, sin dependencias y con numpy opcional — ✅ Diferencia con SB3 < 1e-5 en 1000 observaciones; tiempo de inferencia medido en PC
-- [ ] **63. Correr la política dentro del simulador de PenaltyStack** en lugar del motor de B-Human (rama de prueba en PenaltyStack, coordinada con su autor) — ✅ Camina 5 m; comparación directa con el baseline en el mismo simulador
-- [ ] **64. Ejecutor a bordo** integrado a PenaltyStack (START: táctil frontal 0.25 s tras el silbato; ABORT: pecho 0.3 s; ciclo de 24 ms; paro por inclinación), desplegado con su mecanismo de Ethernet — ✅ Paquete generado y probado en seco; revisado por el autor de PenaltyStack
+- [ ] **66. Exportar la política** (pesos y normalización en JSON o `.npz` + versión del contrato) y módulo de inferencia compatible con Python 2.7 y 3 — ✅ Diferencia con SB3 < 1e-5; tiempo de inferencia medido en PC
+- [ ] **67. Correr la política dentro del simulador de PenaltyStack**, junto a la caminata original de B-Human — ✅ Camina 5 m; comparación directa en el mismo simulador
+- [ ] **68. Ejecutor a bordo**: visión en Python puro + política exportada, START (táctil frontal 0.25 s), ABORT (pecho 0.3 s), ciclo de 24 ms y paro por inclinación, desplegado con el mecanismo de PenaltyStack — ✅ Probado en seco y revisado por el autor de PenaltyStack
 
 ## Fase O — Robot real
-- [ ] **65. Sesión real #1** (robot suspendido): Python y numpy a bordo, tiempo de inferencia, respuesta de los servos, ruido de IMU y FSR, **deriva de `AngleZ`**, ALMotion vs LoLA — ✅ Datos en `data/real/sesion_01/` y decisión de interfaz documentada
-- [ ] **66. Identificación de servos y del ruido de rumbo** → valores en el simulador (pasos 55 y 59) — ✅ Gráfica simulación vs real por articulación
-- [ ] **67. Baseline en el robot real**: la caminata de B-Human con el framework de B-Human en el NAO (pista de 5 m marcada con cinta, 5 corridas) — ✅ Tabla de tiempo, caídas y deriva
-- [ ] **68. Pruebas escalonadas de la política** (suspendido → arnés → 1 m → 5 m, con `vx_cmd` creciente) — ✅ Cada prueba registrada con video, log y resultado
-- [ ] **69. Ciclo sim-to-real** (diferencia observada → ajuste → nueva generación) — ✅ Cada iteración documentada
+- [ ] **69. Sesión real #1** (robot suspendido): Python y numpy a bordo; tiempo de inferencia + visión; respuesta de los servos; ruido de IMU y FSR; deriva de `AngleZ`; **μ de la duela** (plano inclinado); ALMotion vs LoLA — ✅ Datos en `data/real/sesion_01/` y decisiones documentadas
+- [ ] **70. Precisión de la cámara en pista réplica** (`race_nao.py --dry-run` y `--medir`, 30 posiciones con cinta métrica) — ✅ σ real de `d` y `psi` comparado con el simulado; rango de ruido del paso 57 ajustado
+- [ ] **71. Identificación de servos y ruidos** → valores en el simulador — ✅ Gráfica simulación vs real por articulación
+- [ ] **72. Pruebas escalonadas de la política con visión** (suspendido → arnés → 1 m → 5 m, `vx_cmd` creciente) — ✅ Cada prueba registrada con video, log y resultado
+- [ ] **73. Comparación real de los 3 carriles**: NAOqi (`moveToward` + visión), B-Human (framework en el NAO) y RL, en la misma pista réplica, 5 corridas c/u — ✅ Tabla de tiempo, salidas y caídas de las tres
+- [ ] **74. Ciclo sim-to-real** (diferencia observada → ajuste → nueva generación) — ✅ Cada iteración documentada
 
-## Fase P — Cámara (pendiente de definición del equipo; no bloquea lo anterior)
-- [ ] **70. Definir el método de cámara** (lo trae el equipo): qué mide, a qué frecuencia y con qué error — ✅ Documento con entradas, salidas y precisión medida en la pista
-- [ ] **71. Simular la salida de la cámara con ruido gaussiano** (valor real + ruido + retardo + pérdidas a 10 Hz) y agregarla como contrato v2 de la política — ✅ Política v2 entrenada; mejora de la deriva lateral medida
-- [ ] **72. Integración en el robot real** — ✅ 5 corridas seguidas sin pisar las líneas
-
-## Fase Q — Benchmark, integración final y cierre
-- [ ] **73. Benchmark final RL vs baseline de PenaltyStack** (simulación y robot real, mismo protocolo, 10 corridas) — ✅ Tabla final
-- [ ] **74. Selección, congelamiento e integración en PenaltyStack** (la más rápida con 0 caídas y 0 salidas; si ninguna cumple, baseline) — ✅ Política `carrera_final`, tag de Git y PR al repo final
-- [ ] **75. Simulacro completo de competencia** — ✅ Corrida completa sin cambios de último minuto
-- [ ] **76. Documentación final para el paper** — ✅ Una persona externa entiende el proceso completo leyendo el repo
+## Fase P — Competencia y cierre
+- [ ] **75. Colores definitivos de la pista** (cuando los avisen): editar `config/pista.yaml`, regenerar la escena, modelo de error de la visión con los colores nuevos, batería de la política final y, en el evento, calibración en la zona de calibraciones — ✅ Procedimiento ensayado de antemano en menos de 1 hora con un juego de colores distinto
+- [ ] **76. Lista de chequeo del reglamento**: sin Wi-Fi ni comunicación externa, todo a bordo, activación por sensor en < 10 s, paro por el pecho, carga por Ethernet — ✅ Lista firmada por el equipo en el simulacro
+- [ ] **77. Benchmark final de los 3 carriles** (simulación y robot real, mismo protocolo, 10 corridas) — ✅ Tabla final: el RL contra B-Human y NAOqi
+- [ ] **78. Selección, congelamiento e integración en PenaltyStack** (la más rápida con 0 faltas; si el RL no supera a B-Human de forma confiable, se compite con B-Human + visión) — ✅ Política `carrera_final`, tag de Git y PR al repo final
+- [ ] **79. Simulacro completo de competencia** — ✅ Corrida completa sin cambios de último minuto
+- [ ] **80. Documentación final para el paper** — ✅ Una persona externa entiende el proceso completo leyendo el repo

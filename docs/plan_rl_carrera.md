@@ -1,18 +1,19 @@
 # Plan del sistema de RL para la Carrera Individual — Copa NAO CCM MX 2026
 
 Este documento explica **cómo va a funcionar** la caminata por RL del NAO para la carrera:
-- qué pide el reglamento;
-- contra qué nos comparamos;
-- qué recibe y qué controla la política: espacio de observación y espacio de acción;
-- con qué pesos se recompensa;
-- cómo aprende a caminar recto sin cámara;
+- qué pide el reglamento y cómo pesa cada falta en el RL;
+- contra qué caminatas nos comparamos (los **tres carriles**);
+- qué recibe y qué controla la política, incluida la **cámara**;
+- con qué **pesos** se recompensa;
+- cómo se entrena con **distintas fricciones** y con **100 agentes** en paralelo;
+- cómo se cambian los **colores de la pista** antes de la competencia sin complicaciones;
 - cómo se integrará en el repo final, PenaltyStack.
 
 Es la referencia para presentar el proyecto y la base del paper.
 
 - Pasos concretos y estado: [`PLAN.md`](../PLAN.md).
 - Historial, fallos y soluciones: [`bitacora.md`](bitacora.md).
-- Análisis del repo final y sus condiciones: [`integracion_penaltystack.md`](integracion_penaltystack.md).
+- Condiciones del repo final: [`integracion_penaltystack.md`](integracion_penaltystack.md).
 - **(a validar)** marca decisiones que dependen de mediciones. Si cambian, se actualiza este documento y
   se explica el motivo en la bitácora.
 
@@ -20,406 +21,544 @@ Es la referencia para presentar el proyecto y la base del paper.
 
 ## Resumen para presentar
 
-1. **Objetivo:** que el NAO V6 recorra el carril de 5 m × 70 cm lo más rápido posible, **lo más recto
-   posible** y sin caer.
-2. **Alcance de este repo:** solo el **RL de la caminata**. La cámara y el resto de la app viven en
-   **PenaltyStack**, el repo final, y la política se diseña para enchufarse ahí.
-3. **Baseline:** la caminata ya establecida en PenaltyStack, el **WalkingEngine de B-Human**. Su tope
-   teórico es de unos 18.7 s en 5 m a 300 mm/s. Cada política de RL se compara contra ella con el mismo
-   protocolo.
-4. **La política:**
-   - **Observa** solo lo que el NAO mide: IMU, ángulos, velocidades, carga de los pies y error de rumbo.
-     Son 51 números.
-   - **Controla** 13 articulaciones: piernas, HipYawPitch para corregir el rumbo y hombros.
-   - **Actúa** cada 24 ms.
-5. **Caminar recto sin cámara:** en simulación se *provoca* que el robot se desvíe de varias formas:
-   - asimetrías entre piernas;
-   - empujones de giro;
-   - error inicial;
-   - estimación de rumbo con ruido gaussiano y deriva.
+1. **Objetivo:** que el NAO V6 recorra el carril de 5 m × 70 cm **más rápido que las caminatas de B-Human y
+   de NAOqi**, sin salirse del carril y sin caer.
+2. **Tres carriles de comparación:**
 
-   Con eso la política aprende a corregirse sola.
-6. **Cámara:** pendiente de definir. Cuando esté, se simulará su salida con **ruido gaussiano** y se
-   agregará a la política. Ver la sección 7.
+   | Carril | Caminata | Qué se espera |
+   |---|---|---|
+   | 1 | **Baseline 1: NAOqi** (la de fábrica) | La más lenta, ~0.1 m/s |
+   | 2 | **Baseline 2: B-Human** (la de PenaltyStack) | Rápida, ~0.3 m/s, ~16–19 s en 5 m |
+   | 3 | **RL del equipo** | **La más rápida.** Meta: < 15 s en 5 m |
+
+   Hoy, en simulación, el RL del sprint inicial va a 0.2 m/s (~24 s): todavía **pierde contra B-Human**.
+3. **La política:**
+   - **Observa** 54 valores medibles en el NAO. Incluyen la **cámara**: desplazamiento lateral `d`, ángulo
+     respecto a las líneas `psi` y si la medición es válida.
+   - **Controla** 13 articulaciones cada 24 ms.
+4. **Las faltas del reglamento pesan más que cualquier ganancia de velocidad.**
+   - Salirse del carril y caerse terminan el episodio con un castigo grande.
+   - Chocar con otro robot descarta al agente en la selección.
+   - La comunicación externa queda imposible por diseño.
+5. **Fricción:** se entrena con fricciones aleatorias entre 0.4 y 1.2, distintas en cada pie. Se prueba
+   en una batería fija de 5 valores.
+6. **Colores de la pista:** están en **un solo archivo**. La política no ve colores, solo `d` y `psi`, así
+   que cambiarlos no obliga a reentrenar.
+7. **100 agentes:** desde una política base común, se entrenan 100 variantes con distintos pesos y
+   fricciones. Se eliminan por rondas con la misma batería de pruebas y se queda la mejor.
 
 ---
 
-## 1. Qué pide el reglamento
+## 1. Qué pide el reglamento y cómo lo trata el RL
 
 Fuente: *Reglamento Copa NAO CCM MX 2026 V1.0*, sección 3.2 (Carrera Individual). Evento: **3 de
 noviembre de 2026**, Tec de Monterrey campus Ciudad de México.
 
+### 1.1 La pista y la prueba
+
 | Regla | Valor | Consecuencia para el diseño |
 |---|---|---|
-| Carril | **5 m** × **70 cm** interior, líneas negras de 1.9 cm, sobre **duela de madera** | Margen lateral de ~±30 cm descontando el ancho de los pies |
-| Salir del carril (un pie pisa fuera) | **Carrera anulada** | Ir recto es tan importante como ir rápido |
-| Clasificación | **Menor tiempo**; si no llega en 3 min, mayor distancia | Caerse casi siempre pierde contra una marcha más lenta y segura |
-| Salida | Ambos pies en la franja de salida | El episodio empieza desde quieto |
-| Meta | Franja roja; el tiempo para cuando un pie la pisa | No hace falta frenar |
-| Activación | Por un sensor del NAO, ≤ **10 s** después del silbato | Táctil frontal de la cabeza sostenido 0.25 s, como en PenaltyStack |
-| Paro manual | Obligatorio, con un sensor que **no esté en las piernas** | Botón del pecho sostenido 0.3 s, como en PenaltyStack |
-| Comunicación | Sin control remoto ni Wi-Fi; carga por Ethernet antes | Todo corre **a bordo** |
+| Carril | **5 m** × **70 cm** interior, líneas de 1.9 cm, sobre **duela de madera** | Margen lateral de ~±25 cm descontando el ancho de los pies |
+| Colores | Hoy: líneas y salida **negras**, meta **roja**. **Los colores definitivos de líneas y piso se avisan poco antes del evento** | Todo lo que dependa del color va en un solo archivo (sección 10) |
+| Clasificación | **Menor tiempo**; si no llega en 3 min, mayor distancia | Caer o salirse casi siempre pierde contra una marcha más lenta y segura |
+| Salida | Ambos pies en la franja de salida, colocados a mano | Hay error de colocación de unos cm y grados: la cámara lo corrige |
+| Meta | Franja de 30 cm; el tiempo para cuando un pie la pisa | No hace falta frenar |
+| Activación | Por un sensor del NAO, ≤ **10 s** después del silbato | Táctil frontal de la cabeza 0.25 s, como en PenaltyStack |
+| Paro manual | Obligatorio, con un sensor que **no esté en las piernas** | Botón del pecho 0.3 s, como en PenaltyStack |
 | Robot | NAO de cualquier versión, sin modificaciones | **NAO V6 con NAOqi 2.8** |
 
-El silbato **no** activa al robot: el operador lo escucha y toca el sensor. PenaltyStack no tiene
-detector de silbato, y no hace falta. Ver [integración, sección 4](integracion_penaltystack.md#4-silbato).
+### 1.2 Faltas y cómo pesan en el RL
+
+Las faltas de la sección 3.2.6 no se pueden tratar como un detalle: **una sola falta pierde la carrera**.
+Por eso cada una tiene un tratamiento explícito, en el entrenamiento, en la selección de agentes o en el
+diseño del sistema.
+
+| Falta (reglamento 3.2.6) | Sanción | En el entrenamiento (recompensa) | En la selección de agentes | En el diseño |
+|---|---|---|---|---|
+| **Salir del carril** (un pie pisa fuera de las líneas) | Retiro inmediato, carrera anulada | **Termina el episodio** con castigo grande (−200 inicial) + **barrera** que castiga acercarse a la línea a menos de 10 cm | Una salida en la batería de pruebas = agente **descartado** | La cámara mide `d` y `psi` para corregir antes de llegar a la línea |
+| **Provocar un choque contra otro robot** | **Descalificación del equipo** | Solo puede pasar **saliendo del carril**, así que la misma terminación lo previene antes. El valor de referencia es el doble que salir del carril (−400) | Se prueba con **robots vecinos** en los carriles de al lado (escena de 3 carriles). Un contacto = agente **descartado**, sin importar su tiempo | — |
+| **Comunicación externa o control remoto** | Descalificación de la prueba | **No es un peso**: la política no tiene ninguna acción para comunicarse | — | **Imposible por diseño:** solo sensores propios, todo corre a bordo, sin Wi-Fi. Se verifica con la lista de chequeo del paso 76 |
+| Caerse (no es falta, pero no llega) | Sin tiempo, se mide distancia | **Termina el episodio** con castigo (−100 inicial) | Una caída en la batería = agente **descartado** | Paro de seguridad por inclinación a bordo |
+| Superar 3 minutos | Carrera no completada | Episodio de 30 s: más lento que eso ya no compite | — | — |
+| Activar fuera de tiempo o antes del silbato | Descalificación (sección 2.9) | — | — | Arranque manual por táctil, ya resuelto en PenaltyStack |
+
+**Por qué dos capas, recompensa y selección.** La recompensa le enseña a la política a evitar las
+faltas. La selección **garantiza** que ninguna política que haya cometido una falta en las pruebas llegue
+a la competencia, por rápida que sea.
 
 ---
 
-## 2. Alcance: este repo y PenaltyStack
+## 2. Alcance: las piezas del sistema
 
-| | Este repo (NAO) | PenaltyStack (repo final) |
+| Pieza | Dónde vive | Qué hace |
 |---|---|---|
-| Qué contiene | Entrenamiento, evaluación y exportación de la **política de caminata** | App completa: arranque y paro, sensores, cámara, despliegue en el NAO, simulador con el motor de B-Human |
-| Modelo del robot | NAO V6 de B-Human (`NaoV6H25.rsi3`) | **El mismo archivo**, con el mismo SHA-256 |
-| Qué entrega | Política exportada + módulo de inferencia + ejecutor compatible | Recibe la política y la ejecuta |
+| **Política de caminata (RL)** | Este repo (NAO) | Entrenamiento, evaluación y exportación |
+| **Visión de carril (cámara)** | `carril/`, traída de [danielpaya/nao_linea](https://github.com/danielpaya/nao_linea) (Daniel) | Imagen de la cámara inferior → `d`, `psi`, válido a 10 Hz. Tiene versión en Python puro para el NAO |
+| **Simulador de la pista** | `demo/build_scene.py`, de nao_linea | Escena MuJoCo del carril con la cámara inferior del NAO. **Es el MuJoCo que usa este repo** |
+| **Benchmark de 3 carriles** | `demo/caminatas/`, de nao_linea | RL vs baseline 2 (tipo B-Human) vs baseline 1 (tipo NAOqi) en el mismo carril simulado |
+| **App, arranque y paro, despliegue** | PenaltyStack (repo final) | Recibe la política y la visión |
 
-**Condiciones de PenaltyStack que respetamos desde el diseño**
-([detalle](integracion_penaltystack.md#3-condiciones-que-impone-penaltystack-a-nuestra-política)):
-- orden de articulaciones de B-Human;
-- ciclo de 12 ms;
-- sensores con su formato, incluidos los 8 FSR en kg;
-- Python 2.7 a bordo, sin torch y quizá sin numpy;
-- arranque y paro por táctil y botón;
-- despliegue por Ethernet con `deploy/`.
+Todas estas piezas se unifican en la rama `main` de este repo en el paso 40, y la versión final se lleva a
+PenaltyStack en la Fase N.
 
 ---
 
-## 3. Baseline: la caminata de PenaltyStack
+## 3. Punto de partida: revisión de nao_linea (2026-10-10)
 
-El baseline es la caminata ya establecida en PenaltyStack, el **WalkingEngine original de B-Human**:
+**Qué tiene, y funciona en simulación:**
 
-| Parámetro | Valor |
-|---|---|
-| Velocidad máxima hacia adelante | 300 mm/s (config del NAO) |
-| Aceleración máxima | 75 mm/s² |
-| Duración de un paso | 250 ms |
-| Altura de cadera | 230 mm |
-| Levantamiento del pie | 13 mm |
-| Tiempo teórico en 5 m a 300 mm/s | **~18.7 s** (a medir) |
+1. **Visión de carril completa:**
+   - busca la cinta por contraste local;
+   - filtra por el ancho de la cinta;
+   - proyecta al piso;
+   - ajusta las rectas con RANSAC;
+   - devuelve `d`, `psi`, válido y la distancia a la meta.
 
-**Cómo se compara:**
+   **Precisión:** σ(d) = 1.6 cm y σ(psi) = 1.2°, con 1.5° de error en la pose de la cámara. Funciona con
+   poca luz, reflejos y cinta gastada. Con un robot vecino tapando una línea sube a σ(d) = 4.8 cm.
+2. **Versión en Python puro**, sin numpy y escrita compatible con Python 2.7. Tarda 13 ms por imagen en
+   PC; en el NAO se estiman 40–110 ms, **a medir**.
+3. **Lazo cerrado con la cámara renderizada en MuJoCo:**
+   - solo RL: llega en **3 de 18** corridas;
+   - RL + visión: llega en **18 de 18**, con desvío máximo de 14.5 cm.
+4. **Pista con colores configurables** (`demo/pista.yaml`, 9 pisos y 7 colores de línea, o código hex). La
+   visión decide sola si la línea es más oscura o más clara que el piso.
+5. **Los tres carriles** (`demo/caminatas/carrera_vivo.py`, `benchmark.py`): B-Human a la izquierda, RL en el
+   centro y NAOqi a la derecha. Cada robot va en su propia física y se ven juntos en el visor.
+   - **Resultados que reporta**, con visión, 5 fricciones de 0.4 a 1.2 y error de colocación aleatorio:
 
-| Dónde | Baseline | Política de RL | Protocolo |
+     | Caminata | Velocidad | Tiempo en 5 m |
+     |---|---|---|
+     | Tipo B-Human | 0.30 m/s | 16.2–18.3 s |
+     | RL actual | 0.20 m/s | 24.2–24.3 s |
+     | Tipo NAOqi | 0.10 m/s | 45–50 s |
+
+   - Ninguna se cae. Sin visión, las tres se salen en ~40 % de las corridas.
+6. **Kit para el robot real** (`robot/`): diagnóstico, prueba en seco de la visión y guía paso a paso.
+
+**Limitaciones que hay que tener en cuenta:**
+
+- **Las caminatas de B-Human y NAOqi son reimplementaciones propias del esquema**, no el código original.
+  Además, la velocidad la impone el comando: 0.30 y 0.12 m/s pedidos. Sirven para comparar en el mismo
+  simulador, pero hay que contrastar la de B-Human con el **WalkingEngine original** que corre en
+  PenaltyStack (paso 50). En el robot real se comparan las caminatas originales (paso 73).
+- **El `benchmark.md` guardado en el repo es la versión corta** (12 corridas, una por celda). Las 150
+  corridas que cita el README no están guardadas, así que hay que regenerarlas (paso 51).
+- **La corrección del rumbo usa un truco:** le suma una señal falsa al giroscopio de la política. Con
+  señales grandes se invierte. **La política nueva recibe `d` y `psi` como observación**, y eso reemplaza
+  el truco.
+- El RL usado es el del sprint inicial, entrenado en el modelo aproximado y sin fricción aleatoria.
+- En el repo hay archivos que no deberían versionarse: `__pycache__`, `MUJOCO_LOG.TXT`, un `.bundle` y un
+  `.zip`. Se limpian al integrar (paso 40).
+- Los robots del benchmark no se tocan entre sí, porque cada uno va en su propia física. Por eso **el
+  choque entre robots no se puede medir ahí**. Se agrega una escena de 3 carriles con física compartida
+  (paso 48), que usa el benchmark (paso 51).
+
+---
+
+## 4. Los tres carriles: qué comparamos y cómo
+
+| Caminata | En simulación | En el robot real | Velocidad esperada |
 |---|---|---|---|
-| Simulación | WalkingEngine de B-Human en el simulador de PenaltyStack | Nuestra política, primero en nuestro entorno y después **dentro del simulador de PenaltyStack** | Mismo carril de 5 m, mismas semillas, 5+ corridas |
-| Robot real | La caminata de B-Human corriendo en el NAO con el framework de B-Human (a confirmar en la sesión 1) | Nuestra política con el ejecutor a bordo | Misma pista marcada, superficie y batería, 5+ corridas |
+| **Baseline 1: NAOqi** | Tipo NAOqi de nao_linea: ZMP + preview, pasos de 500 ms | `ALMotion.moveToward` de fábrica, con la misma corrección de visión | ~0.1 m/s |
+| **Baseline 2: B-Human (PenaltyStack)** | Tipo B-Human de nao_linea, con los parámetros de la config de B-Human que trae PenaltyStack, **y** el WalkingEngine original en el simulador de PenaltyStack (para validar la réplica) | Framework de B-Human en el NAO | ~0.3 m/s (máx. de config 300 mm/s; ~18.7 s teóricos en 5 m) |
+| **RL del equipo** | Nuestro entorno y el mismo carril del benchmark | Ejecutor a bordo con la política exportada | **Meta: ≥ 0.35 m/s de media, < 15 s en 5 m** |
 
-**Métricas:**
-- tiempo en 5 m;
-- velocidad media;
-- **deriva lateral al llegar**;
-- **rumbo máximo**;
-- caídas;
-- salidas de carril;
-- choques entre piernas, solo en simulación;
-- consistencia entre corridas.
-
-La política actual del sprint inicial (0.2 m/s, ~25 s en 5 m) queda como referencia histórica, no
-como baseline.
+**Protocolo común** (el mismo para las tres, para que la comparación sea justa):
+- carril de 5 m con las medidas del reglamento;
+- **las mismas** fricciones: μ = 0.4, 0.6, 0.8, 1.0, 1.2;
+- **los mismos** errores de colocación, por semilla: σ = 2 cm y 2°, más casos extremos de ±10 cm y ±8°;
+- con visión, que es como se corre, y sin visión, para medir la deriva propia;
+- métricas:
+  - tiempo en 5 m;
+  - velocidad media;
+  - desvío máximo;
+  - rumbo máximo;
+  - salidas;
+  - caídas;
+  - choques;
+  - consistencia (desviación estándar).
 
 ---
 
-## 4. Arquitectura
+## 5. Arquitectura con cámara
 
 ```mermaid
 flowchart LR
     subgraph NAO["Sensores del NAO V6"]
-        IMU["IMU: inclinación, giroscopio,<br/>rumbo (AngleZ)"]
+        IMU["IMU: inclinación, giroscopio,<br/>rumbo AngleZ"]
         JNT["Ángulos y velocidades<br/>articulares"]
         FSR["8 FSR (carga de los pies)"]
+        CAM["Cámara inferior<br/>QVGA, 10 FPS"]
     end
-    CMD["Velocidad elegida vx_cmd"] --> POL
-    RUMBO["Rumbo objetivo<br/>(el de la salida)"] --> ERR["Error de rumbo"]
-    IMU --> ERR --> POL
+    CAM --> VIS["Visión de carril<br/>(fuera de la red)"]
+    PISTA["pista.yaml<br/>colores de piso y líneas"] -.-> VIS
+    VIS -- "d, psi, válido" --> POL
     IMU --> POL
     JNT --> POL
     FSR --> POL
+    CMD["Velocidad vx_cmd"] --> POL
     POL["Política de RL<br/>MLP, cada 24 ms"] -- "13 ángulos objetivo" --> SERVO["Servos"]
-    CAM["Cámara: método pendiente<br/>(entrada reservada, vacía)"] -.-> POL
-    APP["App PenaltyStack: START cabeza 0.25 s,<br/>ABORT pecho 0.3 s, paro por inclinación"] -.-> POL
+    APP["PenaltyStack: START cabeza 0.25 s,<br/>ABORT pecho 0.3 s, paro por inclinación"] -.-> POL
 ```
 
-- **La política hace todo el trabajo de caminar y de mantener el rumbo.** Recibe el error entre el rumbo
-  de salida y el rumbo actual, estimado por la IMU, y aprende a corregirlo con sus propias piernas.
-- **La cámara queda como entrada reservada.** Su método todavía no está definido. Cuando lo esté,
-  aportará lo que la IMU no puede medir: la posición lateral dentro del carril y el ángulo respecto a
-  las líneas. Ver la sección 7.
+- **La cámara no entra como imagen a la red.** La visión corre aparte y le pasa 3 números a la política.
+  Ventajas:
+  - el entrenamiento no renderiza imágenes, así que sigue siendo rápido;
+  - los colores de la pista no afectan a la red;
+  - la visión se prueba sola con fotos reales.
+- **La política decide cómo corregir.** Con `d` y `psi` aprende a volver al centro sin perder velocidad, en
+  vez de recibir un giro calculado por un controlador externo.
+- **Si la visión se pierde** (`válido = 0`), la política sigue con el rumbo de la IMU.
 
 ---
 
-## 5. La política: observación, acción, comandos y recompensa (contrato v1)
+## 6. La política: observación, acción, comandos y recompensa (contrato v1)
 
-### 5.1 Espacio de observación: 51 valores, solo sensores reales
-
-Cada fila dice de dónde sale el dato en entrenamiento y de dónde sale en el robot y en PenaltyStack.
-Así se garantiza que la política se pueda pasar al robot.
+### 6.1 Espacio de observación: 54 valores, solo sensores del NAO
 
 | Componente | Dim | En simulación | En el NAO / PenaltyStack | Escala |
 |---|---|---|---|---|
 | Gravedad proyectada (inclinación del torso) | 3 | Orientación del torso | `InertialSensor/AngleX, AngleY` / `orientation` | — |
 | Velocidad angular del torso | 3 | Sensor `gyro` | `InertialSensor/Gyr*` / `gyro` | ×0.25 |
-| **Error de rumbo** (rumbo objetivo − rumbo estimado) | 1 | Rumbo real **+ modelo de error** (sección 6.4) | `InertialSensor/AngleZ` / yaw de `orientation` | rad, recortado a ±π/2 |
+| Error de rumbo de la IMU (respecto al rumbo de salida) | 1 | Rumbo real + deriva y ruido (sección 8) | `InertialSensor/AngleZ` | rad, recortado a ±π/2 |
+| **`d`: desplazamiento lateral en el carril** | 1 | Real + **ruido gaussiano**, retardo y pérdidas (sección 7) | Visión de carril | m |
+| **`psi`: ángulo respecto a las líneas** | 1 | Ídem | Visión de carril | rad |
+| **`válido`: medición de cámara reciente (< 300 ms)** | 1 | Ídem | Visión de carril | 0/1 |
 | Ángulos de las 13 articulaciones controladas (respecto a la pose de pie) | 13 | `qpos` | Encoders / `angles` | rad |
-| Velocidades de esas articulaciones | 13 | `qvel` | Diferencia finita de ángulos en el NAO / `velocity` | ×0.05 |
+| Velocidades de esas articulaciones | 13 | `qvel` | Diferencia finita / `velocity` | ×0.05 |
 | Acción anterior | 13 | Memoria | Memoria | [−1, 1] |
-| Carga de cada pie (suma de sus 4 FSR / peso del robot) | 2 | Fuerzas de contacto, igual que el `SensorAdapter` de PenaltyStack | FSR / `fsr[8]` | 0–1 |
+| Carga de cada pie (suma de sus 4 FSR / peso del robot) | 2 | Fuerzas de contacto | FSR / `fsr[8]` | 0–1 |
 | Reloj de marcha (seno, coseno) | 2 | Software | Software | — |
 | Comando de velocidad `vx_cmd` | 1 | Sorteado | Valor elegido para la carrera | m/s |
-| **Total** | **51** | | | |
+| **Total** | **54** | | | |
 
-**Cambios respecto a la política anterior:**
+**No se observa nada que el robot no mida:** ni la velocidad lineal, ni la posición global, ni la altura.
+Los colores tampoco: la política solo recibe lo que la visión ya calculó.
 
-| Dato | Cambio | Por qué |
-|---|---|---|
-| Velocidad lineal del torso | **Se quita** | El NAO no la mide |
-| Contacto binario de los pies | **Se cambia** por carga en kg | Es lo que da el NAO |
-| Error de rumbo | **Se agrega** | Es la base para ir recto |
-| Comando de velocidad | **Se agrega** | Permite elegir la velocidad en la pista sin reentrenar |
-
-**No se observa:** altura del torso, posición global, velocidad lineal ni posición lateral en el
-carril. La posición lateral es justo lo que aportará la cámara.
-
-**Reservado para la cámara (contrato v2, no implementado):**
-- desplazamiento lateral en el carril;
-- ángulo respecto a las líneas;
-- un indicador de "medición válida".
-
-Son 3 valores. Ver la sección 7.
-
-### 5.2 Espacio de acción: 13 ángulos objetivo cada 24 ms
+### 6.2 Espacio de acción: 13 ángulos objetivo cada 24 ms
 
 **Cómo funciona la acción:**
-- La acción es un vector en [−1, 1]. Se multiplica por la escala de cada articulación y se suma a la
-  pose de pie.
-- Los servos de posición, con los parámetros del modelo V6, siguen ese objetivo.
-- La política actúa cada **24 ms**, es decir 2 ciclos de 12 ms de PenaltyStack y del NAO, unos 41.7 Hz.
-  La física corre a 2 ms. Ese período está **(a validar)** con el tiempo de inferencia a bordo.
+- La acción es un vector en [−1, 1]. Se multiplica por la escala de cada articulación y se suma a la pose
+  de pie.
+- Los servos del modelo V6 siguen ese objetivo.
+- La política actúa cada **24 ms**, es decir 2 ciclos de 12 ms, el ciclo de PenaltyStack y del NAO.
 
 | Articulación | Escala (rad) | Para qué |
 |---|---|---|
-| HipYawPitch (un solo motor para ambas piernas) | ±0.10 **(a validar)** | Girar el pie para **corregir el rumbo** |
-| LHipRoll / RHipRoll | **Asimétrica:** hacia afuera hasta 0.25, hacia adentro solo hasta ~0.07 **(a validar)** | Pasar el peso de un pie a otro **sin cruzar las piernas** (ver sección 8) |
-| L/R HipPitch | ±0.5 | Largo del paso |
+| HipYawPitch (un motor para ambas piernas) | ±0.10 **(a validar)** | Girar para **corregir el rumbo** |
+| LHipRoll / RHipRoll | **Asimétrica:** hacia afuera 0.25, hacia adentro ~0.07 **(a validar)** | Pasar el peso **sin cruzar las piernas** (sección 12) |
+| L/R HipPitch | ±0.5 | Largo del paso: más rango = más velocidad posible |
 | L/R KneePitch | ±0.5 | Levantar el pie |
 | L/R AnklePitch | ±0.4 | Despegue y apoyo |
 | L/R AnkleRoll | ±0.25 | Equilibrio lateral |
-| L/R ShoulderPitch | ±0.5 | Balanceo de brazos, que compensa el giro del torso |
-| Cabeza, resto de los brazos | Fijos en la pose de pie | — |
+| L/R ShoulderPitch | ±0.5 | Balanceo de brazos |
+| Cabeza, resto de brazos | Fijos | La cabeza fija mantiene estable la pose de la cámara |
 
-### 5.3 Comandos
+### 6.3 Comandos
 
-- **`vx_cmd`, velocidad hacia adelante.** En entrenamiento se sortea en un rango que crece por
-  currículo. En la carrera se usa la mayor velocidad que el robot real sostenga sin caer: es una
-  **perilla de seguridad**.
-- **Rumbo objetivo.** Es el rumbo con el que sale el robot, alineado con el carril. Más adelante la
-  cámara podrá ajustarlo.
+- **`vx_cmd`.** En entrenamiento se sortea en un rango que sube por currículo, hasta 0.5 m/s. En la carrera
+  se usa la mayor velocidad que el robot real sostenga sin caer: es la **perilla de seguridad**.
+- **El carril es el objetivo de rumbo.** `d = 0` y `psi = 0`. Ya no hace falta un "rumbo de salida"
+  arbitrario: la cámara le dice al robot dónde está el centro del carril.
 
-### 5.4 Recompensa: pesos iniciales (v1)
+### 6.4 Recompensa: pesos iniciales y rangos para los 100 agentes
 
 **Cómo funciona:**
-- La recompensa **sí puede usar información que el robot no mide**, como la velocidad real, el rumbo
-  real o la posición lateral, porque solo se calcula durante el entrenamiento. La política nunca la ve.
-- Los pesos son el punto de partida. Cambiar uno es una nueva generación y se documenta.
+- La recompensa puede usar información que el robot no mide: la `d`, la `psi` y la velocidad reales del
+  simulador. Solo existe en el entrenamiento.
+- La **columna de rango** es lo que explora el entrenamiento por población (sección 11).
 
-| Término | Qué mide | Peso inicial | Viene de |
-|---|---|---|---|
-| Velocidad | exp(−((vx − vx_cmd)/0.1)²) | **+1.0** | Sprint inicial |
-| **Rumbo** | exp(−(error de rumbo real/0.1)²) | **+0.5** | Nuevo |
-| Patrón de marcha | Pies que coinciden con el reloj de marcha | +0.5 | Sprint inicial |
-| Vivo | Constante mientras no cae | +0.1 | Sprint inicial |
-| Inclinación del torso | gx² + gy² | −2.0 | Sprint inicial |
-| Altura del torso | (z − z_objetivo)², con z_objetivo recalculado para el V6 | −50 | Sprint inicial (valor a actualizar) |
-| Velocidad lateral | vy² | −10 | Sprint inicial |
-| **Deriva lateral** | y², posición lateral respecto al centro del carril | **−1.0** | Nuevo |
-| Velocidad de giro | ωz² | −0.5 | Sprint inicial |
-| **Choque entre piernas** | 1 si una pierna toca la otra | **−1.0** | Nuevo (V6) |
-| Cambio de acción | ‖aₜ − aₜ₋₁‖² | −0.02 | Sprint inicial |
-| Torque | Σ τ² | −0.001 | Sprint inicial |
-| Caída | Una vez, termina el episodio | −10 | Sprint inicial |
-| **Salida de carril** | Un pie fuera de los 70 cm, termina el episodio | **−10** | Nuevo (reglamento) |
+| Grupo | Término | Qué mide | Peso inicial | Rango en el barrido |
+|---|---|---|---|---|
+| **Velocidad** | Seguimiento de `vx_cmd` | exp(−((vx − vx_cmd)/0.1)²) | **+1.0** | 0.5 – 2.0 |
+| | Llegada a la meta | Bono único al pisar la franja de meta | **+20** | 0 – 50 |
+| **Rectitud** | Rumbo respecto al carril | exp(−(psi/0.1)²) | **+0.5** | 0.2 – 1.0 |
+| | Centrado | d² | **−2.0** | −0.5 a −5 |
+| | **Barrera de margen** | ((0.10 − margen)/0.10)² cuando el pie está a menos de 10 cm de la línea | **−5.0** | −1 a −20 |
+| | Velocidad lateral | vy² | −10 | −2 a −20 |
+| | Velocidad de giro | ωz² | −0.5 | −0.1 a −2 |
+| **Faltas** (terminan el episodio) | **Salida de carril** | Un pie toca la línea | **−200** | −50 a −400 |
+| | **Choque con otro robot** | Referencia: el doble de una salida. En la práctica la salida lo previene antes; se mide en la selección | **−400** | 2 × salida |
+| | **Caída** | Torso bajo, inclinado o una parte que no sea el pie toca el suelo | **−100** | −50 a −300 |
+| **Estabilidad y robot real** | Patrón de marcha | Pies que coinciden con el reloj | +0.5 | 0 – 1.0 |
+| | Vivo | Constante mientras no cae | +0.1 | fijo |
+| | Inclinación del torso | gx² + gy² | −2.0 | −0.5 a −5 |
+| | Altura del torso | (z − z_objetivo)², con z_objetivo del V6 | −50 | fijo |
+| | Choque entre piernas | 1 si una pierna toca la otra | −1.0 | −0.5 a −5 |
+| | Cambio de acción | ‖aₜ − aₜ₋₁‖² | −0.02 | −0.005 a −0.1 |
+| | Torque | Σ τ² | −0.001 | fijo |
 
-### 5.5 Episodio
+**Cómo elegir el tamaño de los castigos por falta.**
+- **Muy chicos:** a la política le conviene arriesgar por velocidad, porque perder un episodio le cuesta
+  poco.
+- **Muy grandes:** la política se vuelve tímida y camina lento, porque cualquier riesgo es carísimo.
 
-- **Inicio:** desde quieto, con ambos pies en la franja de salida.
-- **Variación inicial:**
-  - pequeña variación de la pose;
-  - **rumbo inicial desviado** ±5–10°;
-  - posición lateral desviada ±10 cm.
-- **Fin:** caída, salida de carril o 30 s. El tiempo en cruzar los 5 m se registra. El episodio sigue
-  después de la meta para que la política no aprenda a frenar.
+Terminar el episodio ya cuesta toda la recompensa futura, incluido el bono de meta. Los −200 y −100 son
+el punto de partida, y el barrido de 100 agentes busca el equilibrio. La selección (sección 11.4)
+garantiza que, sea cual sea el peso, ninguna política con faltas pase.
 
-### 5.6 Algoritmo
+### 6.5 Episodio
 
-- **PPO** (Stable-Baselines3), con la base del sprint inicial:
+- **Escena:** carril de 5 m × 70 cm, con la **fricción sorteada** (sección 9).
+- **Inicio:** desde quieto, en la franja de salida, con error de colocación: ±10 cm y ±8° como máximo,
+  normal con σ = 2 cm y 2°.
+- **Antes de arrancar,** ~0.5 s de pie para que la visión mida dónde quedó el robot, como en la demo de
+  nao_linea.
+- **Fin:** caída, salida de carril o 30 s. El episodio sigue después de la meta para que la política no
+  aprenda a frenar.
+- **Cambios durante el episodio:** `vx_cmd` cambia de vez en cuando, y hay perturbaciones (sección 8).
+
+### 6.6 Algoritmo
+
+- **PPO** (Stable-Baselines3):
   - MLP con activación ELU;
   - 16 entornos en paralelo;
   - normalización de observaciones y recompensas;
-  - semilla fija.
-- **Tamaño de la red:** 256×256 hoy. Puede bajar a 128×128 o 64×64 si la inferencia en Python 2.7 a bordo
-  no alcanza los 24 ms **(a validar)**.
+  - semilla fija por agente.
+- **Tamaño de la red:** 256×256 de partida. Se baja a 128×128 o 64×64 si la inferencia en Python 2.7 a bordo
+  no cabe en los 24 ms, junto con la visión **(a medir en el paso 69)**.
 
 ---
 
-## 6. Caminar recto sin cámara: pérdida de rectitud simulada
+## 7. Cámara simulada con ruido gaussiano
 
-En simulación no hay cámara: ni MuJoCo ni PenaltyStack simulan la suscripción a `ALVideoDevice`. Aun
-así, el robot tiene que **intentar siempre ir lo más recto posible**. La estrategia es **provocar en
-simulación las mismas causas que desvían a un NAO real**. Así la política aprende a detectarlas con la
-IMU y a corregirlas.
+En el entrenamiento **no se renderizan imágenes**, porque sería unas 100 veces más lento. Se simula **la
+salida de la visión**:
 
-### 6.1 Error inicial
-Se sale con el rumbo desviado ±5–10° y la posición lateral desviada ±10 cm. La política aprende a
-volver al rumbo objetivo desde el primer paso.
+> `d`, `psi` = valor real del simulador + **ruido gaussiano** + retardo, actualizados a **10 Hz** y mantenidos
+> entre fotos, con pérdidas (`válido = 0`) y mediciones malas ocasionales
 
-### 6.2 Asimetrías entre lados
-Se sortean por episodio. Son la causa típica de que un robot real "se vaya de lado":
-- fricción distinta en cada pie;
-- ganancia de servos distinta en cada pierna (±10–20 %);
-- errores de calibración articular de ±1–2° por articulación;
-- centro de masa corrido unos milímetros hacia un lado;
-- holgura (*backlash*) en tobillos y caderas.
+**Valores nominales**, del modelo de error medido en nao_linea:
 
-### 6.3 Perturbaciones durante la marcha
-- empujones de giro (torque en el eje vertical) en momentos aleatorios;
-- empujones laterales;
-- suelo con inclinación de ±1°.
+| Parámetro | Nominal | Rango de entrenamiento | Por qué el rango |
+|---|---|---|---|
+| σ de `d` | 1.6 cm | 1 – 5 cm | 4.8 cm con un robot vecino tapando; colores o luz peores |
+| σ de `psi` | 1.2° | 1 – 4° | Ídem |
+| Retardo | 100–200 ms | 50–250 ms | Tiempo de procesamiento a bordo sin medir |
+| Pérdidas (`válido = 0`) | 5–10 % | 0–30 % | Colores poco contrastados, reflejos |
+| Mediciones malas | 2–5 % con hasta ±15 cm | 0–8 % | — |
 
-### 6.4 Estimación de rumbo imperfecta, con ruido gaussiano
-En el robot, el rumbo sale de la IMU (`AngleZ`), que **deriva con el tiempo**. En simulación, el rumbo que
-ve la política se calcula así:
-
-> rumbo estimado = rumbo real + **ruido gaussiano** (σ por paso) + **sesgo que deriva lentamente**
-> (camino aleatorio) + **retardo** de 1 a 3 pasos, con **pérdidas** ocasionales en las que se repite el
-> último valor
-
-Se implementa con wrappers de Gymnasium propios: uno de ruido y pérdidas y otro de retardo, con el mismo
-patrón que PenaltyStack usa para simular percepción. Los valores de σ y de la deriva se
-ajustan con lo que se mida en el robot.
-
-### 6.5 Cambios del rumbo objetivo
-De vez en cuando se mueve el rumbo objetivo unos grados. Esto le enseña a la política a girar
-suavemente, que es justo lo que pedirá la cámara cuando corrija la posición en el carril.
-
-### 6.6 Cómo se mide
-Prueba de rectitud: 100 episodios con todo lo anterior activado, en 5 m. Se registran:
-- deriva lateral final (media y peor caso);
-- rumbo máximo;
-- porcentaje de episodios dentro del carril.
-
-Con solo IMU, la deriva lateral no se puede corregir por completo, porque la posición lateral no se
-observa. Por eso la meta es que la deriva **sea tan pequeña** que 5 m no alcancen para salir del carril.
+**Cómo se valida que la simulación de la cámara está bien:**
+1. Los mejores agentes se prueban con la **cámara renderizada de verdad** y el estimador real de
+   nao_linea, en lazo cerrado.
+2. En el robot real se compara la visión con la cinta métrica (paso 70).
 
 ---
 
-## 7. Cámara (pendiente) y ruido gaussiano
+## 8. Caminar recto: pérdida de rectitud simulada
 
-**Estado: pendiente de definir por el equipo. Por ahora no se implementa nada.**
+Aun con cámara, la política tiene que ir lo más recta posible por sí misma. Así necesita pocas
+correcciones, aguanta si la visión se pierde un momento y no pierde velocidad corrigiendo. En
+simulación se provocan las causas de desvío de un NAO real:
 
-- **El problema:** la cámara del NAO se lee suscribiéndose a `ALVideoDevice`. En PenaltyStack es la
-  cámara inferior, QVGA, RGB, 10 FPS. Esa suscripción **no existe en el simulador**, y el ruido real de
-  una cámara (iluminación, desenfoque, reflejos de la duela) no se puede reproducir en MuJoCo.
-- **La idea, que se aplicará cuando haya método de cámara:** no simular imágenes, sino **simular la
-  salida del módulo de cámara**:
+1. **Error de colocación inicial:** ±10 cm, ±8°.
+2. **Asimetrías entre lados**, por episodio:
+   - fricción distinta en cada pie;
+   - ganancia de servos por pierna ±10–20 %;
+   - error de calibración de ±1–2° por articulación;
+   - centro de masa corrido;
+   - holgura en tobillos y caderas.
+3. **Perturbaciones:**
+   - empujones de giro y laterales;
+   - suelo con inclinación de ±1°.
+4. **Deriva de la IMU:** el rumbo de `AngleZ` lleva ruido gaussiano + un sesgo que deriva lentamente.
+5. **Pérdidas de visión:** tramos sin cámara en los que solo queda la IMU.
 
-  > estimación del carril = valor real del simulador (desplazamiento lateral y ángulo) + **ruido gaussiano**
-  > + retardo (~100–200 ms) + pérdidas de detección, **actualizada a 10 Hz** y mantenida entre fotos
-
-  Los σ del ruido gaussiano se calibran comparando las mediciones de la cámara real con mediciones
-  manuales en la pista. Es el mismo patrón que PenaltyStack ya usa para simular percepción.
-- **Dónde entra:** como 3 observaciones nuevas (contrato v2, sección 5.1). Requiere reentrenar o ajustar
-  la política.
-- **Por qué no ahora:** sin saber qué medirá la cámara, ni con qué error ni a qué frecuencia, cualquier
-  ruido que inventemos sería arbitrario.
+**Prueba de rectitud:** 100 episodios con todo lo anterior. Se mide la deriva **sin visión**, para la
+calidad de la marcha, y el desvío **con visión**, para la carrera.
 
 ---
 
-## 8. Modelo V6: separación de piernas y valores heredados del modelo aproximado
+## 9. Fricción: entrenamiento y pruebas
+
+**Situación actual.** El modelo usa μ = 1.0 en el piso y en los pies sin que nadie lo haya elegido: es el
+valor por defecto de MuJoCo. MuJoCo usa el **mayor** de los dos, así que hay que fijarlo en ambos.
+
+| Uso | Valores | Detalle |
+|---|---|---|
+| **Entrenamiento** | μ uniforme en **[0.4, 1.2]** por episodio, con hasta ±0.1 de diferencia entre los pies | Duela barnizada ~0.5–0.8, con margen hacia ambos lados |
+| **Batería de pruebas** | μ = **0.4, 0.6, 0.8, 1.0, 1.2** | La misma que usa el benchmark de nao_linea, para comparar las 3 caminatas |
+| **Robot real** | Medir μ de la duela con la prueba del plano inclinado: un pie del NAO sobre una tabla parecida, se inclina hasta que resbala y μ = tan(ángulo) | Paso 69. Centra el rango si hace falta |
+| **Fricción torsional** | Probar `condim` 3 (hoy) contra 4 | El giro del pie sobre el suelo afecta la deriva de rumbo **(a validar)** |
+
+En el barrido de 100 agentes, **el rango de fricción de entrenamiento también varía**: algunos agentes
+entrenan con rangos estrechos y otros con rangos amplios. Todos se evalúan con la misma batería.
+
+---
+
+## 10. Colores de la pista: cambiarlos rápido antes de la competencia
+
+**El problema.** Hoy las líneas son negras y la meta roja, pero **los colores definitivos de líneas y piso
+se avisan poco antes del evento**. Cambiarlos no puede requerir tocar código ni reentrenar.
+
+**La solución:**
+
+1. **Un solo archivo de configuración de la pista**, por ejemplo `config/pista.yaml`. Lo leen la escena del
+   simulador, la visión y el benchmark:
+   ```yaml
+   piso: madera_clara      # nombre o "#rrggbb"
+   veta: true
+   linea: negro
+   salida: negro
+   meta: rojo
+   ```
+   Las medidas del reglamento quedan fijas en el mismo archivo.
+2. **La política de RL no depende del color.** Solo recibe `d`, `psi` y válido. Un cambio de color solo
+   afecta a la visión.
+3. **La visión decide sola** si la línea es más oscura o más clara que el piso. Ya funciona así en
+   nao_linea.
+4. **La política se entrena con ruido de visión hasta 3 veces el nominal** (sección 7). Si con los colores
+   nuevos la visión empeora, la política ya está preparada.
+
+**Procedimiento cuando nos avisen los colores** (paso 75, objetivo < 1 hora):
+1. Editar `config/pista.yaml`.
+2. Regenerar la escena y correr el modelo de error de la visión con los colores nuevos (minutos).
+3. Si σ(d) y σ(psi) quedan dentro del rango entrenado, **no se reentrena**. Si no, ajuste fino corto.
+4. Correr la batería de pruebas de la política final con la pista nueva.
+5. En la zona de calibraciones del evento (reglamento 2.10): tomar fotos de la pista real, ajustar los
+   umbrales de la visión y verificar `d` y `psi` con el robot quieto.
+
+---
+
+## 11. Entrenamiento por población: 100 agentes
+
+**Idea.** En lugar de ajustar los pesos a mano uno por uno, se entrenan **100 agentes** con distintas
+combinaciones de pesos, fricción y otros parámetros. Se evalúan todos con la **misma batería** y se
+eliminan por rondas.
+
+### 11.1 Qué varía entre agentes
+
+Cada agente sortea su configuración dentro de los rangos de la sección 6.4:
+- pesos de la recompensa;
+- rango de fricción de entrenamiento: centro 0.5–1.0, ancho 0.2–0.8, asimetría entre pies 0–0.2;
+- velocidad máxima del currículo: 0.35–0.5 m/s;
+- multiplicador del ruido de la cámara: 1–3;
+- semilla.
+
+Cada configuración se guarda con el agente.
+
+### 11.2 Base común y rondas
+
+Entrenar 100 agentes desde cero es caro: cada uno tarda ~0.5M pasos solo en aprender a no caerse. Por eso:
+
+1. **Base común** `carrera_v01`: un entrenamiento largo con los pesos iniciales y fricción aleatoria.
+   Camina, cruza los 5 m y usa la cámara.
+2. **Ronda 1:** 100 agentes parten de la base y se ajustan ~1M pasos cada uno. Se evalúan con una batería
+   corta y pasan los **20 mejores**.
+3. **Ronda 2:** los 20 siguen ~5M pasos. Se evalúan con la batería completa y pasan los **5 mejores**.
+4. **Ronda 3:** los 5 se entrenan con toda la domain randomization y se evalúan con la **cámara
+   renderizada**, la **escena de 3 carriles con robots vecinos** y el benchmark contra B-Human y NAOqi.
+   Queda **el campeón**.
+5. Lo aprendido, es decir qué rangos ganaron, define la siguiente generación.
+
+### 11.3 Costo estimado (a medir en el paso 43)
+
+Todos los entrenamientos corren en **un solo PC**, la laptop Ryzen 7 5800H, a ~3,800 pasos/s. Por eso las
+rondas son más cortas que si hubiera dos máquinas:
+
+| Ronda | Pasos | Tiempo estimado |
+|---|---|---|
+| Ronda 1 | 100 × 1M | ~7.5 h (una noche) |
+| Ronda 2 | 20 × 5M | ~7.5 h (una noche) |
+| Ronda 3 | 5 × 20M | ~7.5 h (una noche) |
+
+**Total:** unas 3 noches de cómputo, más la base común. Los agentes corren en cola, uno detrás de otro con
+16 entornos cada uno, y la cola se puede reanudar si se interrumpe. Si no alcanza, se reducen pasos o
+agentes (paso 65). La torre con RTX 5060 no está disponible por ahora.
+
+### 11.4 Cómo se elige: puntaje de selección
+
+1. **Filtro duro**, en este orden. Ninguna ganancia de velocidad compensa:
+   - **cualquier choque con un robot vecino** → descartado (reglamento: descalifica al equipo);
+   - **cualquier salida de carril** → descartado (anula la carrera);
+   - **cualquier caída** → descartado.
+2. **Entre los que pasan:** menor **tiempo medio en 5 m + 1 desviación estándar**. Premia ser rápido **y**
+   consistente, porque hay un solo intento.
+3. **Desempate:** menor desvío máximo.
+
+---
+
+## 12. Modelo V6: separación de piernas y valores heredados
 
 **Qué cambió.**
-- El modelo aproximado del sprint inicial usaba primitivas delgadas.
-- El V6 de B-Human usa las **cajas de colisión reales**: muslos y tibias de 7 cm de ancho y pies de
-  7.5 cm, con las caderas separadas 10 cm (`yHipOffset` = 50 mm).
+- El V6 de B-Human usa las **cajas de colisión reales**: muslos y tibias de 7 cm de ancho y pies de 7.5 cm,
+  con las caderas separadas 10 cm.
 - En la pose de pie quedan **3.0 cm entre muslos y tibias y 3.1 cm entre pies** (medido el 2026-10-08).
-- Un HipRoll hacia adentro de solo ~0.075 rad por pierna cierra ese espacio: 0.2 m de pierna × 0.075 rad
-  ≈ 1.5 cm por pierna.
-- La escala actual de HipRoll (±0.25 rad, simétrica) se diseñó con el modelo aproximado y **permite
-  cruzar las piernas**.
+- Un HipRoll hacia adentro de ~0.075 rad por pierna cierra ese espacio.
+- La escala actual (±0.25 rad, simétrica) es del modelo aproximado.
 
-**Valores en el código que todavía son del modelo aproximado y hay que revisar** (paso 45):
+**Valores del código que todavía son del modelo aproximado** (paso 46):
 
 | Valor | Hoy | Acción |
 |---|---|---|
-| Pose de pie `home` (cadera −0.4, rodilla 0.8, tobillo −0.4) | Copiada del modelo anterior | Comparar con la altura de cadera de B-Human (230 mm) y con la separación de pies real |
-| Escalas de acción (`ACTION_SCALES`) | Simétricas, del modelo anterior | HipRoll asimétrico y HipYawPitch nuevo (sección 5.2) |
-| Altura objetivo del torso (0.31 m) y altura de caída (0.22 m) | Del modelo anterior | Recalcular con el V6 |
-| Período de marcha (0.6 s) | Del modelo anterior | Contrastar con B-Human: pasos de 250 ms, ciclo de 0.5 s |
-| Ciclo de control (20 ms) | Del sprint inicial | Pasar a 24 ms para PenaltyStack y el NAO |
-| Autocolisión entre piernas | Activada, sin penalización | Mantenerla y **penalizar el choque** (sección 5.4) |
+| Pose de pie `home` (cadera −0.4, rodilla 0.8, tobillo −0.4) | Del modelo anterior | Comparar con la altura de cadera de B-Human (230 mm) |
+| Escalas de acción | Simétricas | HipRoll asimétrico y HipYawPitch nuevo |
+| Altura objetivo (0.31 m) y altura de caída (0.22 m) | Del modelo anterior | Recalcular con el V6 |
+| Período de marcha (0.6 s) | Del modelo anterior | Contrastar con B-Human: pasos de 250 ms |
+| Ciclo de control (20 ms) | Del sprint inicial | 24 ms |
+| Fricción (1.0) | Valor por defecto de MuJoCo | Explícita y aleatoria (sección 9) |
+| Autocolisión entre piernas | Activada, sin castigo | Castigarla (sección 6.4) |
 
-**Medición del 2026-10-08:** la política entregada en septiembre, entrenada en el modelo aproximado,
-evaluada en el V6 durante 3 episodios de 20 s con semillas 1000–1002: **0 caídas y 0 pasos con choque
-entre piernas** caminando de corrido.
-
-**Dónde se vieron las caídas:** en la demo interactiva (`scripts/demo_interactive.py`), al **pausar y
-reanudar** la caminata. Al pausar, la demo congela la última postura. Al reanudar, la política tiene que
-arrancar desde esa postura quieta, una situación para la que nunca fue entrenada. En el sprint inicial,
-con el modelo aproximado, eso funcionaba en 399 de 400 paradas. En el V6 "a veces se cae". El paso 44
-mide cuántas veces se cae, por qué (¿choque entre piernas?, ¿pérdida de equilibrio al reanudar?) y
-en qué instante.
-
-**Relevancia para la carrera:**
-- En la carrera no se pausa: se arranca una vez y el ABORT detiene para siempre.
-- Pero la caída revela algo importante: **la política no sabe arrancar desde quieto**, y la carrera
-  empieza exactamente así.
-- Por eso el episodio de carrera (sección 5.5) arranca siempre desde quieto, con variaciones en la pose
-  inicial.
+**Caídas vistas en la demo interactiva.** Ocurren al pausar y reanudar: la política no sabe arrancar desde
+quieto. En la carrera no se pausa, pero se arranca desde quieto. Por eso el episodio siempre arranca así
+(paso 45 para el diagnóstico).
 
 ---
 
-## 9. Del simulador al robot real
+## 13. Del simulador al robot real
 
-1. **Medir antes de entrenar para el robot** (sesión 1, robot suspendido):
-   - versión de Python y si hay numpy;
-   - tiempo de inferencia a bordo;
-   - respuesta de los servos: retardo, velocidad máxima, rigidez;
+1. **Sesión 1, robot suspendido:**
+   - Python, numpy y tiempo de inferencia a bordo;
+   - tiempo de la visión;
+   - respuesta de los servos;
    - ruido de IMU y FSR;
-   - **cuánto deriva `AngleZ`**, que alimenta la sección 6.4.
-2. **Identificar el modelo de servos** y llevarlo al simulador.
-3. **Domain randomization general:**
-   - fricción de la duela;
-   - masas;
-   - rigidez;
-   - retardo de la acción;
-   - ruido de sensores.
-4. **Primero dentro de PenaltyStack:** la política corre en su simulador en lugar del motor de B-Human.
-5. **A bordo:** un ejecutor integrado a PenaltyStack, con su START y ABORT, un ciclo de 24 ms y un paro
-   por inclinación. La interfaz ALMotion o LoLA se decide con datos.
-6. **Pruebas escalonadas:** suspendido → arnés → 1 m → 5 m, con `vx_cmd` creciente.
+   - deriva de `AngleZ`;
+   - **precisión de `d` y `psi` con cinta métrica**, que es el criterio pendiente de la cámara;
+   - **μ de la duela**.
+2. **Identificar los servos** y llevarlos al simulador.
+3. **Primero dentro de PenaltyStack:** la política corre en su simulador junto a la caminata original de
+   B-Human.
+4. **A bordo:** ejecutor con la visión en Python puro y la política exportada, con START, ABORT, ciclo de
+   24 ms y paro por inclinación.
+5. **Pruebas escalonadas:** suspendido → arnés → 1 m → 5 m, con `vx_cmd` creciente.
+6. **Comparación real de los tres carriles:** NAOqi, B-Human y RL en la misma pista réplica.
 
 ---
 
-## 10. Generaciones y selección
+## 14. Métricas y protocolo
 
-Cada generación (`carrera_vNN`):
-- tiene una hipótesis escrita;
-- cambia **una sola cosa**;
-- se entrena con semilla fija;
-- se evalúa con el mismo protocolo, en simulación propia y después en PenaltyStack;
-- queda como una fila en la tabla del README y una entrada en la bitácora, aunque salga peor.
+| Métrica | Simulación | Robot real |
+|---|---|---|
+| Tiempo en 5 m y velocidad media | ✓ | ✓ (cronómetro + video) |
+| Salidas de carril, caídas, choques | ✓ | ✓ |
+| Desvío máximo y rumbo máximo | ✓ | ✓ (video y cinta métrica) |
+| Consistencia (desviación estándar) | ✓ | ✓ |
+| Desempeño por fricción | ✓ (5 valores) | ✓ (duela medida) |
+| Con y sin visión | ✓ | ✓ |
 
-**Criterio de selección final:** la política más rápida en el robot real con **0 caídas y 0 salidas de
-carril** en las últimas corridas. Si ninguna cumple, se compite con el baseline de PenaltyStack.
+**Protocolo en simulación:**
+- semillas fijas;
+- acciones deterministas;
+- la misma batería para las 3 caminatas y para los 100 agentes.
+
+**Protocolo en el robot real:**
+- pista réplica de 5 m;
+- misma superficie y batería cargada;
+- 5 o más corridas por caminata;
+- video y log de cada corrida.
 
 ---
 
-## 11. Riesgos y mitigación
+## 15. Riesgos y mitigación
 
 | Riesgo | Mitigación |
 |---|---|
-| Sin cámara, la deriva lateral no se observa | Minimizar la deriva con las estrategias de la sección 6; cámara como contrato v2 |
-| Las piernas chocan en el V6 | HipRoll asimétrico, penalización de choque, medición específica (paso 44) |
-| La red es demasiado lenta en Python 2.7 a bordo | Medir en la sesión 1; red más chica; numpy si existe |
-| La política no transfiere al robot real | Medir, identificar servos, domain randomization, pruebas escalonadas |
-| No integra con PenaltyStack | Contrato v1 alineado desde el inicio; prueba dentro de su simulador antes del robot |
-| No llegar a tiempo | Baseline de PenaltyStack como plan B; congelamiento antes del evento |
+| El RL no supera a B-Human | Currículo de velocidad, 100 agentes y rango de HipPitch; meta medida contra la misma batería |
+| La visión falla con los colores definitivos | Un solo archivo de colores, visión que decide sola la polaridad, política entrenada con ruido hasta 3×, procedimiento de < 1 hora y zona de calibraciones |
+| La fricción real es distinta a la simulada | Entrenamiento en [0.4, 1.2], batería de 5 valores, medición de la duela real |
+| Salida del carril o choque con un robot vecino | Barrera de margen + terminación + filtro duro en la selección + escena de 3 carriles |
+| Las piernas chocan en el V6 | HipRoll asimétrico, castigo por choque, diagnóstico (paso 45) |
+| La red y la visión no caben en el tiempo a bordo | Medir en la sesión 1; red más chica; visión con numpy si existe |
+| El cómputo de 100 agentes no alcanza en un solo PC | Base común + rondas cortas en cola nocturna; reducir pasos o agentes |
+| No llegar a tiempo | Las caminatas de B-Human y NAOqi con visión ya llegan siempre en simulación: son el plan B |

@@ -29,6 +29,10 @@ Este documento resume el análisis de PenaltyStack del 2026-10-08, rama `feat/bh
 **Decisión, confirmada con el autor de PenaltyStack el 2026-10-08:** el baseline es la caminata ya
 establecida en PenaltyStack, el **WalkingEngine de B-Human**.
 
+Desde el 2026-10-10 la comparación es de **tres carriles**: RL, B-Human y NAOqi. Ver
+[`plan_rl_carrera.md`, sección 4](plan_rl_carrera.md#4-los-tres-carriles-qué-comparamos-y-cómo). Esta sección
+describe el B-Human original, que valida la réplica tipo B-Human del benchmark.
+
 **Parámetros del WalkingEngine** (config de B-Human incluida en PenaltyStack, `baseline/bhuman/Config/Robots/`):
 
 | Parámetro | Valor | Archivo |
@@ -50,7 +54,7 @@ de medirlo.
 avance de 0.06 m/s (`docs/SIMULACION.md`). Hay que medir el baseline a velocidades de carrera.
 
 **Cómo se mide:**
-- **En simulación** (paso 47): con el simulador de PenaltyStack sin ventana y la marcha original
+- **En simulación** (paso 50): con el simulador de PenaltyStack sin ventana y la marcha original
   (`python -m penalty.simulator --headless --mode manual --action walk --forward <v> --seconds <s>`).
   Hay que compilar antes su runtime con VS 2022 Build Tools. Se mide con el mismo protocolo que
   nuestras políticas:
@@ -58,7 +62,7 @@ avance de 0.06 m/s (`docs/SIMULACION.md`). Hay que medir el baseline a velocidad
   - deriva lateral;
   - rumbo máximo;
   - caídas.
-- **En el robot real** (paso 67): la caminata de B-Human corriendo en el NAO con el framework de B-Human.
+- **En el robot real** (paso 73): la caminata de B-Human corriendo en el NAO con el framework de B-Human.
   En el robot ya existe un proceso `bhuman`, según `deploy/run.sh` de PenaltyStack. Se mide con el mismo
   protocolo en la pista marcada. Hay que confirmar en la sesión 1 que el framework está instalado y cómo
   se le ordena caminar recto a una velocidad fija.
@@ -93,13 +97,16 @@ avance de 0.06 m/s (`docs/SIMULACION.md`). Hay que medir el baseline a velocidad
 
 - El simulador de PenaltyStack **no simula la cámara**. En el robot real la cámara se lee suscribiéndose a
   `ALVideoDevice`: cámara inferior, QVGA, RGB, **10 FPS**. Esa suscripción no existe en simulación.
-- **Para la carrera, el método de la cámara aún no está definido y queda vacío.** Cuando se defina, su
-  salida se simulará así, sin renderizar imágenes:
+- **Método de cámara (2026-10-10):** la visión de carril de Daniel, de
+  [danielpaya/nao_linea](https://github.com/danielpaya/nao_linea), integrada en `carril/`. Usa la **misma suscripción** que
+  PenaltyStack (cámara inferior, QVGA, RGB, 10 FPS) y entrega `d`, `psi` y válido. Tiene una versión en
+  Python puro para el NAO.
+- En el entrenamiento, su salida se simula sin renderizar imágenes:
 
   > estimación del carril = valor real del simulador + **ruido gaussiano** + retardo + pérdidas, actualizada a 10 Hz
 
   Es el mismo patrón que PenaltyStack ya usa para simular percepción. Ver
-  [`plan_rl_carrera.md`](plan_rl_carrera.md#7-cámara-pendiente-y-ruido-gaussiano).
+  [`plan_rl_carrera.md`](plan_rl_carrera.md#7-cámara-simulada-con-ruido-gaussiano).
 
 ## 6. Cómo se pasará la política a PenaltyStack
 
