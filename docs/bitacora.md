@@ -706,3 +706,33 @@ sin salida y cómo se resolvieron. Tiene tres usos:
 - **Ruta crítica del RL, agregada al plan:** 41 → 46 → 53–58 → 58b → 59 → 60–63 → 77–78. Los demás pasos se
   intercalan mientras haya entrenamientos corriendo.
 - **Siguiente:** paso 41, contrato v1 en código.
+
+### 2026-10-10 — Material para el paper: historial, registro de errores y capítulo de visión
+- **Autor:** Camilo, con Claude Code.
+- **Indicación:** guardar todo, incluidos todos los errores y fallos, cómo se solucionaron y el paso a paso
+  exacto, porque de esto sale un paper. Revisar los pasos anteriores e incluir la visión (cámara).
+- **Revisión de los pasos 1–40:**
+  - 1–33, 39 y 40 completos;
+  - 34–35 hechos pero sin validar (la validación pasó al paso 44);
+  - 36–38 reubicados en la replanificación;
+  - 47 y 48 completos, adelantados.
+- **Qué se hizo.** Nueva carpeta **`docs/paper/`**:
+  - **`historial_pasos.md`:** cada paso del 1 al 40, más el 47 y el 48, con qué se hizo, cómo se verificó,
+    resultado y commit. Reconstruido del historial de Git, el plan, el README, `SOURCE.md`, `results/`, la
+    bitácora y las notas de las sesiones del sprint. **No se inventaron cifras:** donde no hay dato, no se
+    pone.
+  - **`registro_errores.md`:** **37 errores** (E01–E37) con síntoma, causa, solución, estado y evidencia.
+    - Incluye errores del sprint que no estaban en la bitácora: ejes invertidos del modelo base, reinicio
+      del visor, autocolisiones, rangos peligrosos, rutas largas de `pip`.
+    - Incluye los del desarrollo de la visión de Daniel: poca luz, falsos positivos de la meta,
+      autocorrección de pose, truco del giroscopio.
+    - Incluye errores de herramientas: heredocs, CRLF, captura de ventanas.
+  - **`vision_carril.md`:** capítulo de la visión (problema, método, precisión, colores, 3 carriles, cómo
+    entra al RL y pendientes), con crédito a Daniel.
+  - **`README.md`:** índice y cuándo se actualiza cada documento.
+- **Protocolo:** `CLAUDE.md` ahora exige que todo error vaya también al registro (con su ID `E##`) y que cada
+  paso cerrado se resuma en el historial.
+- **Pendiente detectado al reconstruir:** el plan original de los pasos 34–35 usaba el URDF oficial V6
+  (`NAOH25V60.urdf`), pero el modelo se generó desde el RSI3 de B-Human. El motivo del cambio no quedó
+  registrado en su momento (ver E12).
+- **Siguiente:** paso 41.

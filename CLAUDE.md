@@ -42,6 +42,13 @@ ramas. Todos los entrenamientos corren en **un solo PC**, la laptop Ryzen 7 5800
      del README**: línea de estado y tabla de generaciones.
   4. Si cambió una decisión de diseño, actualizar [`docs/plan_rl_carrera.md`](docs/plan_rl_carrera.md) y
      explicar el motivo en la bitácora.
+  5. **Material del paper** ([`docs/paper/`](docs/paper/README.md)):
+     - **todo** error, fallo o callejón sin salida va también a `docs/paper/registro_errores.md`, con el
+       siguiente ID `E##`, síntoma, causa, solución y evidencia. Incluye errores de herramientas y del
+       sistema operativo;
+     - al cerrar un paso, se agrega su resumen a `docs/paper/historial_pasos.md` (qué se hizo, cómo se
+       verificó, resultado y commit);
+     - si cambia algo de la cámara o la visión, se actualiza `docs/paper/vision_carril.md`.
 - **Los fallos no se borran.** Un paso fallido se marca `[!]` y se documenta. Si hace falta corregirlo, se
   agrega un paso nuevo (p. ej. `56b`). Las entradas viejas de la bitácora no se editan; se corrigen con
   una entrada nueva.

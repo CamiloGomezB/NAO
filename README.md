@@ -70,6 +70,9 @@ Se actualiza con cada resultado:
 Aparte se abre la ventana **"Lo que ve cada NAO"**, con la cámara de cada robot. Solo el RL con panel de
 controles: `--live --solo-rl`. Guía completa: [`docs/camara_y_carriles.md`](docs/camara_y_carriles.md).
 
+**Material para el paper:** [`docs/paper/`](docs/paper/README.md). Contiene el historial paso a paso, el registro
+de los 37 errores encontrados con su solución, y el capítulo de la visión de carril.
+
 **Para el equipo:** antes de trabajar, lean [`CLAUDE.md`](CLAUDE.md) (convenciones y protocolo de
 documentación), el paso actual en [`PLAN.md`](PLAN.md) y las últimas entradas de la
 [bitácora](docs/bitacora.md).
