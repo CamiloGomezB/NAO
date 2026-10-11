@@ -4,6 +4,10 @@ Uso (desde la raiz del repo):
     uv run python -m src.evaluate --model checkpoints/best_model.zip --render
     uv run python -m src.evaluate --model runs/<run>/best_model.zip --episodes 20 --json results/metrics.json
     uv run python -m src.evaluate --model runs/<run>/best_model.zip --video media/demo.mp4 --video-episodes 1
+    uv run python -m src.evaluate --model checkpoints/best_model.zip --episodes 20 --mu 0.6   # piso con mu fijo
+
+Friccion: sin --mu se usa la de la configuracion del entorno; si no define una, se sortea en cada episodio
+(ver FRICTION_RANGE en src/envs/nao_walk_env.py). El mu de cada episodio queda en las metricas.
 
 Junto al modelo se buscan automaticamente:
     - la normalizacion de observaciones (VecNormalize .pkl) con el nombre correspondiente al modelo
@@ -55,7 +59,7 @@ def rel(path: Path) -> str:
 
 def run_episode(env, model, vecnorm, seed: int, deterministic: bool, frames: list | None) -> dict:
     base = env.unwrapped
-    obs, _ = env.reset(seed=seed)
+    obs, reset_info = env.reset(seed=seed)
     x0, y0 = base.data.qpos[0], base.data.qpos[1]
     ret, steps, max_tilt, effort, reason = 0.0, 0, 0.0, 0.0, None
     double_support, foot_max = 0, np.zeros(2)  # calidad de marcha
@@ -83,6 +87,7 @@ def run_episode(env, model, vecnorm, seed: int, deterministic: bool, frames: lis
     distance = float(base.data.qpos[0] - x0)
     return {
         "semilla": seed,
+        "friccion": [round(mu, 3) for mu in reset_info["friccion"]],  # (pie izquierdo, pie derecho)
         "duracion_s": round(duration, 3),
         "distancia_m": round(distance, 4),
         "velocidad_media_ms": round(distance / duration, 4),
@@ -123,6 +128,8 @@ def main() -> int:
     parser.add_argument("--video", type=Path, default=None, help="grabar .mp4 o .gif")
     parser.add_argument("--video-episodes", type=int, default=1, help="episodios a incluir en el video")
     parser.add_argument("--json", type=Path, default=None, help="guardar metricas en JSON")
+    parser.add_argument("--mu", type=float, default=None,
+                        help="friccion fija pie-suelo (por defecto: la de la config o aleatoria por episodio)")
     args = parser.parse_args()
 
     if not args.model.exists():
@@ -130,6 +137,8 @@ def main() -> int:
         return 1
     config_path = args.config or find_config(args.model)
     env_kwargs = yaml.safe_load(config_path.read_text(encoding="utf-8"))["env"] if config_path else {}
+    if args.mu is not None:
+        env_kwargs["friction"] = args.mu
     vecnorm_path = args.vecnormalize or find_vecnormalize(args.model)
 
     render_mode = "human" if args.render else ("rgb_array" if args.video else None)
@@ -146,7 +155,13 @@ def main() -> int:
     print(f"Config. env:   {rel(config_path) if config_path else 'valores por defecto'}")
     print(f"Episodios: {args.episodes} (semillas {args.seed}..{args.seed + args.episodes - 1}), "
           f"acciones {'estocasticas' if args.stochastic else 'deterministas'}, "
-          f"maximo {MAX_EPISODE_STEPS * env.unwrapped.dt:.0f} s\n")
+          f"maximo {MAX_EPISODE_STEPS * env.unwrapped.dt:.0f} s")
+    base = env.unwrapped
+    if base.friction_fixed is not None:
+        print(f"Friccion: fija, mu = {base.friction_fixed:.2f}\n")
+    else:
+        print(f"Friccion: aleatoria por episodio, mu en [{base.friction_range[0]:.2f}, {base.friction_range[1]:.2f}], "
+              f"asimetria entre pies hasta {base.friction_asym:.2f}\n")
 
     frames = [] if args.video else None
     episodes = []

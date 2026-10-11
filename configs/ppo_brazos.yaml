@@ -16,6 +16,9 @@ env:
   stance_fraction: 0.6  # (base: 0.5) cada pie apoya 60% del ciclo -> 20% de doble apoyo
   control_arms: true    # (base: false) la politica controla LShoulderPitch y RShoulderPitch
   reward_weights: {}    # sobrescribe pesos de REWARD_WEIGHTS, p. ej. {vel_lateral: -5.0}
+  friction: 1.0         # sprint inicial: mu fijo 1.0 (el valor por defecto de MuJoCo de entonces).
+                        # Los entrenamientos nuevos usan friction_range (aleatoria); reproducir este
+                        # requiere: uv run python -m src.train --config ... --friccion-fija
 
 normalize:
   obs: true

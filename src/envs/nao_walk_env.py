@@ -76,6 +76,13 @@ ANG_VEL_SCALE = 0.25
 LIN_VEL_SCALE = 2.0
 JOINT_VEL_SCALE = 0.05
 
+# Friccion de deslizamiento pie-suelo. No se sabe que piso habra en la competencia (duela de madera,
+# probablemente mu ~0.5-0.8), asi que por defecto se sortea en cada episodio. MuJoCo usa el MAYOR de los
+# dos coeficientes en contacto, por eso se fija en el suelo y en los pies (ver set_friction).
+FRICTION_RANGE = (0.4, 1.2)  # mu uniforme por episodio
+FRICTION_ASYM = 0.1          # diferencia maxima de mu entre el pie izquierdo y el derecho
+FRICTION_MIN = 0.05
+
 
 def gait_pattern_reward(contacts: np.ndarray, phase: float, stance_fraction: float = 0.5) -> float:
     """Fraccion de pies (0, 0.5 o 1) cuyo contacto coincide con el reloj de marcha.
@@ -113,9 +120,14 @@ class NaoWalkEnv(gym.Env):
         stance_fraction: float = 0.5,
         control_arms: bool = False,
         reward_weights: dict | None = None,
+        friction: float | None = None,
+        friction_range: tuple[float, float] = FRICTION_RANGE,
+        friction_asym: float = FRICTION_ASYM,
         render_mode: str | None = None,
         render_size: tuple[int, int] = (640, 480),
     ):
+        """friction: mu fijo en el suelo y los pies (para evaluar con un piso conocido). Si es None, en cada
+        reset se sortea mu en friction_range y cada pie se separa hasta friction_asym del otro."""
         self.model = mujoco.MjModel.from_xml_path(str(SCENE_PATH))
         self.data = mujoco.MjData(self.model)
         self.frame_skip = frame_skip
@@ -126,6 +138,15 @@ class NaoWalkEnv(gym.Env):
         self.fall_height = fall_height
         self.fall_tilt_deg = fall_tilt_deg
         self.target_speed = target_speed
+        lo, hi = friction_range
+        if friction is None and not (FRICTION_MIN <= lo <= hi):
+            raise ValueError(f"friction_range invalido: {friction_range}")
+        if friction is not None and friction < FRICTION_MIN:
+            raise ValueError(f"friction debe ser >= {FRICTION_MIN}")
+        self.friction_fixed = friction
+        self.friction_range = (float(lo), float(hi))
+        self.friction_asym = float(friction_asym)
+        self.friction = (1.0, 1.0)  # mu actual (pie izquierdo, pie derecho)
         unknown = set(reward_weights or {}) - set(REWARD_WEIGHTS)
         if unknown:
             raise ValueError(f"Terminos de recompensa desconocidos: {sorted(unknown)}")
@@ -153,6 +174,8 @@ class NaoWalkEnv(gym.Env):
         self._torso_id = self.model.body("torso").id
         self._floor_id = self.model.geom("floor").id
         self._foot_ids = (self.model.geom("left_foot").id, self.model.geom("right_foot").id)
+        if self.friction_fixed is not None:
+            self.set_friction(self.friction_fixed)
 
         self._prev_action = np.zeros(self.n_act)
         self._step_count = 0
@@ -170,12 +193,13 @@ class NaoWalkEnv(gym.Env):
         self._reset_to_home()
         n_joints = self.model.nq - 7
         self.data.qpos[7:] += self.np_random.uniform(-self.reset_noise, self.reset_noise, n_joints)
+        self._sample_friction()
         mujoco.mj_forward(self.model, self.data)
         self._prev_action[:] = 0.0
         self._step_count = 0
         if self.render_mode == "human":
             self.render()
-        return self._get_obs(), {}
+        return self._get_obs(), {"friccion": self.friction}
 
     def step(self, action):
         action = np.clip(np.asarray(action, dtype=np.float64), -1.0, 1.0)
@@ -310,6 +334,30 @@ class NaoWalkEnv(gym.Env):
                 if other not in self._foot_ids:
                     return "contacto_" + self.model.geom(other).name
         return None
+
+    # ------------------------------------------------------------------ Friccion
+
+    def set_friction(self, mu_left: float, mu_right: float | None = None) -> None:
+        """Fija la friccion de deslizamiento de cada pie con el suelo.
+
+        MuJoCo combina dos geometrias en contacto con el MAYOR de sus coeficientes. Por eso todas las
+        geometrias (suelo incluido) quedan en el menor de los dos valores y cada pie en el suyo: el contacto
+        pie izquierdo-suelo usa mu_left y el pie derecho-suelo usa mu_right. Las fricciones torsional y de
+        rodadura no se tocan.
+        """
+        mu_right = mu_left if mu_right is None else mu_right
+        self.model.geom_friction[:, 0] = min(mu_left, mu_right)
+        self.model.geom_friction[self._foot_ids[0], 0] = mu_left
+        self.model.geom_friction[self._foot_ids[1], 0] = mu_right
+        self.friction = (float(mu_left), float(mu_right))
+
+    def _sample_friction(self) -> None:
+        if self.friction_fixed is not None:
+            self.set_friction(self.friction_fixed)
+            return
+        mu = self.np_random.uniform(*self.friction_range)
+        delta = self.np_random.uniform(-self.friction_asym, self.friction_asym)
+        self.set_friction(max(FRICTION_MIN, mu + delta / 2), max(FRICTION_MIN, mu - delta / 2))
 
     # ------------------------------------------------------------------ Utilidades
 

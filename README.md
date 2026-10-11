@@ -222,23 +222,32 @@ de velocidad (ver siguientes pasos).
 ## 3. Entrenamiento
 
 ```bash
-uv run python -m src.train --config configs/ppo.yaml --total-timesteps 5000000 --run-name mi_entrenamiento
+uv run python -m src.train --config configs/ppo_brazos_friccion.yaml --total-timesteps 5000000 --run-name mi_entrenamiento
 ```
 
-- Todos los hiperparámetros, la semilla y los parámetros del entorno están en [`configs/ppo.yaml`](configs/ppo.yaml).
+- **Fricción aleatoria obligatoria (desde el paso 47).** No se sabe qué piso habrá en la competencia, así que
+  todo entrenamiento sortea la fricción pie-suelo en cada episodio:
+  - μ entre 0.4 y 1.2 (`friction_range`);
+  - hasta 0.1 de diferencia entre pies (`friction_asym`).
+
+  `src.train` rechaza una config con fricción fija (`friction`), salvo que se pase `--friccion-fija`. Esa
+  opción existe solo para reproducir el sprint inicial. Verificación: `uv run python scripts/check_friction.py`.
+- Todos los hiperparámetros, la semilla y los parámetros del entorno están en la config, por ejemplo
+  [`configs/ppo_brazos_friccion.yaml`](configs/ppo_brazos_friccion.yaml).
 - La salida queda en `runs/<run-name>/`: la configuración usada, versiones y commit, checkpoints
   periódicos, `best_model.zip`, `final_model.zip` y logs de TensorBoard.
 - **Duración de referencia:** 5M pasos en **~22 min** (Ryzen 7 5800H, 16 entornos en paralelo, ~3,800 pasos/s).
   Con `--n-envs` se ajusta el número de procesos si el equipo tiene menos núcleos.
 - Se puede interrumpir con `Ctrl+C`: guarda el modelo actual antes de salir.
 
-Las variantes comparadas en la [sección 6](#6-experimentos-y-resultados) se entrenan igual, cambiando
-`--config` por `configs/ppo_natural.yaml` o `configs/ppo_brazos.yaml`.
+Las variantes del sprint inicial comparadas en la [sección 6](#6-experimentos-y-resultados) usaban μ = 1.0
+fijo. Se reproducen con `configs/ppo.yaml`, `configs/ppo_natural.yaml` o `configs/ppo_brazos.yaml` agregando
+`--friccion-fija`.
 
 **Reproducir la política entregada** (V2 brazos) y copiarla a `checkpoints/`:
 
 ```bash
-uv run python -m src.train --config configs/ppo_brazos.yaml --total-timesteps 5000000 --run-name ppo_brazos_5M
+uv run python -m src.train --config configs/ppo_brazos.yaml --total-timesteps 5000000 --run-name ppo_brazos_5M --friccion-fija
 uv run python scripts/export_model.py --run ppo_brazos_5M
 ```
 
@@ -260,8 +269,11 @@ observaciones y la configuración del entorno que se detectan automáticamente, 
 episodios con semillas fijas:
 
 ```bash
-uv run python -m src.evaluate --model checkpoints/best_model.zip --episodes 20 --json results/metrics.json
+uv run python -m src.evaluate --model checkpoints/best_model.zip --episodes 20 --json results/metrics.json --mu 1.0
 ```
+
+`--mu` fija la fricción pie-suelo. Sin `--mu`, se sortea en cada episodio y el μ de cada uno queda en las
+métricas. `results/metrics.json` del sprint inicial corresponde a μ = 1.0.
 
 Métricas por episodio y agregadas (media ± desviación estándar): distancia recorrida, velocidad media,
 duración, tasa de caídas, retorno, desviación lateral, inclinación máxima del torso y esfuerzo

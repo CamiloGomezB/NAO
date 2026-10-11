@@ -72,9 +72,17 @@ def main() -> int:
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--checkpoint-every", type=int, default=None)
     parser.add_argument("--eval-every", type=int, default=None)
+    parser.add_argument("--friccion-fija", action="store_true",
+                        help="permitir una config con friccion fija (solo para reproducir el sprint inicial)")
     args = parser.parse_args()
 
     cfg = load_config(args.config, args)
+    # Regla del proyecto: todo entrenamiento usa friccion aleatoria, porque no se sabe que piso habra en la
+    # competencia. Una friccion fija solo se acepta pidiendolo explicitamente.
+    if cfg["env"].get("friction") is not None and not args.friccion_fija:
+        print(f"ERROR: la config fija friction = {cfg['env']['friction']}. Todo entrenamiento debe usar friccion "
+              "aleatoria (friction_range). Para reproducir un entrenamiento antiguo usa --friccion-fija.")
+        return 1
     run_name = args.run_name or f"{cfg['experiment']}_{dt.datetime.now():%Y%m%d_%H%M%S}"
     run_dir = ROOT / "runs" / run_name
     if run_dir.exists():

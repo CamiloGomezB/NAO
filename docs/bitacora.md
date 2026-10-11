@@ -457,3 +457,54 @@ sin salida y cómo se resolvieron. Tiene tres usos:
   que depende de que PyTorch vuelva a cargar.
 - **Siguiente:** resolver el bloqueo de PyTorch (decisión del usuario). Mientras tanto se avanza con los
   pasos 47 (fricción) y 48 (colores), que se pueden verificar sin PyTorch.
+
+### 2026-10-10 — Paso 47: fricción explícita y aleatoria en todo entrenamiento
+- **Autor:** Camilo, con Claude Code (laptop Ryzen 7 5800H).
+- **Objetivo:** que todo entrenamiento de RL use fricciones distintas, porque no se sabe qué piso habrá en
+  la competencia, y dejar de depender del μ = 1.0 por defecto de MuJoCo.
+- **Qué se hizo:**
+  - **`src/envs/nao_walk_env.py`:**
+    - Nuevos parámetros `friction` (μ fijo, para evaluar con un piso conocido), `friction_range`
+      (por defecto [0.4, 1.2]) y `friction_asym` (por defecto 0.1).
+    - Sin `friction`, cada `reset()` sortea μ uniforme y separa los pies hasta 0.1. El sorteo va
+      **después** del ruido de la pose inicial, para no cambiar la secuencia aleatoria de antes.
+    - `set_friction()` deja todas las geometrías (suelo incluido) en el menor de los dos μ y cada pie en
+      el suyo. Como MuJoCo combina con el **mayor** de los dos coeficientes, el contacto de cada pie con el
+      suelo usa el μ de ese pie.
+    - `reset()` devuelve el μ usado en `info["friccion"]`.
+  - **`src/train.py`:** rechaza una config con fricción fija, salvo con `--friccion-fija`, que existe solo
+    para reproducir el sprint inicial.
+  - **`src/evaluate.py`:** opción `--mu` para evaluar con fricción fija; el μ de cada episodio queda en
+    las métricas.
+  - **Configs:**
+    - `configs/ppo.yaml`, `ppo_natural.yaml` y `ppo_brazos.yaml` fijan `friction: 1.0` explícito (es lo
+      que usó el sprint inicial).
+    - Nueva `configs/ppo_brazos_friccion.yaml`: V2 con fricción aleatoria, lista para entrenar.
+  - **Prueba nueva `scripts/check_friction.py`.**
+  - Los scripts de nao_linea (`benchmark`, `carrera_vivo`) fijan μ **después** de `reset()`, así que
+    siguen funcionando igual.
+- **Resultado:** `scripts/check_friction.py` → **RESULTADO: OK**:
+  - con μ fijo de 0.4, 0.8 y 1.2, los 8 contactos pie-suelo usan exactamente ese μ;
+  - **aleatorio, 200 semillas:** μ medio entre 0.413 y 1.199 (media 0.824); diferencia entre pies de 0.047
+    de media y 0.099 como máximo;
+  - el μ efectivo de cada pie coincide con el pedido;
+  - el sorteo es reproducible con la misma semilla y cambia entre semillas;
+  - de pie con μ = 0.4, el pie se desliza 0.03 mm en 3 s.
+- **Problemas y solución:**
+  - La primera versión de la prueba de "de pie con μ = 0.4" falló: 4.97 mm de deslizamiento.
+  - Medición con distintos μ: el movimiento es casi igual con μ = 1.2 (4.44 mm) y viene de cómo se acomoda
+    la postura por el **ruido de la pose inicial** (`reset_noise`), no de la fricción. Sin ese ruido, el
+    deslizamiento es de 0.01–0.03 mm con cualquier μ.
+  - La prueba se hace ahora sin ruido inicial.
+- **`condim` 3 vs 4** (fricción torsional del pie). Prueba con las caminatas de los baselines, porque el RL
+  no carga por el bloqueo de PyTorch: μ de 0.4, 0.6 y 1.0, sin visión, **una corrida por caso**.
+  - Con `condim` 3, tipo B-Human llega con μ = 0.4 y **se sale** con 0.6 y 1.0. Con `condim` 4 llega en los
+    tres.
+  - Tipo NAOqi se sale con μ = 1.0 y `condim` 3, y llega en los demás casos.
+  - Con una sola corrida, la diferencia no es concluyente: la deriva sin visión cambia mucho de una corrida
+    a otra.
+  - **Decisión:** mantener `condim` 3, igual que el entrenamiento previo y el benchmark de nao_linea, y
+    repetir la comparación con varias semillas en el benchmark completo (paso 51).
+  - **Lo que sí muestra:** **sin visión, la misma caminata llega o se sale según la fricción.** Eso
+    confirma que hay que entrenar con fricción variable y usar la cámara.
+- **Siguiente:** paso 48, colores de la pista en un solo archivo.
