@@ -36,12 +36,17 @@ caminar**. Caminar es opcional, al final.
 
 ## 2. Copiar los archivos al robot
 
-Desde la carpeta del repo en la laptop (`C:\demo_carril`), en PowerShell:
+Desde la carpeta del repo en la laptop (`C:\Users\...\NAO`), en PowerShell:
 
 ```
 ssh nao@<IP_DEL_NAO> "mkdir -p nao_linea"
 scp -r carril robot nao@<IP_DEL_NAO>:/home/nao/nao_linea/
+scp config/pista_robot.json nao@<IP_DEL_NAO>:/home/nao/nao_linea/robot/
 ```
+
+`pista_robot.json` le dice a la visión del robot los colores de la pista: si la línea es más oscura o más
+clara que el piso, y si debe usar el modo "color". Se genera con `scripts/cambiar_colores.py`. **Cada vez que
+cambien los colores, hay que volver a copiarlo.** Sin él, el robot asume cinta negra sobre piso claro.
 
 ## 3. Diagnóstico (2 minutos, el robot no se mueve)
 

@@ -42,7 +42,7 @@ class EstimadorCarrilPuro(object):
                  rel_contrast=0.18, local_window=41, width_tol=(0.35, 2.6), x_range=(0.12, 2.2), max_abs_y=1.6,
                  ransac_iters=60, inlier_tol=0.02, min_inliers=8, max_lines=4, pair_tol=0.08,
                  red_ratio=2.0, red_min=80, red_min_sat=70, red_min_row_px=25, red_min_rows=3,
-                 color_order="rgb", polaridad="oscura", seed=0):
+                 color_order="rgb", polaridad="oscura", color_ref=None, seed=0):
         self.w, self.h = int(width), int(height)
         self.fx = (width / 2.0) / math.tan(math.radians(hfov_deg) / 2.0)
         self.fy = (height / 2.0) / math.tan(math.radians(vfov_deg) / 2.0)
@@ -52,6 +52,10 @@ class EstimadorCarrilPuro(object):
         self.rows = list(range(0, self.h, row_step))
         self.dark_ratio, self.min_contrast, self.rel_contrast = dark_ratio, min_contrast, rel_contrast
         self.clara = polaridad == "clara"   # "oscura" (cinta negra) o "clara" (cinta blanca sobre piso oscuro)
+        # Modo "color" (ver LaneEstimator): proyeccion sobre la direccion linea - piso; la linea queda clara.
+        self.color_ref = color_ref
+        if color_ref is not None:
+            self.clara = True
         self.k = int(local_window) | 1
         self.width_tol, self.x_range, self.max_abs_y = width_tol, x_range, max_abs_y
         self.ransac_iters, self.inlier_tol, self.min_inliers = ransac_iters, inlier_tol, min_inliers
@@ -86,7 +90,12 @@ class EstimadorCarrilPuro(object):
         for v in self.rows:
             base = v * w * 3
             row = data[base:base + w * 3]
-            gray = [0.299 * row[3 * i + ir] + 0.587 * row[3 * i + 1] + 0.114 * row[3 * i + ib] for i in range(w)]
+            if self.color_ref is not None:
+                (ur, ug, ub), (mr, mg, mb) = self.color_ref
+                gray = [min(255.0, max(0.0, 128.0 + ur * (row[3 * i + ir] - mr) + ug * (row[3 * i + 1] - mg)
+                                       + ub * (row[3 * i + ib] - mb))) for i in range(w)]
+            else:
+                gray = [0.299 * row[3 * i + ir] + 0.587 * row[3 * i + 1] + 0.114 * row[3 * i + ib] for i in range(w)]
             # meta roja: contar pixeles rojos saturados en la fila
             nred, sum_u = 0, 0
             for i in range(0, w, 2):

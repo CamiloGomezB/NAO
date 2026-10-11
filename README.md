@@ -60,6 +60,8 @@ Se actualiza con cada resultado:
 | RL | `v2_brazos` del sprint inicial, con visión (truco del giroscopio) | 24.2–24.3 s | ~0.20 m/s | 0 | — | — | nao_linea, sin regenerar (paso 51) |
 | RL | `carrera_v01` y siguientes | pendiente | — | — | — | — | Fase M |
 
+**Cambiar los colores de la pista** (los avisan poco antes del evento): `uv run python scripts/cambiar_colores.py --piso <color> --linea <color>`.
+
 **Ver la cámara funcionando con el RL actual:** `uv run python demo/run_demo.py --live`. Los 3 carriles:
 `uv run python -m demo.caminatas.carrera_vivo`. Guía completa: [`docs/camara_y_carriles.md`](docs/camara_y_carriles.md).
 
@@ -404,6 +406,7 @@ NAO/
 ├── carril/              # Visión de carril (de nao_linea): cámara → d, psi, válido
 ├── demo/                # Pista configurable, demo RL + cámara y caminatas de los baselines (3 carriles)
 ├── robot/               # Kit para probar la visión en el NAO real
+├── config/              # pista.yaml: colores de la pista (único lugar) y pista_robot.json para el NAO
 ├── configs/             # Configuraciones de entrenamiento (base y variantes)
 ├── src/
 │   ├── envs/            # NaoWalkEnv (Gymnasium) y registro de NaoWalk-v0

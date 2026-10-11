@@ -134,7 +134,9 @@ del equipo.
 - [ ] **46. Quitar los valores del modelo aproximado**: pose de pie, escalas de acción (HipRoll asimétrico, HipYawPitch), altura objetivo y de caída, período de marcha y ciclo de 24 ms — ✅ `inspect_actions` muestra que ninguna acción extrema cruza las piernas; `check_standing` en OK
 - [x] **47. Fricción explícita y configurable** en el piso y en los pies (MuJoCo usa el mayor), aleatoria por episodio en [0.4, 1.2] con asimetría entre pies; probar `condim` 3 contra 4 — ✅ Prueba automática de que el μ pedido es el μ efectivo; decisión de `condim` documentada
   - Hecho (2026-10-10): `NaoWalkEnv` sortea μ en [0.4, 1.2] con asimetría ≤ 0.1 por defecto (`friction` fijo solo para evaluar); `src.train` rechaza fricción fija salvo `--friccion-fija`; `src.evaluate --mu`; `configs/ppo_brazos_friccion.yaml`; `scripts/check_friction.py` en OK. `condim` se mantiene en 3 (comparación con 4 no concluyente; se repite en el paso 51).
-- [ ] **48. Pista en un solo archivo de configuración** (`config/pista.yaml`: colores de piso, línea, salida y meta, más las medidas del reglamento), usado por la escena, la visión y el benchmark. Escena de **3 carriles con física compartida** para medir choques entre robots — ✅ Cambiar colores = editar el archivo + un comando; la escena de 3 carriles detecta contactos entre robots
+- [x] **48. Colores de la pista en un solo archivo** (`config/pista.yaml`: piso, veta, línea, salida y meta), usado por la escena, la demo, el benchmark, la verificación de la visión y el robot (`config/pista_robot.json`); `scripts/cambiar_colores.py` cambia, regenera y verifica — ✅ Cambiar colores = un comando con verificación automática
+  - Hecho (2026-10-10): visión con modo **brillo** o **color** según los colores; matriz de 63 combinaciones con 57 OK (`results/camara/matriz_colores.md`); el robot toma la polaridad y el modo de `pista_robot.json`.
+- [ ] **48b. Escena de 3 carriles con física compartida** para medir choques entre robots (hoy cada robot de `carrera_vivo` va en su propia física) — ✅ La escena detecta contactos entre robots de carriles vecinos
 - [ ] **49. Revalidar contactos, de pie y barrido articular con el V6** — ✅ `check_contacts`, `check_standing` y `joint_sweep` en OK + revisión visual del usuario
 
 ## Fase K — Benchmark de los tres carriles (RL, B-Human, NAOqi)
@@ -173,7 +175,7 @@ del equipo.
 - [ ] **74. Ciclo sim-to-real** (diferencia observada → ajuste → nueva generación) — ✅ Cada iteración documentada
 
 ## Fase P — Competencia y cierre
-- [ ] **75. Colores definitivos de la pista** (cuando los avisen): editar `config/pista.yaml`, regenerar la escena, modelo de error de la visión con los colores nuevos, batería de la política final y, en el evento, calibración en la zona de calibraciones — ✅ Procedimiento ensayado de antemano en menos de 1 hora con un juego de colores distinto
+- [ ] **75. Colores definitivos de la pista** (cuando los avisen): `uv run python scripts/cambiar_colores.py --piso <color> --linea <color>` (guarda, regenera y verifica la visión), copiar `config/pista_robot.json` al robot, batería de la política final y, en el evento, calibración en la zona de calibraciones — ✅ Procedimiento ensayado de antemano en menos de 1 hora con un juego de colores distinto
 - [ ] **76. Lista de chequeo del reglamento**: sin Wi-Fi ni comunicación externa, todo a bordo, activación por sensor en < 10 s, paro por el pecho, carga por Ethernet — ✅ Lista firmada por el equipo en el simulacro
 - [ ] **77. Benchmark final de los 3 carriles** (simulación y robot real, mismo protocolo, 10 corridas) — ✅ Tabla final: el RL contra B-Human y NAOqi
 - [ ] **78. Selección, congelamiento e integración en PenaltyStack** (la más rápida con 0 faltas; si el RL no supera a B-Human de forma confiable, se compite con B-Human + visión) — ✅ Política `carrera_final`, tag de Git y PR al repo final

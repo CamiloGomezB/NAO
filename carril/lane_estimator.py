@@ -65,6 +65,10 @@ class LaneEstimator(object):
                  color_order="bgr",     # "bgr" (kBGRColorSpace) o "rgb" (kRGBColorSpace, el de PenaltyStack)
                  polaridad="oscura",    # "oscura": linea mas oscura que el piso (cinta negra sobre madera)
                                         # "clara":  linea mas clara que el piso (cinta blanca sobre piso oscuro)
+                 color_ref=None,        # ((ur, ug, ub), (mr, mg, mb)): modo "color" para lineas y pisos con
+                                        # brillo parecido pero color distinto (ver demo/build_scene.describe).
+                                        # Cada pixel se proyecta sobre la direccion linea - piso y la linea
+                                        # queda siempre mas clara que el piso.
                  seed=0):
         self.cam = camera
         self.lane_width = lane_width
@@ -92,7 +96,8 @@ class LaneEstimator(object):
         self.rel_contrast = rel_contrast
         if polaridad not in ("oscura", "clara"):
             raise ValueError('polaridad debe ser "oscura" o "clara"')
-        self.polaridad = polaridad
+        self.polaridad = "clara" if color_ref is not None else polaridad
+        self.color_ref = color_ref
         self.refine = refine
         self.refine_pitch = np.radians(np.arange(-refine_pitch_deg, refine_pitch_deg + 1e-6, 0.5))
         self.refine_roll = np.radians(np.arange(-refine_roll_deg, refine_roll_deg + 1e-6, 1.0))
@@ -108,7 +113,12 @@ class LaneEstimator(object):
     def _line_points(self, img, T):
         """Centros de los tramos oscuros con ancho compatible con la linea -> puntos (x, y) en el suelo."""
         sub = img[self.rows].astype(np.float32)
-        gray = 0.114 * sub[:, :, self.ib] + 0.587 * sub[:, :, 1] + 0.299 * sub[:, :, self.ir]
+        if self.color_ref is not None:
+            (ur, ug, ub), (mr, mg, mb) = self.color_ref
+            gray = np.clip(128.0 + ur * (sub[:, :, self.ir] - mr) + ug * (sub[:, :, 1] - mg)
+                           + ub * (sub[:, :, self.ib] - mb), 0.0, 255.0)
+        else:
+            gray = 0.114 * sub[:, :, self.ib] + 0.587 * sub[:, :, 1] + 0.299 * sub[:, :, self.ir]
         if self.local_window > 0:
             # Fondo LOCAL (media movil a lo largo de la fila): resiste reflejos y luz no uniforme
             k = self.local_window

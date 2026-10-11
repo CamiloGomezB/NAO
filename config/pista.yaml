@@ -1,0 +1,22 @@
+# COLORES DE LA PISTA: el UNICO lugar del repo donde se definen.
+#
+# La organizacion de la Copa NAO avisa los colores definitivos de las lineas y del piso poco antes de la
+# competencia. Para cambiarlos y verificar que la vision los detecta (ver docs/camara_y_carriles.md):
+#     uv run python scripts/cambiar_colores.py --piso madera_oscura --linea blanco
+# o editar este archivo a mano y correr:
+#     uv run python scripts/cambiar_colores.py
+#
+# Leen este archivo: demo/build_scene.py (escena MuJoCo y config/pista_robot.json para el NAO),
+# demo/run_demo.py, demo/caminatas/* (benchmark y carrera de 3 carriles) y scripts/check_vision.py.
+# La politica de RL NO ve colores (solo recibe d, psi y valido de la vision): cambiarlos no obliga a reentrenar.
+#
+# Cada color puede ser un NOMBRE de la lista o un codigo HEX como "#c49460".
+#   Pisos:  madera_clara, madera_oscura, duela_roja, gris, gris_oscuro, blanco, negro, verde, azul
+#   Lineas: negro, blanco, amarillo, rojo, azul, verde, gris
+# La vision decide sola si busca lineas mas oscuras o mas claras que el piso.
+
+piso: madera_clara     # color base del piso (duela)
+veta: true             # true = tablas y veta de madera; false = piso liso de un solo color
+linea: negro           # lineas del carril (1.9 cm). Reglamento V1.0: negras
+salida: null           # franja de salida (18 cm); null = mismo color que las lineas. Reglamento V1.0: negra
+meta: rojo             # franja de meta (30 cm). Reglamento V1.0: roja

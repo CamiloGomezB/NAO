@@ -57,30 +57,25 @@ def camera_T(env, cam_id, rng, pose_noise_deg):
     return T, origin, yaw
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--pose-noise", type=float, default=0.0, help="error de pose de la camara [grados]")
-    ap.add_argument("--seed", type=int, default=0)
-    ap.add_argument("--out", type=Path, default=None, help="guardar la tabla en un .md")
-    build_scene.add_color_args(ap)
-    a = ap.parse_args()
-
-    cfg = build_scene.config_from_args(a)
+def verificar(cfg: dict, pose_noise: float = 0.0, seed: int = 0,
+              grid: tuple = (X_VALUES, D_VALUES, PSI_VALUES)) -> dict:
+    """Genera la pista con los colores de cfg y mide la vision en las posiciones de grid = (x, d, psi)."""
     info = build_scene.build(cfg, verbose=False)
     E.SCENE_PATH = ROOT / "assets" / "nao" / "scene_carril.xml"
     env = E.NaoWalkEnv()
-    env.reset(seed=a.seed)
+    env.reset(seed=seed)
     m, d = env.model, env.data
     cam_id = m.camera("CameraBottom").id
     renderer = mujoco.Renderer(m, CAM_H, CAM_W)
-    est = LaneEstimator(CameraModel(CAM_W, CAM_H, HFOV, VFOV), polaridad=info["polaridad"])
-    rng = np.random.RandomState(a.seed)
+    est = LaneEstimator(CameraModel(CAM_W, CAM_H, HFOV, VFOV), polaridad=info["polaridad"],
+                        color_ref=info["color_ref"])
+    rng = np.random.RandomState(seed)
     home_q = d.qpos.copy()
 
     rows = []
-    for x in X_VALUES:
-        for d0 in D_VALUES:
-            for psi0 in PSI_VALUES:
+    for x in grid[0]:
+        for d0 in grid[1]:
+            for psi0 in grid[2]:
                 d.qpos[:] = home_q
                 d.qpos[0], d.qpos[1] = x, d0
                 half = math.radians(psi0) / 2
@@ -89,7 +84,7 @@ def main() -> int:
                 mujoco.mj_forward(m, d)
                 renderer.update_scene(d, camera=cam_id)
                 img = renderer.render()
-                T, origin, yaw = camera_T(env, cam_id, rng, a.pose_noise)
+                T, origin, yaw = camera_T(env, cam_id, rng, pose_noise)
                 e = est.process(np.ascontiguousarray(img[:, :, ::-1]), T)
                 rows.append(dict(x=x, d=origin[1], psi=math.degrees(yaw), valid=e.valid, lines=e.n_lines,
                                  d_est=e.d, psi_est=math.degrees(e.psi)))
@@ -97,39 +92,65 @@ def main() -> int:
     env.close()
 
     valid = [r for r in rows if r["valid"]]
-    err_d = np.array([100 * abs(r["d_est"] - r["d"]) for r in valid])
-    err_psi = np.array([abs(r["psi_est"] - r["psi"]) for r in valid])
-    pct_valid = 100.0 * len(valid) / len(rows)
-    ok = pct_valid == 100.0 and err_d.mean() <= TOL_D_CM and err_psi.mean() <= TOL_PSI_DEG
+    err_d = np.array([100 * abs(r["d_est"] - r["d"]) for r in valid]) if valid else np.array([np.nan])
+    err_psi = np.array([abs(r["psi_est"] - r["psi"]) for r in valid]) if valid else np.array([np.nan])
+    res = dict(cfg=dict(cfg), info=info, pose_noise=pose_noise, grid=grid, n=len(rows),
+               pct_valid=100.0 * len(valid) / len(rows),
+               pct_two_lines=100.0 * sum(r["lines"] == 2 for r in rows) / len(rows),
+               err_d_mean=float(err_d.mean()), err_d_max=float(err_d.max()),
+               err_psi_mean=float(err_psi.mean()), err_psi_max=float(err_psi.max()))
+    # Ademas del resultado en simulacion se exige un contraste minimo: la imagen renderizada no tiene ruido,
+    # y una linea casi del mismo color que el piso no se veria en una pista real aunque aqui se detecte.
+    res["contraste_ok"] = bool(info["contraste_efectivo"] >= build_scene.MIN_CONTRASTE_REAL)
+    res["ok"] = bool(res["pct_valid"] == 100.0 and res["err_d_mean"] <= TOL_D_CM
+                     and res["err_psi_mean"] <= TOL_PSI_DEG and res["contraste_ok"])
+    return res
 
+
+def informe(res: dict, origen: str = "scripts/check_vision.py") -> str:
+    cfg, info = res["cfg"], res["info"]
+    salida = cfg.get("salida") or cfg["linea"]
     lines = [
         "# Verificacion de la vision de carril en la pista simulada",
         "",
-        f"Generado por `scripts/check_vision.py`. Pista: piso `{cfg['piso']}`, linea `{cfg['linea']}`, "
-        f"meta `{cfg['meta']}`, veta {'si' if info['veta'] else 'no'}; linea {info['polaridad']} que el piso, "
-        f"contraste {info['contraste']:.0f}. Error de pose de la camara: {a.pose_noise:.1f} grados.",
+        f"Generado por `{origen}`. Pista: piso `{cfg['piso']}`, linea `{cfg['linea']}`, salida `{salida}`, "
+        f"meta `{cfg['meta']}`, veta {'si' if info['veta'] else 'no'}. Vision por **{info['modo_vision']}**, "
+        f"linea {info['polaridad']} que el piso. Error de pose de la camara: {res['pose_noise']:.1f} grados.",
         "",
-        f"Posiciones: x = {X_VALUES} m, d = {D_VALUES} m, psi = {PSI_VALUES} grados ({len(rows)} en total), "
-        "robot de pie en la pose `home`.",
+        f"Posiciones: x = {res['grid'][0]} m, d = {res['grid'][1]} m, psi = {res['grid'][2]} grados "
+        f"({res['n']} en total), robot de pie en la pose `home`.",
         "",
         "| Metrica | Valor | Tolerancia |",
         "|---|---|---|",
-        f"| Mediciones validas | {pct_valid:.0f} % | 100 % |",
-        f"| Error medio de d | {err_d.mean():.2f} cm | <= {TOL_D_CM} cm |" if len(valid) else "| Error medio de d | - | |",
-        f"| Error maximo de d | {err_d.max():.2f} cm | - |" if len(valid) else "",
-        f"| Error medio de psi | {err_psi.mean():.2f} grados | <= {TOL_PSI_DEG} grados |" if len(valid) else "",
-        f"| Error maximo de psi | {err_psi.max():.2f} grados | - |" if len(valid) else "",
-        f"| Con las 2 lineas detectadas | {100.0 * sum(r['lines'] == 2 for r in rows) / len(rows):.0f} % | - |",
+        f"| Contraste linea-piso (0-255) | {info['contraste_efectivo']:.0f} | >= {build_scene.MIN_CONTRASTE_REAL} |",
+        f"| Mediciones validas | {res['pct_valid']:.0f} % | 100 % |",
+        f"| Error medio de d | {res['err_d_mean']:.2f} cm | <= {TOL_D_CM} cm |",
+        f"| Error maximo de d | {res['err_d_max']:.2f} cm | - |",
+        f"| Error medio de psi | {res['err_psi_mean']:.2f} grados | <= {TOL_PSI_DEG} grados |",
+        f"| Error maximo de psi | {res['err_psi_max']:.2f} grados | - |",
+        f"| Con las 2 lineas detectadas | {res['pct_two_lines']:.0f} % | - |",
         "",
-        f"RESULTADO: {'OK' if ok else 'FALLA'}",
+        f"RESULTADO: {'OK' if res['ok'] else 'FALLA'}",
     ]
-    text = "\n".join(line for line in lines if line is not None) + "\n"
+    return "\n".join(lines) + "\n"
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--pose-noise", type=float, default=0.0, help="error de pose de la camara [grados]")
+    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--out", type=Path, default=None, help="guardar la tabla en un .md")
+    build_scene.add_color_args(ap)
+    a = ap.parse_args()
+
+    res = verificar(build_scene.config_from_args(a), a.pose_noise, a.seed)
+    text = informe(res)
     print(text)
     if a.out:
         a.out.parent.mkdir(parents=True, exist_ok=True)
         a.out.write_text(text, encoding="utf-8")
         print(f"Guardado en {a.out}")
-    return 0 if ok else 1
+    return 0 if res["ok"] else 1
 
 
 if __name__ == "__main__":

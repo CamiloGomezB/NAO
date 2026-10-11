@@ -14,7 +14,7 @@ Uso:
     uv run python demo/run_demo.py --live --inicio-d 12 --inicio-psi 8
         # colocado chueco: 12 cm a la izquierda y girado 8 grados; mide, se centra y corre
     uv run python demo/run_demo.py --live --piso gris_oscuro --linea blanco
-        # otros colores (tambien en demo/pista.yaml o desde el panel)
+        # otros colores (tambien en config/pista.yaml o desde el panel)
 En Linux sin pantalla:  MUJOCO_GL=egl (u osmesa) uv run python demo/run_demo.py --video demo.mp4
 """
 import argparse
@@ -34,7 +34,7 @@ import mujoco  # noqa: E402
 import src.envs.nao_walk_env as E  # noqa: E402
 from carril import CameraModel, LaneEstimator, LaneFilter  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import build_scene  # noqa: E402  (colores de la pista: demo/pista.yaml)
+import build_scene  # noqa: E402  (colores de la pista: config/pista.yaml)
 
 E.SCENE_PATH = ROOT / "assets" / "nao" / "scene_carril.xml"
 LANE_HALF, LENGTH = 0.35, 5.0
@@ -187,8 +187,8 @@ class CameraWindow(object):
                           valinit=self.d0, valstep=1)
         self.s_p = Slider(f.add_axes([0.33, 0.230, 0.52, 0.032]), "Inicio: girado [grados]\n(+ izquierda)", -15, 15,
                           valinit=self.psi0, valstep=1)
-        # Colores: nombre (madera_oscura, gris, blanco...) o codigo "#rrggbb"; ver demo/pista.yaml
-        # Colores: listas desplegables con los nombres de build_scene (mas colores HEX en demo/pista.yaml)
+        # Colores: nombre (madera_oscura, gris, blanco...) o codigo "#rrggbb"; ver config/pista.yaml
+        # Colores: listas desplegables con los nombres de build_scene (mas colores HEX en config/pista.yaml)
         self.d_piso = Desplegable(f, [0.12, 0.150, 0.27, 0.042], "Piso", list(build_scene.PISOS), self.piso)
         self.d_linea = Desplegable(f, [0.49, 0.150, 0.21, 0.042], "Linea", list(build_scene.LINEAS), self.linea)
         self.b_col = Button(f.add_axes([0.73, 0.145, 0.24, 0.052]), "Aplicar colores", color="#e3f2fd", hovercolor="#bbdefb")
@@ -265,7 +265,7 @@ def run(vision, seed=1000, video=None, live=False, pose_noise_deg=1.0, k_psi=1.2
     cam = CameraModel(CAM_W, CAM_H, HFOV, VFOV)
     if polaridad is None:   # linea mas oscura o mas clara que el piso, segun los colores de la pista
         polaridad = ctx["polaridad"] if ctx is not None and "polaridad" in ctx else PISTA.get("polaridad", "oscura")
-    est = LaneEstimator(cam, polaridad=polaridad)
+    est = LaneEstimator(cam, polaridad=polaridad, color_ref=PISTA.get("color_ref"))
     filt = LaneFilter()
     if ctx is not None:
         cam_renderer, cam_win, viewer = ctx["renderer"], ctx["cam_win"], ctx["viewer"]
@@ -532,7 +532,7 @@ def live_app(a, pista_cfg):
             PISTA.update(info)
             ctx["polaridad"] = info["polaridad"]
             open_world()
-            if info["contraste"] < 45:
+            if info["contraste_efectivo"] < build_scene.MIN_CONTRASTE_REAL:
                 cam_win.set_title("Ojo: la linea casi no se distingue del piso", "#c5221f")
             continue
         if cam_win.request == "run":
@@ -571,7 +571,7 @@ def main():
     ap.add_argument("--inicio-psi", type=float, default=0.0,
                     help="colocacion inicial: girado a la izquierda (+) o derecha (-) [grados]")
     ap.add_argument("--sin-camara", action="store_true", help="con --live: no abrir la ventana de la camara")
-    build_scene.add_color_args(ap)   # --piso, --linea, --meta, --sin-veta (si no se pasan: demo/pista.yaml)
+    build_scene.add_color_args(ap)   # --piso, --linea, --salida, --meta, --sin-veta (si no se pasan: config/pista.yaml)
     a = ap.parse_args()
     pista_cfg = build_scene.config_from_args(a)
     PISTA.update(build_scene.build(pista_cfg))   # regenera la pista con esos colores

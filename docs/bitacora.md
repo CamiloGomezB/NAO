@@ -508,3 +508,65 @@ sin salida y cómo se resolvieron. Tiene tres usos:
   - **Lo que sí muestra:** **sin visión, la misma caminata llega o se sale según la fricción.** Eso
     confirma que hay que entrenar con fricción variable y usar la cámara.
 - **Siguiente:** paso 48, colores de la pista en un solo archivo.
+
+### 2026-10-10 — Paso 48: colores de la pista en un solo archivo, con verificación automática
+- **Autor:** Camilo, con Claude Code (laptop Ryzen 7 5800H).
+- **Objetivo:** que cambiar los colores de las líneas y del piso, que la organización avisa poco antes del
+  evento, sea un solo comando con verificación, sin tocar código ni reentrenar.
+- **Qué se hizo:**
+  - **`config/pista.yaml`**, movido desde `demo/pista.yaml`, es el **único lugar** con los colores: piso,
+    veta, línea, salida y meta.
+    - `salida: null` significa "mismo color que las líneas", como en el reglamento V1.0.
+  - **`demo/build_scene.py`:**
+    - lee `config/pista.yaml`;
+    - acepta `--salida`;
+    - genera **`config/pista_robot.json`** (polaridad, modo y colores) para la visión a bordo del NAO, que
+      no tiene PyYAML.
+  - **`robot/race_nao.py`** toma la polaridad y el modo de `pista_robot.json`; antes la polaridad era
+    "oscura" fija. `robot/LUNES.md` explica que hay que copiar ese JSON al robot.
+  - **`scripts/check_vision.py`** ahora expone las funciones `verificar()` e `informe()` y exige además un
+    contraste mínimo.
+  - **Nuevo `scripts/cambiar_colores.py`:** guarda los colores conservando los comentarios del YAML,
+    regenera la escena, verifica la visión (50 posiciones, 1.5° de error de pose) y escribe el informe.
+    Tiene `--probar` (sin guardar) y `--matriz` (todas las combinaciones con nombre).
+- **Problema encontrado y solución: la visión solo miraba el brillo.**
+  - **Primera matriz** (63 combinaciones de piso × línea con nombre): **solo 30 OK.** Fallaban todas las
+    líneas de color con brillo parecido al piso; por ejemplo, verde o gris sobre madera clara daba 0 %
+    de mediciones válidas.
+  - **Solución, un modo "color" en los dos estimadores** (`carril/lane_estimator.py` con numpy y
+    `carril/lane_estimator_puro.py` para el NAO):
+    - como los colores de la pista se conocen por la configuración, cada píxel se proyecta sobre la
+      dirección de color "línea − piso";
+    - con eso, la línea queda siempre más clara que el piso.
+  - **Cuándo se usa cada modo:**
+    - se usa **brillo** si la línea pasa la misma prueba que aplica el detector (más oscura que el 62 % del
+      piso, o más clara en la misma proporción, con al menos 45 niveles de diferencia);
+    - si no, se usa **color**.
+    - Con la pista actual (negro sobre madera clara) se sigue usando brillo: el modo validado no cambia.
+  - Se agregó un criterio **NO APTO** para contraste efectivo < 30 de 255. La imagen simulada no tiene ruido
+    y "detecta" negro sobre negro, cosa que en una pista real no pasaría.
+- **Resultado:**
+  - **Pista actual** (madera clara, línea negra), visión por brillo: **RESULTADO: OK**, 100 % válidas,
+    error medio de 1.27 cm y 0.86°. Idéntico a antes del cambio
+    (`results/camara/verificacion_vision.md`).
+  - **Cambio real y vuelta atrás** (gris oscuro con línea `#f2f2f2` y sin veta → madera clara con línea
+    negra):
+    - con los colores nuevos: OK, error de 1.26 cm, polaridad "clara";
+    - al volver, `config/pista.yaml` queda idéntico al original.
+  - **`--probar`** no modifica ningún archivo (verificado con md5).
+  - **Matriz final:** **57 de 63 OK** (`results/camara/matriz_colores.md`).
+    - **NO APTO:** negro sobre negro y blanco sobre blanco.
+    - **Fallan:** gris sobre gris y verde sobre verde; y, al límite, gris sobre madera clara (89 %), rojo
+      sobre gris (89 %) y gris sobre blanco (0 %).
+    - Gris sobre blanco falla por una limitación de la simulación: la cámara simulada no tiene
+      autoexposición y el piso blanco se satura a 255.
+- **Problemas menores:**
+  - Al escribir parches con heredocs de Bash, las secuencias `
+` se convirtieron en saltos de línea
+    reales y rompieron dos archivos. Se detectó con `ast.parse` y se corrigió.
+  - Path.write_text en Windows guarda con CRLF; los archivos generados ahora se escriben con LF.
+- **Decisión:** la escena de 3 carriles con física compartida (choques entre robots) pasa a un paso
+  propio, el **48b**, para no mezclarla con los colores.
+- **Siguiente:**
+  - resolver el bloqueo de PyTorch (decisión del usuario, ver la entrada del paso 40);
+  - después, pasos 41 (contrato v1), 44–46 (modelo V6) y 48b.

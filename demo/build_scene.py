@@ -2,17 +2,20 @@
 """Genera la escena MuJoCo de la Carrera Individual (reglamento 3.2.4) con el NAO V6.
 
   - Piso (madera con veta o liso), carril de 70 cm con lineas de 1.9 cm, carriles vecinos, franja de
-    salida (18 cm) y franja de meta (30 cm) a 5 m. Los COLORES se eligen en demo/pista.yaml.
+    salida (18 cm) y franja de meta (30 cm) a 5 m. Los COLORES se eligen en config/pista.yaml (el UNICO lugar
+    donde se definen; la organizacion los avisa poco antes de la competencia).
   - Camara inferior del NAO en la cabeza, como en el modelo de B-Human: (x 0.05071, z 0.01774) desde
     HeadPitch, inclinada 39.7 grados, 320x240, campo de vision vertical 42.5 grados.
 
 Uso:
-    uv run python demo/build_scene.py                              # colores de demo/pista.yaml
+    uv run python demo/build_scene.py                              # colores de config/pista.yaml
     uv run python demo/build_scene.py --piso gris --linea blanco   # o pasarlos aqui
     uv run python demo/build_scene.py --piso "#3a3a3a" --linea "#f2f2f2" --sin-veta
-Salida: assets/nao/scene_carril.xml, assets/nao/nao_cam.xml y assets/nao/duela.png
+Salida: assets/nao/scene_carril.xml, assets/nao/nao_cam.xml, assets/nao/duela.png y config/pista_robot.json
+(polaridad y colores para la vision que corre en el NAO, que no tiene PyYAML).
 """
 import argparse
+import json
 import math
 import re
 import struct
@@ -24,7 +27,8 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 NAO_DIR = ROOT / "assets" / "nao"
-CONFIG = Path(__file__).resolve().parent / "pista.yaml"
+CONFIG = ROOT / "config" / "pista.yaml"
+ROBOT_JSON = ROOT / "config" / "pista_robot.json"
 LANE, LINE, LENGTH = 0.70, 0.019, 5.0
 SPACING = LANE + LINE
 CAM_PITCH = math.radians(39.7)
@@ -51,7 +55,10 @@ LINEAS = {
     "verde": (30, 150, 50),
     "gris": (120, 120, 120),
 }
-DEFAULT = dict(piso="madera_clara", veta=True, linea="negro", meta="rojo")
+MIN_CONTRASTE_BRILLO = 45   # contraste minimo de brillo (0-255) para usar el modo "brillo"
+BRILLO_RATIO = 0.62         # el mismo dark_ratio por defecto de carril/lane_estimator.py
+MIN_CONTRASTE_REAL = 30     # por debajo, la linea no se veria en una pista real (ruido de camara, luz)
+DEFAULT = dict(piso="madera_clara", veta=True, linea="negro", salida=None, meta="rojo")  # salida None = color de linea
 
 
 def parse_color(value, names):
@@ -77,7 +84,7 @@ def luminance(rgb):
 
 
 def load_config(**overrides):
-    """Lee demo/pista.yaml y aplica los valores pasados (los None se ignoran)."""
+    """Lee config/pista.yaml y aplica los valores pasados (los None se ignoran)."""
     cfg = dict(DEFAULT)
     if CONFIG.exists():
         cfg.update({k: v for k, v in (yaml.safe_load(CONFIG.read_text(encoding="utf-8")) or {}).items() if v is not None})
@@ -90,9 +97,28 @@ def describe(cfg):
     piso = parse_color(cfg["piso"], PISOS)
     linea = parse_color(cfg["linea"], LINEAS)
     meta = parse_color(cfg["meta"], LINEAS)
+    salida = parse_color(cfg["salida"], LINEAS) if cfg.get("salida") else linea
     lp, ll = luminance(piso), luminance(linea)
-    return dict(piso_rgb=piso, linea_rgb=linea, meta_rgb=meta, veta=bool(cfg.get("veta", True)),
-                polaridad="oscura" if ll < lp else "clara", contraste=abs(ll - lp))
+    info = dict(piso_rgb=piso, linea_rgb=linea, salida_rgb=salida, meta_rgb=meta, veta=bool(cfg.get("veta", True)),
+                polaridad="oscura" if ll < lp else "clara", contraste=abs(ll - lp),
+                modo_vision="brillo", color_ref=None)
+    # El detector por brillo (carril/lane_estimator.py) exige que la linea sea mas oscura que BRILLO_RATIO
+    # veces el fondo (o, si es clara, que supere al fondo en (1 - BRILLO_RATIO) de lo que le queda hasta 255).
+    # Si el brillo no pasa esa prueba pero el color si distingue la linea (p. ej. verde sobre madera clara),
+    # la vision proyecta cada pixel sobre la direccion de color linea - piso (modo "color").
+    if ll < lp:
+        brillo_ok = ll < BRILLO_RATIO * lp and lp - ll >= MIN_CONTRASTE_BRILLO
+    else:
+        brillo_ok = ll > lp + (255.0 - lp) * (1.0 - BRILLO_RATIO) and ll - lp >= MIN_CONTRASTE_BRILLO
+    dif = [l_ - p_ for l_, p_ in zip(linea, piso)]
+    norma = math.sqrt(sum(x * x for x in dif))
+    if not brillo_ok and norma > info["contraste"]:
+        u = [x / norma for x in dif]
+        m = [(l_ + p_) / 2.0 for l_, p_ in zip(linea, piso)]
+        info.update(modo_vision="color", polaridad="clara",
+                    color_ref=[[round(x, 5) for x in u], [round(x, 2) for x in m]])
+    info["contraste_efectivo"] = norma if info["modo_vision"] == "color" else info["contraste"]
+    return info
 
 
 def write_png(path, rgb):
@@ -131,7 +157,7 @@ def rgba(rgb):
 
 
 def build(cfg=None, verbose=True, **overrides):
-    """Genera la escena con los colores de cfg (o de demo/pista.yaml + overrides). Devuelve describe(cfg)."""
+    """Genera la escena con los colores de cfg (o de config/pista.yaml + overrides). Devuelve describe(cfg)."""
     cfg = cfg or load_config(**overrides)
     info = describe(cfg)
     floor_texture(NAO_DIR / "duela.png", info["piso_rgb"], info["veta"])
@@ -145,7 +171,7 @@ def build(cfg=None, verbose=True, **overrides):
     (NAO_DIR / "nao_cam.xml").write_text(nao)
 
     # 2) Escena de la pista
-    lc, mc = rgba(info["linea_rgb"]), rgba(info["meta_rgb"])
+    lc, sc, mc = rgba(info["linea_rgb"]), rgba(info["salida_rgb"]), rgba(info["meta_rgb"])
     geoms = []
     x0, x1 = -0.4, LENGTH + 0.8
     for k in (-2, -1, 0, 1):
@@ -153,7 +179,7 @@ def build(cfg=None, verbose=True, **overrides):
         geoms.append('<geom type="box" pos="%.4f %.4f 0.0006" size="%.4f %.4f 0.0006" rgba="%s" contype="0" conaffinity="0"/>'
                      % ((x0 + x1) / 2, y, (x1 - x0) / 2, LINE / 2, lc))
     geoms.append('<geom name="salida" type="box" pos="0 0 0.0005" size="0.09 %.4f 0.0005" rgba="%s" contype="0" conaffinity="0"/>'
-                 % (SPACING * 1.5, lc))
+                 % (SPACING * 1.5, sc))
     geoms.append('<geom name="meta" type="box" pos="%.3f 0 0.0007" size="0.15 %.4f 0.0007" rgba="%s" contype="0" conaffinity="0"/>'
                  % (LENGTH + 0.15, LANE / 2, mc))
     scene = """<mujoco model="nao carrera">
@@ -178,25 +204,36 @@ def build(cfg=None, verbose=True, **overrides):
 </mujoco>
 """ % (1 / 1.8, 1 / 1.8, "\n    ".join(geoms))
     (NAO_DIR / "scene_carril.xml").write_text(scene)
+    # 3) Lo que necesita la vision a bordo del NAO (Python 2.7, sin PyYAML): robot/race_nao.py lo lee.
+    ROBOT_JSON.parent.mkdir(parents=True, exist_ok=True)
+    ROBOT_JSON.write_text(json.dumps(dict(
+        nota="Generado por demo/build_scene.py desde config/pista.yaml. No editar a mano.",
+        piso=str(cfg["piso"]), linea=str(cfg["linea"]), salida=str(cfg.get("salida") or cfg["linea"]),
+        meta=str(cfg["meta"]), veta=info["veta"], polaridad=info["polaridad"],
+        modo_vision=info["modo_vision"], color_ref=info["color_ref"],
+        contraste=round(info["contraste"], 1), contraste_efectivo=round(info["contraste_efectivo"], 1), piso_rgb=list(info["piso_rgb"]), linea_rgb=list(info["linea_rgb"]),
+        meta_rgb=list(info["meta_rgb"])), indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
     if verbose:
-        print("Pista: piso %s (%s), linea %s, meta %s -> linea %s que el piso, contraste %.0f"
-              % (cfg["piso"], "con veta" if info["veta"] else "liso", cfg["linea"], cfg["meta"],
-                 "mas oscura" if info["polaridad"] == "oscura" else "mas clara", info["contraste"]))
-        if info["contraste"] < 45:
+        print("Pista: piso %s (%s), linea %s, meta %s -> vision por %s, linea %s que el piso, contraste %.0f"
+              % (cfg["piso"], "con veta" if info["veta"] else "liso", cfg["linea"], cfg["meta"], info["modo_vision"],
+                 "mas oscura" if info["polaridad"] == "oscura" else "mas clara", info["contraste_efectivo"]))
+        if info["contraste_efectivo"] < MIN_CONTRASTE_REAL:
             print("  AVISO: la linea casi no se distingue del piso (contraste %.0f de 255). La vision puede fallar,"
-                  " igual que fallaria en una pista real asi." % info["contraste"])
+                  " igual que fallaria en una pista real asi." % info["contraste_efectivo"])
     return info
 
 
 def add_color_args(ap):
     ap.add_argument("--piso", default=None, help="color del piso: nombre (%s) o '#rrggbb'" % ", ".join(PISOS))
     ap.add_argument("--linea", default=None, help="color de las lineas: nombre (%s) o '#rrggbb'" % ", ".join(LINEAS))
+    ap.add_argument("--salida", default=None, help="color de la franja de salida (por defecto, el de la linea)")
     ap.add_argument("--meta", default=None, help="color de la franja de meta")
     ap.add_argument("--sin-veta", action="store_true", help="piso liso, sin tablas ni veta")
 
 
 def config_from_args(a):
-    return load_config(piso=a.piso, linea=a.linea, meta=a.meta, veta=(False if a.sin_veta else None))
+    return load_config(piso=a.piso, linea=a.linea, salida=a.salida, meta=a.meta,
+                       veta=(False if a.sin_veta else None))
 
 
 if __name__ == "__main__":

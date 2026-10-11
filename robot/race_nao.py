@@ -53,6 +53,38 @@ KEY_ANGLE_X = "Device/SubDeviceList/InertialSensor/AngleX/Sensor/Value"
 KEY_ANGLE_Y = "Device/SubDeviceList/InertialSensor/AngleY/Sensor/Value"
 
 
+
+def pista_robot():
+    """Contenido de config/pista_robot.json (lo genera demo/build_scene.py desde config/pista.yaml), o {}."""
+    for ruta in (os.path.join(HERE, "pista_robot.json"),
+                 os.path.join(os.path.dirname(HERE), "config", "pista_robot.json")):
+        if os.path.isfile(ruta):
+            try:
+                with open(ruta) as f:
+                    return json.load(f)
+            except (IOError, ValueError):
+                pass
+    return {}
+
+
+def polaridad_pista():
+    """Polaridad de la linea segun config/pista_robot.json (lo genera demo/build_scene.py desde config/pista.yaml).
+
+    Se busca junto a este archivo y en ../config/. Si no existe, "oscura" (cinta negra sobre madera).
+    Asi, cuando la organizacion avise los colores, basta con regenerar la pista y copiar el JSON al robot.
+    """
+    for ruta in (os.path.join(HERE, "pista_robot.json"),
+                 os.path.join(os.path.dirname(HERE), "config", "pista_robot.json")):
+        if os.path.isfile(ruta):
+            try:
+                with open(ruta) as f:
+                    pol = json.load(f).get("polaridad", "oscura")
+                if pol in ("oscura", "clara"):
+                    return pol
+            except (IOError, ValueError):
+                pass
+    return "oscura"
+
 def wrap(a):
     return (a + math.pi) % (2 * math.pi) - math.pi
 
@@ -62,8 +94,10 @@ class Vision(object):
 
     def __init__(self, args):
         self.usa_numpy = np is not None and not args.puro
+        # Modo "color" si la pista lo pide (lineas con brillo parecido al piso); ver config/pista_robot.json.
+        color_ref = pista_robot().get("color_ref") if pista_robot().get("modo_vision") == "color" else None
         kw = dict(dark_ratio=args.dark_ratio, min_contrast=args.min_contrast, color_order="rgb",
-                  polaridad=args.polaridad)
+                  polaridad=args.polaridad, color_ref=color_ref)
         if self.usa_numpy:
             self.est = LaneEstimator(CameraModel(320, 240, args.hfov, args.vfov), **kw)
         else:
@@ -277,8 +311,9 @@ def main():
     ap.add_argument("--vfov", type=float, default=43.7)
     ap.add_argument("--dark-ratio", type=float, default=0.62)
     ap.add_argument("--min-contrast", type=float, default=10.0)
-    ap.add_argument("--polaridad", choices=("oscura", "clara"), default="oscura",
-                    help="oscura = cinta mas oscura que el piso (negra sobre madera); clara = cinta blanca")
+    ap.add_argument("--polaridad", choices=("oscura", "clara"), default=polaridad_pista(),
+                    help="oscura = cinta mas oscura que el piso (negra sobre madera); clara = cinta blanca. "
+                         "Por defecto: la de pista_robot.json (generado desde config/pista.yaml)")
     ap.add_argument("--puro", action="store_true", help="forzar el estimador en Python puro aunque haya numpy")
     ap.add_argument("--vx", type=float, default=0.5, help="fraccion de velocidad maxima hacia adelante")
     ap.add_argument("--max-step-x", type=float, default=0.04, help="MaxStepX de la caminata de NAOqi [m]")

@@ -17,7 +17,9 @@ las decisiones están en [`plan_rl_carrera.md`](plan_rl_carrera.md).
 |---|---|
 | `carril/` | **Visión de carril.** Modelo de cámara, estimador (`lane_estimator.py` con numpy y `lane_estimator_puro.py` en Python puro para el NAO), filtro visión + odometría y controlador |
 | `demo/build_scene.py` | Genera la **pista** (`assets/nao/scene_carril.xml`): carril de 5 m × 70 cm, líneas de 1.9 cm, carriles vecinos, salida y meta. También genera el **NAO con su cámara inferior** (`assets/nao/nao_cam.xml`): 39.7° hacia abajo, 54.7° × 42.5°, 320×240 |
-| `demo/pista.yaml` | **Colores** de piso, línea y meta |
+| `config/pista.yaml` | **Colores** de piso, línea, salida y meta: el único lugar donde se definen |
+| `config/pista_robot.json` | Colores, polaridad y modo de la visión para el NAO; lo genera `demo/build_scene.py` |
+| `scripts/cambiar_colores.py` | Cambia los colores, regenera la pista y verifica la visión (procedimiento antes de la competencia) |
 | `demo/run_demo.py` | Demo con la política de RL y la cámara: interactiva (`--live`) o en video (`--video`) |
 | `demo/caminatas/` | Caminatas de los **baselines** (`naoqi_like.py`, `bhuman_like.py`), simulador del carril (`simular.py`), **carrera de 3 carriles en vivo** (`carrera_vivo.py`), **benchmark** (`benchmark.py`) y video (`video_carrera.py`) |
 | `robot/` | Kit para el **NAO real**: `diagnostico.py`, `race_nao.py` (visión a bordo, prueba en seco y medición), `replay.py` y la guía [`robot/LUNES.md`](../robot/LUNES.md) |
@@ -65,7 +67,7 @@ uv run python -m demo.caminatas.benchmark                            # completo:
 ```
 
 En `carrera_vivo`, el carril izquierdo es B-Human (baseline 2), el central el RL y el derecho NAOqi
-(baseline 1). Cada robot va en su propia física: todavía no pueden chocar entre sí (paso 48).
+(baseline 1). Cada robot va en su propia física: todavía no pueden chocar entre sí (paso 48b).
 
 ### Verificar la visión (sin PyTorch)
 
@@ -76,26 +78,65 @@ uv run python scripts/check_vision.py --pose-noise 1.5    # con error de pose de
 
 Termina con `RESULTADO: OK` si las 50 mediciones son válidas y el error medio es ≤ 3 cm y ≤ 3°.
 
-### Cambiar los colores de la pista
+### Cambiar los colores de la pista (antes de la competencia)
 
-**Desde el panel de la demo:** listas **Piso ▼** y **Línea ▼**, y el botón **Aplicar colores**.
-
-**Desde la terminal:**
+La organización avisa los colores definitivos de las líneas y del piso **poco antes del evento**. Están en
+**un solo archivo**, [`config/pista.yaml`](../config/pista.yaml), y se cambian con un solo comando:
 
 ```bash
-uv run python demo/run_demo.py --live --piso gris_oscuro --linea blanco
+uv run python scripts/cambiar_colores.py --piso madera_oscura --linea blanco
 ```
 
-**Permanente:** editar [`demo/pista.yaml`](../demo/pista.yaml). Desde el paso 48 se centraliza en un solo
-archivo para todo el repo.
+**Qué hace:**
+1. guarda los colores en `config/pista.yaml`, conservando los comentarios;
+2. regenera la pista de MuJoCo (`assets/nao/scene_carril.xml`) y `config/pista_robot.json`, que es lo que lee
+   la visión a bordo del NAO;
+3. verifica la visión con la cámara renderizada en 50 posiciones conocidas, con 1.5° de error de pose;
+4. guarda el resultado en [`results/camara/verificacion_vision.md`](../results/camara/verificacion_vision.md)
+   y termina con `RESULTADO: OK` o `FALLA`.
+
+**Si da OK, no hay que reentrenar:** la política de RL no ve colores, solo `d`, `psi` y válido. Después hay
+que **copiar `config/pista_robot.json` al robot** (ver [`robot/LUNES.md`](../robot/LUNES.md)).
+
+**Variantes:**
+
+```bash
+uv run python scripts/cambiar_colores.py                                        # verificar los colores actuales del archivo
+uv run python scripts/cambiar_colores.py --piso gris --linea amarillo --probar  # probar SIN guardar nada
+uv run python scripts/cambiar_colores.py --piso "#3a2a1a" --linea "#f5f5f5" --sin-veta
+uv run python scripts/cambiar_colores.py --linea blanco --salida negro --meta rojo   # salida y meta por separado
+uv run python scripts/cambiar_colores.py --matriz                               # todas las combinaciones (~30 s)
+```
 
 **Colores con nombre:**
 - **Pisos:** `madera_clara`, `madera_oscura`, `duela_roja`, `gris`, `gris_oscuro`, `blanco`, `negro`, `verde`,
   `azul`.
 - **Líneas:** `negro`, `blanco`, `amarillo`, `rojo`, `azul`, `verde`, `gris`.
 - También acepta cualquier código `#rrggbb`.
+- La franja de salida usa por defecto el mismo color que las líneas (`salida: null`).
 
-La visión decide sola si la línea es más oscura o más clara que el piso.
+**Cómo decide la visión** (`demo/build_scene.py`, función `describe`):
+
+| Modo | Cuándo | Cómo detecta la línea |
+|---|---|---|
+| **brillo** | La línea pasa la prueba del detector por brillo: más oscura que el 62 % del piso (o más clara en la misma proporción) y al menos 45 niveles de diferencia | Escala de grises; busca la cinta más oscura o más clara que el fondo local. Es el modo validado por Daniel |
+| **color** | El brillo no alcanza, pero el color sí distingue la línea (p. ej. verde o amarilla sobre madera) | Proyecta cada píxel sobre la dirección de color "línea − piso", así que la línea siempre queda más clara que el piso |
+
+Si el contraste efectivo es menor que 30 de 255, la combinación queda **NO APTA**: en una pista real no se
+vería, aunque en la simulación, que no tiene ruido, se detecte.
+
+**Matriz de colores** ([`results/camara/matriz_colores.md`](../results/camara/matriz_colores.md)): de las 63
+combinaciones con nombre, **57 dan OK**. Las que fallan son colores casi iguales:
+- gris sobre gris y verde sobre verde;
+- negro sobre negro y blanco sobre blanco, que salen NO APTO;
+- tres casos al límite: gris sobre madera clara, rojo sobre gris y gris sobre blanco.
+
+Si la organización elige una de esas combinaciones, hay que avisar y ajustar la visión con fotos reales en
+la zona de calibraciones.
+
+**Desde el panel de la demo** también se pueden probar colores (listas **Piso ▼** y **Línea ▼**, botón
+**Aplicar colores**), o con `uv run python demo/run_demo.py --live --piso gris_oscuro --linea blanco`.
+Esto no modifica `config/pista.yaml`.
 
 ### En el NAO real
 
@@ -125,4 +166,4 @@ medición con cinta métrica.
   - en el robot real se comparan las caminatas originales en el paso 73.
 - **La demo corrige el rumbo del RL actual con un truco:** suma una señal falsa al giroscopio. La política
   nueva recibe `d` y `psi` como observación (Fase L).
-- **Los robots de `carrera_vivo` no se tocan entre sí.** La escena con física compartida llega en el paso 48.
+- **Los robots de `carrera_vivo` no se tocan entre sí.** La escena con física compartida llega en el paso 48b.

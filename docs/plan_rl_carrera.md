@@ -121,7 +121,7 @@ PenaltyStack en la Fase N.
 3. **Lazo cerrado con la cámara renderizada en MuJoCo:**
    - solo RL: llega en **3 de 18** corridas;
    - RL + visión: llega en **18 de 18**, con desvío máximo de 14.5 cm.
-4. **Pista con colores configurables** (`demo/pista.yaml`, 9 pisos y 7 colores de línea, o código hex). La
+4. **Pista con colores configurables** (`demo/pista.yaml`, hoy `config/pista.yaml`; 9 pisos y 7 colores de línea, o código hex). La
    visión decide sola si la línea es más oscura o más clara que el piso.
 5. **Los tres carriles** (`demo/caminatas/carrera_vivo.py`, `benchmark.py`): B-Human a la izquierda, RL en el
    centro y NAOqi a la derecha. Cada robot va en su propia física y se ven juntos en el visor.
@@ -152,7 +152,7 @@ PenaltyStack en la Fase N.
   `.zip`. Se limpian al integrar (paso 40).
 - Los robots del benchmark no se tocan entre sí, porque cada uno va en su propia física. Por eso **el
   choque entre robots no se puede medir ahí**. Se agrega una escena de 3 carriles con física compartida
-  (paso 48), que usa el benchmark (paso 51).
+  (paso 48b), que usa el benchmark (paso 51).
 
 ---
 
@@ -392,32 +392,41 @@ entrenan con rangos estrechos y otros con rangos amplios. Todos se evalúan con 
 **El problema.** Hoy las líneas son negras y la meta roja, pero **los colores definitivos de líneas y piso
 se avisan poco antes del evento**. Cambiarlos no puede requerir tocar código ni reentrenar.
 
-**La solución:**
+**La solución (implementada en el paso 48):**
 
-1. **Un solo archivo de configuración de la pista**, por ejemplo `config/pista.yaml`. Lo leen la escena del
-   simulador, la visión y el benchmark:
-   ```yaml
-   piso: madera_clara      # nombre o "#rrggbb"
-   veta: true
-   linea: negro
-   salida: negro
-   meta: rojo
-   ```
-   Las medidas del reglamento quedan fijas en el mismo archivo.
+1. **Un solo archivo,** [`config/pista.yaml`](../config/pista.yaml), con piso, veta, línea, salida y meta. Lo
+   leen:
+   - la escena de MuJoCo;
+   - la demo;
+   - el benchmark;
+   - la verificación de la visión;
+   - el robot, a través de `config/pista_robot.json`, que se genera solo.
 2. **La política de RL no depende del color.** Solo recibe `d`, `psi` y válido. Un cambio de color solo
    afecta a la visión.
-3. **La visión decide sola** si la línea es más oscura o más clara que el piso. Ya funciona así en
-   nao_linea.
+3. **La visión elige sola cómo ver la línea:**
+   - **por brillo**, si es más oscura o más clara que el piso;
+   - **por color**, si el brillo es parecido pero el color distinto: proyecta cada píxel sobre la dirección
+     "línea − piso". Esto funciona igual en el estimador del NAO, en Python puro.
 4. **La política se entrena con ruido de visión hasta 3 veces el nominal** (sección 7). Si con los colores
    nuevos la visión empeora, la política ya está preparada.
+5. **Ya se sabe qué colores funcionan:** de 63 combinaciones de piso y línea, 57 dan OK en simulación
+   ([`results/camara/matriz_colores.md`](../results/camara/matriz_colores.md)). Las que fallan son colores
+   casi iguales.
 
 **Procedimiento cuando nos avisen los colores** (paso 75, objetivo < 1 hora):
-1. Editar `config/pista.yaml`.
-2. Regenerar la escena y correr el modelo de error de la visión con los colores nuevos (minutos).
-3. Si σ(d) y σ(psi) quedan dentro del rango entrenado, **no se reentrena**. Si no, ajuste fino corto.
+1. `uv run python scripts/cambiar_colores.py --piso <color> --linea <color>`. Guarda, regenera y verifica la
+   visión en 50 posiciones; tarda menos de 1 minuto.
+2. Si da `RESULTADO: OK`, **no se reentrena**. Si falla, ajustar la visión con fotos reales.
+3. Copiar `config/pista_robot.json` al robot.
 4. Correr la batería de pruebas de la política final con la pista nueva.
-5. En la zona de calibraciones del evento (reglamento 2.10): tomar fotos de la pista real, ajustar los
-   umbrales de la visión y verificar `d` y `psi` con el robot quieto.
+5. En la zona de calibraciones del evento (reglamento 2.10):
+   - tomar fotos de la pista real;
+   - ajustar los umbrales de la visión con `robot/replay.py`;
+   - verificar `d` y `psi` con el robot quieto (`robot/race_nao.py --medir`).
+
+**Limitación de la simulación:** la cámara simulada no tiene autoexposición. Con piso blanco la imagen se
+satura a 255, y por eso falla, por ejemplo, la línea gris sobre blanco. La cámara real ajusta la exposición,
+así que ese caso se verifica con fotos reales.
 
 ---
 

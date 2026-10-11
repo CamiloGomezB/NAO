@@ -1,0 +1,28 @@
+{
+  "nota": "Generado por demo/build_scene.py desde config/pista.yaml. No editar a mano.",
+  "piso": "madera_clara",
+  "linea": "negro",
+  "salida": "negro",
+  "meta": "rojo",
+  "veta": true,
+  "polaridad": "oscura",
+  "modo_vision": "brillo",
+  "color_ref": null,
+  "contraste": 141.1,
+  "contraste_efectivo": 141.1,
+  "piso_rgb": [
+    196,
+    148,
+    96
+  ],
+  "linea_rgb": [
+    15,
+    15,
+    18
+  ],
+  "meta_rgb": [
+    200,
+    25,
+    25
+  ]
+}
