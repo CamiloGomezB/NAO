@@ -219,6 +219,7 @@ de velocidad (ver siguientes pasos).
 | Aviso `VIRTUAL_ENV=... does not match the project environment` | Inofensivo: aparece si hay otro entorno virtual activo en la terminal. `uv` usa igual el `.venv` del proyecto. Para quitarlo: `deactivate` o abrir una terminal nueva |
 | **Windows + pip:** `OSError ... Windows Long Path support` | Clonar en una ruta corta (por ejemplo `C:\NAO`) o usar `uv` (ver [sección 1](#1-instalación)) |
 | El entrenamiento va lento o el equipo se queda sin memoria | Menos entornos en paralelo: `--n-envs 8` (cada entorno usa ~250 MB de RAM). Cierra programas pesados mientras entrena |
+| **El visor de MuJoCo se ve negro, con la escena aplastada en una franja** (laptops con dos GPU) | El visor estaba usando la GPU integrada (AMD) en lugar de la NVIDIA. Los scripts del repo ya piden la NVIDIA con `SHIM_MCCOMPAT=0x800000001`. Si aun asi pasa, en Configuracion de Windows → Pantalla → Graficos, asignar "Alto rendimiento" a `python.exe` (ver bitacora, 2026-10-10) |
 | La ventana del visor no responde a Espacio o Enter | Haz clic sobre la vista 3D para darle el foco antes de usar el teclado |
 
 > Probado en Windows 11. Las dependencias tienen versiones oficiales para Linux y macOS, pero en esos

@@ -642,3 +642,34 @@ sin salida y cómo se resolvieron. Tiene tres usos:
     - `run_demo.py` sin ventanas: solo RL se sale a 0.54 m; RL + visión llega en 24.2 s;
     - `scripts/check_vision.py`: OK.
 - **Siguiente:** revisión en vivo del usuario. No se toca el RL hasta que el MuJoCo esté aprobado.
+
+### 2026-10-10 — Visor de MuJoCo roto en la laptop: era la GPU integrada AMD
+- **Autor:** Camilo, con Claude Code.
+- **Problema reportado por el usuario,** con captura: el visor de los 3 carriles se veía negro, con la escena
+  aplastada en una franja arriba a la izquierda. Pidió verlo "como se veía caminando en grande, los 3 en
+  perspectiva".
+- **Diagnóstico.** Se abrió el visor brevemente y se capturó solo su ventana con `PrintWindow`:
+  - **Mismo fallo con visión simulada,** sin cámaras renderizadas ni matplotlib, y **sin texto
+    superpuesto**. No era la cámara ni la ventana de las cámaras.
+  - **Mismo fallo con la versión anterior de `carrera_vivo`** (la de nao_linea), con la pista de un solo
+    robot (`scene_carril.xml`) y con la escena original del sprint (`scene.xml`). El patrón era idéntico
+    en todos los casos. No era la escena ni los cambios recientes.
+  - **Causa.** La laptop tiene dos GPU, una NVIDIA GeForce RTX 3060 Laptop y una AMD Radeon integrada.
+    El contexto OpenGL de Python se creaba en la **AMD**, con driver 22.20.44 de 2022, y su ventana GLFW
+    dibuja mal el visor de MuJoCo. Las capturas sin pantalla (`mujoco.Renderer`) sí salían bien.
+- **Solución.**
+  - La variable de entorno `SHIM_MCCOMPAT=0x800000001` hace que el driver de NVIDIA tome el OpenGL de ese
+    proceso. Con ella, `GL_RENDERER` pasa a ser `NVIDIA GeForce RTX 3060 Laptop GPU`. Funciona también
+    si se fija dentro del programa, antes de crear la ventana.
+  - Se agregó `os.environ.setdefault("SHIM_MCCOMPAT", "0x800000001")` al inicio de los scripts con
+    visor: `demo/run_demo.py`, `demo/caminatas/carrera_vivo.py`, `simular.py`, `video_carrera.py`,
+    `scripts/view_model.py`, `scripts/demo_interactive.py`, `scripts/test_viewer.py` y `src/evaluate.py`.
+    En PCs sin NVIDIA no tiene efecto. **No se cambió ninguna configuración de Windows.**
+- **Ajustes de presentación:**
+  - el visor abre **sin los paneles laterales**; se muestran con Tab y Shift+Tab;
+  - el texto con tiempo y avance va **arriba a la izquierda**: abajo tapaba la meta o se cortaba.
+- **Resultado** (`run_demo.py --live` lanzado sin nada externo y capturado a los 11 s):
+  - **visor:** pista de 3 carriles en perspectiva desde atrás de la salida, los 3 robots grandes y con su
+    color, y la meta en los 3 carriles;
+  - **ventana "Lo que ve cada NAO":** las cámaras detectando las líneas en vivo.
+- **Siguiente:** revisión del usuario en vivo.

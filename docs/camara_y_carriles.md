@@ -56,6 +56,10 @@ uv run python demo/run_demo.py --live
 
 Cada robot corrige su rumbo con **su propia cámara renderizada** y la visión de `carril/`.
 
+Los paneles laterales del visor de MuJoCo están ocultos; se muestran con **Tab** (izquierdo) y **Shift+Tab**
+(derecho). En laptops con dos GPU, los scripts piden la NVIDIA para OpenGL: con la GPU integrada AMD el
+visor dibujaba la escena rota (ver la bitácora del 2026-10-10).
+
 **Variantes:**
 
 ```bash

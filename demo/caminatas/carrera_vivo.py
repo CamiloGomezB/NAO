@@ -23,6 +23,12 @@ error medido (sigma 1.6 cm y 1.2 deg), como en el benchmark.
 En el visor: ESPACIO pausa. Para reiniciar, cierra y vuelve a correr. Con el raton se mueve la camara.
 macOS: usar `uv run mjpython -m demo.caminatas.carrera_vivo`.
 """
+import os
+
+# Laptops con dos GPU (NVIDIA + integrada AMD/Intel): pedir la NVIDIA para OpenGL. Con la integrada AMD de la
+# laptop de desarrollo, el visor de MuJoCo dibujaba la escena rota (bitacora 2026-10-10). Sin NVIDIA no tiene efecto.
+os.environ.setdefault("SHIM_MCCOMPAT", "0x800000001")
+
 import argparse
 import math
 import sys
@@ -351,7 +357,7 @@ def main(argv=None):
 
     ventana = VentanaCamaras(corredores) if (vision == "camara" and not a.sin_camaras) else None
     from mujoco import viewer as mj_viewer
-    with mj_viewer.launch_passive(m, d) as v:
+    with mj_viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False) as v:
         v.cam.lookat[:] = [1.2, 0.0, 0.15]
         v.cam.distance, v.cam.azimuth, v.cam.elevation = 4.6, 15, -28    # desde atras de la salida, mirando a la meta
         print("Listo: corriendo. Cierra el visor para terminar.")
@@ -365,7 +371,7 @@ def main(argv=None):
             xs = [c.pose()[0] for c in corredores]
             v.cam.lookat[0] += 0.05 * (min(4.2, max(1.2, 0.5 * (min(xs) + max(xs)) + 0.3)) - v.cam.lookat[0])
             try:
-                v.set_texts((None, mujoco.mjtGridPos.mjGRID_TOPRIGHT) + textos(t_sim))
+                v.set_texts((None, mujoco.mjtGridPos.mjGRID_TOPLEFT) + textos(t_sim))
             except Exception:  # noqa: BLE001  (versiones viejas del visor no tienen textos)
                 pass
             v.sync()

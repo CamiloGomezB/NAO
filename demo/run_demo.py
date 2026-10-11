@@ -21,6 +21,12 @@ Uso:
 Los 3 carriles los dibuja demo/caminatas/carrera_vivo.py (ver su ayuda para mas opciones, p. ej. --mu).
 En Linux sin pantalla:  MUJOCO_GL=egl (u osmesa) uv run python demo/run_demo.py --video demo.mp4
 """
+import os
+
+# Laptops con dos GPU (NVIDIA + integrada AMD/Intel): pedir la NVIDIA para OpenGL. Con la integrada AMD de la
+# laptop de desarrollo, el visor de MuJoCo dibujaba la escena rota (bitacora 2026-10-10). Sin NVIDIA no tiene efecto.
+os.environ.setdefault("SHIM_MCCOMPAT", "0x800000001")
+
 import argparse
 import math
 import pickle
@@ -281,7 +287,7 @@ def run(vision, seed=1000, video=None, live=False, pose_noise_deg=1.0, k_psi=1.2
         viewer = None
     if live and viewer is None:
         from mujoco import viewer as mj_viewer
-        viewer = mj_viewer.launch_passive(m, d)
+        viewer = mj_viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
         viewer.cam.type = mujoco.mjtCamera.mjCAMERA_TRACKING
         viewer.cam.trackbodyid = env._torso_id
         viewer.cam.distance, viewer.cam.azimuth, viewer.cam.elevation = 1.8, 150, -25
@@ -511,7 +517,7 @@ def live_app(a, pista_cfg):
         env = E.NaoWalkEnv(**policy[0]["env"])
         env.reset(seed=a.seed)
         place_robot(env, cam_win.d0 / 100.0, cam_win.psi0)
-        viewer = mj_viewer.launch_passive(env.model, env.data)
+        viewer = mj_viewer.launch_passive(env.model, env.data, show_left_ui=False, show_right_ui=False)
         viewer.cam.type = mujoco.mjtCamera.mjCAMERA_TRACKING
         viewer.cam.trackbodyid = env._torso_id
         viewer.cam.distance, viewer.cam.azimuth, viewer.cam.elevation = 1.8, 150, -25

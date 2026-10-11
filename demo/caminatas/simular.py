@@ -10,6 +10,12 @@ Usa MuJoCo directo (sin el entorno de RL): ciclo de control de 12 ms = 6 pasos d
 La caminata solo recibe sensores del NAO real (giroscopio, inclinacion, FSR); la posicion verdadera se usa
 solo para medir el resultado (meta, salida del carril, caida).
 """
+import os
+
+# Laptops con dos GPU (NVIDIA + integrada AMD/Intel): pedir la NVIDIA para OpenGL. Con la integrada AMD de la
+# laptop de desarrollo, el visor de MuJoCo dibujaba la escena rota (bitacora 2026-10-10). Sin NVIDIA no tiene efecto.
+os.environ.setdefault("SHIM_MCCOMPAT", "0x800000001")
+
 import argparse
 import math
 import sys

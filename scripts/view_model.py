@@ -14,6 +14,12 @@ Teclas:
     Enter       reinicia a la pose "home" (vuelve a soltar el robot); Backspace tambien funciona
 """
 
+import os
+
+# Laptops con dos GPU (NVIDIA + integrada AMD/Intel): pedir la NVIDIA para OpenGL. Con la integrada AMD de la
+# laptop de desarrollo, el visor de MuJoCo dibujaba la escena rota (bitacora 2026-10-10). Sin NVIDIA no tiene efecto.
+os.environ.setdefault("SHIM_MCCOMPAT", "0x800000001")
+
 import argparse
 import time
 from pathlib import Path
