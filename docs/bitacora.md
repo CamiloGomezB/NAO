@@ -601,3 +601,44 @@ sin salida y cómo se resolvieron. Tiene tres usos:
 - **Estado del paso:** `[~]`. Falta la revisión visual del usuario de la demo en vivo y de la carrera de 3
   carriles.
 - **Siguiente:** revisión visual del usuario; después, pasos 41, 44–46 y 48b.
+
+### 2026-10-10 — Paso 40 (corrección): el visor muestra bien los 3 carriles con sus cámaras
+- **Autor:** Camilo, con Claude Code.
+- **Problema reportado por el usuario:** en MuJoCo no se veía bien. La idea es ver **los 3 carriles**, con el
+  RL, NAOqi y B-Human, y la cámara.
+- **Diagnóstico**, con capturas sin pantalla del visor:
+  1. `run_demo.py --live` mostraba **un solo robot**, el RL.
+  2. `carrera_vivo` mostraba los 3 robots, pero **sin cámara**: su visión era la simulada con ruido.
+  3. **La meta roja solo estaba en el carril central.**
+  4. **Los 3 robots eran iguales**, sin forma de saber cuál era cuál.
+- **Qué se hizo:**
+  - **`demo/build_scene.py`:** franja de meta en los 3 carriles (`meta`, `meta_izq`, `meta_der`).
+  - **Nuevo `demo/caminatas/vision_camara.py`:** visión con la **cámara renderizada** de cada robot a
+    10 Hz, más el control proporcional de giro de `run_demo` y el benchmark.
+  - **`demo/caminatas/carrera_vivo.py`:**
+    - cada robot usa su propia cámara (`--vision camara` por defecto; también `simulada` y `no`);
+    - **cada robot tiene su color:** B-Human verde, RL azul, NAOqi naranja. Hay marcas del mismo color en el
+      piso de cada carril;
+    - **nueva ventana "Lo que ve cada NAO"** con las 3 cámaras, las líneas detectadas y d/psi estimados
+      frente a los reales;
+    - colocación configurable con `--inicio-d` y `--inicio-psi`, y opciones de colores;
+    - **el visor mira desde atrás de la salida hacia la meta.** En la primera corrección miraba al revés;
+      se detectó en la captura y se corrigió;
+    - modo `--captura` para revisar sin pantalla.
+  - **`demo/run_demo.py --live`** abre ahora esta carrera de 3 carriles. El modo anterior, solo RL con
+    panel, queda con `--live --solo-rl`.
+- **Resultado:**
+  - Capturas revisadas: los 3 robots con color en sus carriles, la meta en los 3, y las 3 cámaras
+    detectando las dos líneas.
+  - **Carrera completa sin ventanas**, colocados +10 cm y −6°, μ = 1.0:
+
+    | Caminata | Con la cámara de cada robot | Sin visión |
+    |---|---|---|
+    | RL | META en 24.6 s | META en 24.8 s |
+    | B-Human | META en 16.2 s | **sale del carril** a los 9.0 s |
+    | NAOqi | META en 49.8 s | META en 49.9 s |
+
+  - **Sin cambios en lo anterior:**
+    - `run_demo.py` sin ventanas: solo RL se sale a 0.54 m; RL + visión llega en 24.2 s;
+    - `scripts/check_vision.py`: OK.
+- **Siguiente:** revisión en vivo del usuario. No se toca el RL hasta que el MuJoCo esté aprobado.

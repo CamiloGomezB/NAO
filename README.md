@@ -62,8 +62,13 @@ Se actualiza con cada resultado:
 
 **Cambiar los colores de la pista** (los avisan poco antes del evento): `uv run python scripts/cambiar_colores.py --piso <color> --linea <color>`.
 
-**Ver la cámara funcionando con el RL actual:** `uv run python demo/run_demo.py --live`. Los 3 carriles:
-`uv run python -m demo.caminatas.carrera_vivo`. Guía completa: [`docs/camara_y_carriles.md`](docs/camara_y_carriles.md).
+**Ver la carrera en MuJoCo:** `uv run python demo/run_demo.py --live`. Se ven los 3 carriles con sus 3 robots:
+- B-Human (verde, izquierda, baseline 2);
+- RL (azul, centro);
+- NAOqi (naranja, derecha, baseline 1).
+
+Aparte se abre la ventana **"Lo que ve cada NAO"**, con la cámara de cada robot. Solo el RL con panel de
+controles: `--live --solo-rl`. Guía completa: [`docs/camara_y_carriles.md`](docs/camara_y_carriles.md).
 
 **Para el equipo:** antes de trabajar, lean [`CLAUDE.md`](CLAUDE.md) (convenciones y protocolo de
 documentación), el paso actual en [`PLAN.md`](PLAN.md) y las últimas entradas de la

@@ -124,7 +124,10 @@ del equipo.
 - [~] **40. Integrar nao_linea en `main`**: visión de carril (`carril/`), escena MuJoCo de la pista con la cámara del NAO (`demo/build_scene.py`), demo con el RL actual (`demo/run_demo.py`), caminatas de los baselines y benchmark de 3 carriles (`demo/caminatas/`), kit del robot (`robot/`) y resultados. Sin `__pycache__`, `MUJOCO_LOG.TXT`, `.bundle` ni `.zip` — ✅ La demo con cámara y la carrera de 3 carriles corren en este PC con el RL actual; el usuario ve la cámara funcionando
   - Hecho (2026-10-10): código integrado; pista, cámara y visión verificadas (`scripts/check_vision.py`: 100 % válidas, error medio 1.27 cm y 0.86°); caminatas de los baselines llegan a la meta.
   - ~~Bloqueado por Smart App Control~~ → resuelto el 2026-10-10: el usuario lo desactivó. Demo RL + cámara sin ventanas: solo RL se sale a 0.54 m; RL + visión llega en 24.2 s. Benchmark corto idéntico al de nao_linea.
-  - **Falta:** que el usuario vea la demo en vivo (`uv run python demo/run_demo.py --live` y `uv run python -m demo.caminatas.carrera_vivo`).
+  - 2026-10-10: el usuario vio que el visor no mostraba bien los 3 carriles. Se corrigió:
+    - `run_demo.py --live` abre los 3 carriles con sus 3 robots, cada uno con su color y con su cámara real;
+    - la meta está en los 3 carriles y hay una ventana con las 3 cámaras.
+  - **Falta:** que el usuario lo vea en vivo.
 - [ ] **41. Contrato v1 en código** (`src/race/contract.py`): orden de articulaciones de B-Human, ciclo de 24 ms, observación de 54 valores (incluye `d`, `psi` y válido de la cámara) armada desde un `frame` con el formato de PenaltyStack, y acción de 13 ángulos — ✅ Prueba automática: un `frame` de ejemplo produce la observación esperada y la acción vuelve con los nombres correctos
 - [ ] **42. Políticas compartidas en el repo** (`policies/carrera_vNN/`: modelo, normalización, config, métricas y README de la generación) — ✅ Desde un clon limpio se evalúa la misma política sin entrenar y se puede continuar desde ella
 - [ ] **43. Rendimiento de entrenamiento en este PC** (laptop Ryzen 7 5800H, el único equipo de entrenamiento): pasos/s con el modelo V6 y la fricción aleatoria — ✅ Pasos/s medidos y costo real del barrido de 100 agentes recalculado (sección 11.3 del diseño)

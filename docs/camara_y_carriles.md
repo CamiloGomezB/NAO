@@ -20,7 +20,8 @@ las decisiones están en [`plan_rl_carrera.md`](plan_rl_carrera.md).
 | `config/pista.yaml` | **Colores** de piso, línea, salida y meta: el único lugar donde se definen |
 | `config/pista_robot.json` | Colores, polaridad y modo de la visión para el NAO; lo genera `demo/build_scene.py` |
 | `scripts/cambiar_colores.py` | Cambia los colores, regenera la pista y verifica la visión (procedimiento antes de la competencia) |
-| `demo/run_demo.py` | Demo con la política de RL y la cámara: interactiva (`--live`) o en video (`--video`) |
+| `demo/run_demo.py` | **Entrada principal.** `--live` abre los 3 carriles con sus cámaras; `--live --solo-rl` abre solo el RL con el panel; `--video` graba un video |
+| `demo/caminatas/vision_camara.py` | Visión con la cámara **renderizada** de cada robot (10 Hz), usada en la carrera de 3 carriles |
 | `demo/caminatas/` | Caminatas de los **baselines** (`naoqi_like.py`, `bhuman_like.py`), simulador del carril (`simular.py`), **carrera de 3 carriles en vivo** (`carrera_vivo.py`), **benchmark** (`benchmark.py`) y video (`video_carrera.py`) |
 | `robot/` | Kit para el **NAO real**: `diagnostico.py`, `race_nao.py` (visión a bordo, prueba en seco y medición), `replay.py` y la guía [`robot/LUNES.md`](../robot/LUNES.md) |
 | `scripts/check_vision.py` | **Verificación de la visión** en la pista simulada: robot en 50 posiciones conocidas. No necesita PyTorch |
@@ -32,42 +33,69 @@ las decisiones están en [`plan_rl_carrera.md`](plan_rl_carrera.md).
 
 Todos se corren desde la raíz del repo.
 
-### Ver la cámara funcionando con el RL actual
+### Ver la carrera: 3 carriles con sus cámaras (entrada principal)
 
 ```bash
 uv run python demo/run_demo.py --live
 ```
 
 **Qué se abre:**
-- el visor 3D;
-- la ventana **"Lo que ve el NAO"**, con las líneas detectadas en celeste;
-- un panel con la posición inicial, la visión sí o no, los botones Correr y Detener, y los colores.
+- **El visor 3D de MuJoCo**, visto desde atrás de la salida, con la pista de 3 carriles. La salida y la meta
+  están en los tres, y cada robot va en su carril:
+
+  | Carril | Robot | Color |
+  |---|---|---|
+  | Izquierdo | **Baseline 2: tipo B-Human** | Verde |
+  | Centro | **RL del equipo** | Azul |
+  | Derecho | **Baseline 1: tipo NAOqi** | Naranja |
+
+  Cada carril tiene una marca de su color en el piso, antes de la salida y después de la meta. Arriba a la
+  derecha se ven el tiempo y la distancia o el resultado de cada uno.
+- **La ventana "Lo que ve cada NAO"**, con la cámara inferior de cada robot, las líneas detectadas en
+  celeste y la posición estimada por la visión (`d`, `psi`) frente a la real.
+
+Cada robot corrige su rumbo con **su propia cámara renderizada** y la visión de `carril/`.
+
+**Variantes:**
+
+```bash
+uv run python demo/run_demo.py --live --sin-vision                   # sin visión: se ve cómo se desvían
+uv run python demo/run_demo.py --live --inicio-d 12 --inicio-psi -8  # los 3 colocados chuecos
+uv run python demo/run_demo.py --live --piso gris_oscuro --linea blanco
+uv run python -m demo.caminatas.carrera_vivo --mu 0.6                # otra fricción (y más opciones: --help)
+uv run python -m demo.caminatas.carrera_vivo --vision simulada       # visión simulada con el modelo de error
+```
+
+### Solo el RL, con panel de controles
+
+```bash
+uv run python demo/run_demo.py --live --solo-rl
+```
+
+**Qué se abre:**
+- el visor con el RL;
+- la ventana "Lo que ve el NAO";
+- un panel con la posición inicial, la visión sí o no, Correr y Detener, y los colores.
 
 **Para mostrarlo:**
 1. Pon corrido 15 y girado −10.
-2. Desmarca la visión y presiona Correr: se sale del carril.
-3. Marca la visión y vuelve a correr: mide dónde quedó, se centra y llega.
+2. Desmarca la visión y presiona Correr: se sale.
+3. Marca la visión y vuelve a correr: se centra y llega.
 
-**Otras variantes:**
+**Sin ventanas o en video:**
 
 ```bash
-uv run python demo/run_demo.py --live --inicio-d 12 --inicio-psi 8 --sin-camara   # sin la ventana de la cámara
-uv run python demo/run_demo.py --video videos/demo_camara.mp4 --inicio-psi 8     # video comparativo (3-5 min)
 uv run python demo/run_demo.py --inicio-d 12 --inicio-psi 8                      # sin ventanas: imprime el resultado
+uv run python demo/run_demo.py --video videos/demo_camara.mp4 --inicio-psi 8     # video comparativo (3-5 min)
 ```
 
-### Los tres carriles
+### Otras herramientas de los carriles
 
 ```bash
-uv run python -m demo.caminatas.carrera_vivo                         # los 3 NAOs a la vez en el visor, con visión
-uv run python -m demo.caminatas.carrera_vivo --sin-vision --mu 0.6   # sin visión y piso resbaloso
 uv run python -m demo.caminatas.simular --caminata bhuman --vivo     # una sola caminata
-uv run python -m demo.caminatas.benchmark --rapido                   # benchmark corto (~1 min)
+uv run python -m demo.caminatas.benchmark --rapido                   # benchmark corto (~1 min, visión simulada)
 uv run python -m demo.caminatas.benchmark                            # completo: 3 caminatas x 5 fricciones x 5 salidas x con/sin visión
 ```
-
-En `carrera_vivo`, el carril izquierdo es B-Human (baseline 2), el central el RL y el derecho NAOqi
-(baseline 1). Cada robot va en su propia física: todavía no pueden chocar entre sí (paso 48b).
 
 ### Verificar la visión (sin PyTorch)
 

@@ -8,13 +8,17 @@ Compara dos corridas sobre la misma pista de 5 m (carril de 70 cm, duela, meta r
      giroscopio y ella misma la compensa (aprendio a anular giros), lo que la hace girar hacia el centro.
 
 Uso:
-    uv run python demo/run_demo.py --video demo.mp4        # graba las dos corridas (recomendado)
-    uv run python demo/run_demo.py --live                  # visor 3D en vivo (corrida con vision)
-    uv run python demo/run_demo.py --live --sin-vision     # visor 3D en vivo (solo RL)
+    uv run python demo/run_demo.py --live                  # LOS 3 CARRILES en vivo: B-Human, RL y NAOqi, cada uno
+                                                           # con su camara (ventana "Lo que ve cada NAO")
+    uv run python demo/run_demo.py --live --sin-vision     # los 3 sin vision (se ve como se desvian)
     uv run python demo/run_demo.py --live --inicio-d 12 --inicio-psi 8
-        # colocado chueco: 12 cm a la izquierda y girado 8 grados; mide, se centra y corre
+        # los 3 colocados chuecos: 12 cm a la izquierda y girados 8 grados
     uv run python demo/run_demo.py --live --piso gris_oscuro --linea blanco
-        # otros colores (tambien en config/pista.yaml o desde el panel)
+        # otros colores (tambien en config/pista.yaml)
+    uv run python demo/run_demo.py --live --solo-rl        # solo el RL, con el panel de controles (colocacion,
+                                                           # vision si/no, colores, correr/detener)
+    uv run python demo/run_demo.py --video demo.mp4        # graba las dos corridas del RL (solo / con vision)
+Los 3 carriles los dibuja demo/caminatas/carrera_vivo.py (ver su ayuda para mas opciones, p. ej. --mu).
 En Linux sin pantalla:  MUJOCO_GL=egl (u osmesa) uv run python demo/run_demo.py --video demo.mp4
 """
 import argparse
@@ -562,7 +566,8 @@ def live_app(a, pista_cfg):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--video", default=None, help="archivo .mp4 de salida (graba las dos corridas)")
-    ap.add_argument("--live", action="store_true", help="visor 3D en vivo")
+    ap.add_argument("--live", action="store_true", help="visor 3D en vivo: los 3 carriles (B-Human, RL, NAOqi)")
+    ap.add_argument("--solo-rl", action="store_true", help="con --live: solo el RL, con el panel de controles")
     ap.add_argument("--sin-vision", action="store_true", help="con --live: solo la politica RL")
     ap.add_argument("--seed", type=int, default=1000)
     ap.add_argument("--pose-noise", type=float, default=1.0, help="error de pose de la camara [grados]")
@@ -573,6 +578,20 @@ def main():
     ap.add_argument("--sin-camara", action="store_true", help="con --live: no abrir la ventana de la camara")
     build_scene.add_color_args(ap)   # --piso, --linea, --salida, --meta, --sin-veta (si no se pasan: config/pista.yaml)
     a = ap.parse_args()
+    if a.live and not a.solo_rl:
+        # Entrada principal: la carrera de los 3 carriles, cada robot con su camara.
+        from demo.caminatas import carrera_vivo
+        argv = ["--semilla", str(a.seed)] + (["--vision", "no"] if a.sin_vision else [])
+        if a.inicio_d or a.inicio_psi:
+            argv += ["--inicio-d", str(a.inicio_d), "--inicio-psi", str(a.inicio_psi)]
+        if a.sin_camara:
+            argv.append("--sin-camaras")
+        for opcion in ("piso", "linea", "salida", "meta"):
+            if getattr(a, opcion) is not None:
+                argv += ["--" + opcion, getattr(a, opcion)]
+        if a.sin_veta:
+            argv.append("--sin-veta")
+        return carrera_vivo.main(argv)
     pista_cfg = build_scene.config_from_args(a)
     PISTA.update(build_scene.build(pista_cfg))   # regenera la pista con esos colores
     kw = dict(seed=a.seed, pose_noise_deg=a.pose_noise, start_d=a.inicio_d / 100.0, start_psi_deg=a.inicio_psi)

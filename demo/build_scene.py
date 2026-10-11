@@ -180,8 +180,10 @@ def build(cfg=None, verbose=True, **overrides):
                      % ((x0 + x1) / 2, y, (x1 - x0) / 2, LINE / 2, lc))
     geoms.append('<geom name="salida" type="box" pos="0 0 0.0005" size="0.09 %.4f 0.0005" rgba="%s" contype="0" conaffinity="0"/>'
                  % (SPACING * 1.5, sc))
-    geoms.append('<geom name="meta" type="box" pos="%.3f 0 0.0007" size="0.15 %.4f 0.0007" rgba="%s" contype="0" conaffinity="0"/>'
-                 % (LENGTH + 0.15, LANE / 2, mc))
+    # Franja de meta en cada uno de los 3 carriles (entre las lineas): central "meta", vecinos "meta_izq"/"meta_der".
+    for nombre, k in (("meta_der", -1), ("meta", 0), ("meta_izq", 1)):
+        geoms.append('<geom name="%s" type="box" pos="%.3f %.4f 0.0007" size="0.15 %.4f 0.0007" rgba="%s" contype="0" conaffinity="0"/>'
+                     % (nombre, LENGTH + 0.15, k * SPACING, LANE / 2, mc))
     scene = """<mujoco model="nao carrera">
   <include file="nao_cam.xml"/>
   <statistic center="2.5 0 0.25" extent="3"/>
