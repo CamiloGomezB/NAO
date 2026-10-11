@@ -839,3 +839,616 @@ sin salida y cómo se resolvieron. Tiene tres usos:
   retirada.
 - **Siguiente:** paso 46 (ruta crítica), quitar los valores del modelo aproximado. Según la regla, antes se revisa toda la
   documentación.
+
+### 2026-10-10 — Paso 46: valores del modelo V6 (y las piernas ya no se cruzan)
+- **Autor:** Camilo, con Claude Code (laptop Ryzen 7 5800H).
+- **Revisión previa de la documentación:**
+  - 23 `.md`, 0 enlaces o anclas rotas, estados coherentes;
+  - **hueco corregido:** `fuentes_y_repositorios.md` no registraba que el contrato del paso 41 copia el orden de
+    articulaciones y el ciclo de PenaltyStack.
+- **Objetivo:** reemplazar los valores heredados del modelo aproximado V5 por valores medidos en el V6.
+- **Decisión:** `src/envs/nao_walk_env.py` (el entorno del sprint) no se toca, porque la política del sprint lo usa en
+  la demo. Los valores nuevos van en `src/race/contract.py` (también del robot) y `src/race/valores_v6.py` (solo de la
+  simulación).
+- **Qué se hizo y qué salió:**
+  - **Nuevo `scripts/check_valores_v6.py`.**
+    - Cadera en `home` a 232 mm, igual que B-Human (230 mm).
+    - Altura de caída 0.24 m: el torso agachado al máximo queda a 291.6 mm, menos 5 cm.
+    - Altura objetivo 0.316 m.
+    - Ciclo de 24 ms.
+  - **Primera corrida → FALLA** (E40). Las piernas se cruzaban con los límites del paso 41 en el 2.19 % de las
+    acciones. El diagnóstico mostró que eran pie contra pie, con las dos caderas y los dos tobillos hacia adentro a la
+    vez. Achicar los límites de cada articulación no lo resolvía.
+  - **Solución: presupuesto lateral combinado** en el contrato, de 0.09 rad equivalentes de cadera, con pesos medidos
+    (HipRoll 22.1 cm/rad, AnkleRoll 3.85, HipYawPitch +10.6/−5.4). **0 cruces** en 20,000 acciones (antes 23.9 %
+    con los límites viejos).
+  - **Cambio de criterio:** de "margen ≥ 0.30 cm" a "ningún cruce y margen > 0.10 cm". El 0.30 era arbitrario y bajar
+    el presupuesto no subía el peor margen (0.20 cm). Registrado en E40.
+  - **Período de marcha** de 0.6 a 0.5 s (como B-Human), y agregado al barrido (0.4–0.7).
+  - **`check_contract.py`:** pruebas del presupuesto (las dos piernas adentro se escalan exactamente a 0.090 rad, el
+    pitch no se toca y hacia afuera no hay límite combinado).
+- **Resultado:** `check_valores_v6.py` OK; `check_contract.py` OK; `check_standing.py` OK en el V6 (10 s de pie, 20/20
+  con ruido, empujones de 15–20 N).
+- **Documentos actualizados:**
+  - `PLAN.md` (paso actual: 53);
+  - README;
+  - diseño (secciones 6.2, 11.1 y 12);
+  - `docs/paper/` (historial, E40, E16 resuelto, fuentes).
+- **Errores en consola:** solo el `RESULTADO: FALLA` de la primera corrida (E40).
+- **Siguiente:** paso 53 (entorno de carrera: observación de 54 valores), según la ruta crítica. Antes, la revisión de
+  la documentación.
+
+### 2026-10-10/11 (noche) — Noche de trabajo autónomo; E41; pasos 42 y 43
+- **Autor:** Claude Code, trabajando solo con autorización del usuario hasta las 7:00. Sin commits.
+- **Indicaciones del usuario para la noche:**
+  - avanzar bastante en el RL, con documentación;
+  - **meta: que el RL sea al menos igual de rápido que B-Human** (hoy 16–17 s en 5 m con visión, ~0.30 m/s);
+  - el entrenamiento tiene que tener **cambio de fricción** y ser **pesado** (~7 h disponibles).
+- **E41 (pasos saltados):** se eliminó la "ruta crítica" del `PLAN.md` y los pasos vuelven al orden numérico. Detalle en el
+  registro de errores.
+- **Paso 42, políticas compartidas:**
+  - **`scripts/guardar_politica.py`:** copia `model.zip`, `model_vecnormalize.pkl`, `config.yaml`, `metadata.yaml` y un
+    README a `policies/<nombre>/`;
+  - **`src/train.py --continuar`:** acepta una carpeta de `policies/` o un `.zip` de un run, carga el modelo y su
+    normalización (que se sigue actualizando) y anota `continua_de` en los metadatos;
+  - **`env_id` en la config:** para el entorno de carrera (`src/train.py` y `src/utils/env_factory.py`);
+  - **prueba:** guardar el run de humo → `src.evaluate` detecta la normalización y la config solas → `src.train
+    --continuar` 20,000 pasos → OK. Las carpetas de prueba se borraron.
+- **Paso 43, rendimiento** (`scripts/benchmark_envs.py --envs 16 --ppo-envs 16`):
+  - simulación pura: 7,465 pasos/s, 5.0 GB de RAM;
+  - **entrenamiento PPO: 3,725 pasos/s**, es decir 45 min cada 10M pasos;
+  - con el ciclo de 24 ms del entorno de carrera se estiman 3,100–3,300 pasos/s: **~65–70M pasos en 6 h**;
+  - el barrido de 100 agentes (300M pasos) tomaría ~22–27 h en este PC.
+- **Errores en consola:** ninguno.
+- **Siguiente:** paso 44, validar la física del V6.
+
+### 2026-10-11 ~00:00 — Paso 44: el modelo V6 es idéntico al de B-Human
+- **Autor:** Claude Code (noche autónoma). Sin commits.
+- **Qué se hizo:** nuevo `scripts/check_modelo_v6.py`. Lee `NaoV6H25.rsi3` **por su cuenta**, sin pasar por el MJCF
+  generado, y lo compara con `assets/nao/nao.xml` compilado en MuJoCo.
+- **Resultado: RESULTADO: OK.**
+  - 25 cuerpos: masa (dif. máx. 2.8e-17 kg), centro de masa (3.5e-18 m) e inercias principales (dif. relativa
+    2.2e-15).
+  - 24 articulaciones: posición (6.9e-18 m), eje (0) y rango (4.8e-10 rad).
+  - 23 servos con los kp, kv y fuerza del RSI3; RHipYawPitch acoplado sin actuador propio.
+  - **Masa total: RSI3 5.35975 kg = MJCF 5.35975 kg = URDF oficial de Aldebaran 5.35975 kg.** Es un control
+    independiente: el URDF de Aldebaran y el RSI3 de B-Human dan la misma masa.
+- **Consecuencia:** las mediciones del paso 46 (alturas, cruce de piernas) se hicieron sobre un modelo correcto. No
+  hay que repetirlas (ver E41).
+- **Documentos:**
+  - `assets/nao/SOURCE.md` reescrito para el V6 (fuente, qué se conserva, qué se agrega para el RL); el V5 queda como
+    sección histórica;
+  - sección 10 del README reescrita;
+  - tabla de scripts del README con los 5 scripts nuevos (`check_modelo_v6`, `check_valores_v6`, `check_contract`,
+    `check_friction`, `check_vision`);
+  - `scripts/inspect_model.py` (que ya esperaba 5.360 kg): OK.
+- **Errores en consola:** ninguno.
+- **Siguiente:** paso 45, diagnóstico de las caídas al reanudar.
+
+### 2026-10-11 ~00:00–00:30 — Paso 45: diagnóstico de las caídas al pausar y del choque entre piernas
+- **Autor:** Claude Code (noche autónoma). Sin commits.
+- **Qué se hizo:** nuevo `scripts/diag_caidas.py`, que reproduce sin visor la lógica de pausa de
+  `scripts/demo_interactive.py`.
+  - Pausas al azar: marcha de 2–5 s y pausa de 0.5–3 s, en 30 episodios de 30 s.
+  - Cuatro modos de pausa: el de la demo, el de la demo con el reloj de marcha detenido, congelar en cuanto se pide y
+    la pose de pie.
+  - Por cada caída guarda el motivo, el momento (en pausa o al reanudar), la articulación con más error de seguimiento
+    y si hubo choque entre piernas.
+  - También mide la distancia y los choques entre piernas con acciones al azar y con dos políticas.
+  - Para eso se entrenó una política desde cero en el V6 con `NaoWalk-v0`: `runs/diag45_desde_cero_2M`, 2M pasos,
+    10 min, fricción aleatoria. Termina con un episodio medio de 19.4 s.
+- **Resultado** (`results/diagnostico_45.md` y `.json`):
+  - **Pausa de la demo en el V6: se cae en el 45 % de las pausas** (28/62), y no en 1 de cada 400 como en el V5.
+    - 19 caídas fueron **durante** la pausa y 9 al reanudar.
+    - Todas por inclinación; la articulación con más error es RAnklePitch (20/28).
+  - Detener el reloj de marcha no ayuda (48 %). Pausar en la pose de pie baja a **5.6 %**.
+  - **Piernas:**
+
+    | Fuente | Pasos con choque | Penetración máxima |
+    |---|---|---|
+    | Política del sprint | 0 % | separación mínima de 1.5 mm |
+    | Desde cero en el V6 | 0.16 % | 1.2 mm |
+    | Al azar, escalas del sprint | 7.7 % | 12.8 mm |
+    | Al azar, contrato v1 | 1.06 %, solo al caer | 4.3 mm |
+- **Decisiones:**
+  - La carrera no pausa y arranca siempre desde quieto: así lo hace `NaoRace-v0` (paso 56).
+  - La recompensa castiga el choque entre piernas.
+  - La demo del sprint no se toca: se reemplaza con la política de carrera en el paso 58b.
+  - Detalle en el registro de errores, **E42**.
+- **Errores en consola:** ninguno. En el paso 44 hubo un rechazo de la herramienta de escritura, que se registra como
+  **E44**.
+- **Siguiente:**
+  - de acuerdo con el orden de la noche, el entorno de carrera (53–58) y el entrenamiento pesado del 59;
+  - el paso 49 se corre mientras entrena.
+
+### 2026-10-11 ~00:30 — Paso 49: contactos, de pie y barrido articular con el V6 (parte automática)
+- **Autor:** Claude Code (noche autónoma). Sin commits.
+- **Resultado:**
+  - **`check_contacts`: OK.**
+    - Penetración en reposo de 0.39 mm.
+    - Penetración máxima de 4.79 mm al soltarlo desde 3 cm.
+    - Rebote de 0.37 mm; 4 contactos por pie; solo los pies tocan el suelo.
+  - **`check_standing`: OK.**
+    - 10 s de pie con 1.7° de inclinación máxima.
+    - 20/20 de pie con ruido de ±0.05 rad.
+    - Resiste empujones de 0.1 s de 20 N hacia adelante, izquierda y derecha, y de 15 N hacia atrás.
+  - **`joint_sweep`: OK.**
+    - Las 23 articulaciones recorren su rango.
+    - Las que no llegan al 100 % las detiene un choque real: hombro con la cadera (76 %), HipRoll con la otra pierna
+      (87 %) y rodilla con la cadera (94 %).
+    - Video: `videos/joint_sweep.mp4`.
+- **Falta, para marcar `[x]`:** la revisión visual del usuario. Qué observar en `videos/joint_sweep.mp4`:
+  1. cada articulación se mueve en el sentido que dice el letrero (convención de NAOqi);
+  2. ninguna parte atraviesa a otra; los choques se ven como topes;
+  3. HipRoll hacia adentro: las piernas se tocan antes del límite, como en el NAO real;
+  4. los brazos no atraviesan el torso.
+- **Errores en consola:** ninguno.
+
+### 2026-10-11 ~00:05–00:45 — Pasos 53–58: entorno de carrera `NaoRace-v0`; 58b; lanzamiento de `carrera_v01`
+- **Autor:** Claude Code (noche autónoma). Sin commits.
+- **Qué se hizo: `src/envs/nao_race_env.py`, registrado como `NaoRace-v0`** (máximo 1250 pasos = 30 s).
+  - **Observación (53):** los 54 valores del contrato v1, calculados con las funciones de `src/race/contract.py`.
+  - **Acción (54):** 13 ángulos cada 24 ms (`FRAME_SKIP = 12`) con `contract.accion_a_objetivos`, presupuesto
+    lateral incluido.
+  - **Recompensa (55):**
+    - 17 términos, con los pesos de `configs/carrera/pesos.yaml`, que ahora tiene `pesos` y `rangos` del barrido;
+    - usa la `d`, la `psi` y la velocidad **reales**;
+    - la salida de carril se mide con las esquinas de las suelas contra el borde interior de la línea (±35 cm);
+    - la meta se mide con la punta del pie en x ≥ 5 m.
+  - **Episodio (56):**
+    - desde quieto, con colocación normal de σ 2 cm / 2° recortada a ±10 cm / ±8°;
+    - **0.5 s de pie dentro de `reset`** para que la cámara mida; el reloj de marcha arranca en 0 al terminar;
+    - el rumbo objetivo de la IMU es el que mide al arrancar;
+    - fricción por pie sorteada;
+    - sigue después de la meta.
+  - **Cámara simulada (57):**
+    - verdad + ruido gaussiano, retardo, pérdidas, mediciones malas y apagones, a 10 Hz;
+    - se mantiene el último valor, con `EstadoCamara` del contrato;
+    - cada episodio sortea sus parámetros dentro del rango de la sección 7.
+  - **Pérdida de rectitud (58):** asimetrías por episodio, empujones, suelo inclinado, deriva y ruido de la IMU, y
+    ruido de sensores (valores en la nota del paso 58 del `PLAN.md`).
+- **Pruebas:**
+  - **`scripts/check_race_env.py`: RESULTADO: OK, 30/30.**
+    - Observación igual a `contract.armar_observacion`, con diferencia 0.0.
+    - Acciones iguales al contrato.
+    - Faltas y meta correctas.
+    - Colocación con σ medida de 1.9 cm y 2.1°.
+    - Reproducible con semilla.
+    - Signos de la cámara correctos; estadística del ruido igual a la sorteada.
+  - En la primera corrida dio FALLA por dos umbrales mal puestos en la prueba; ver **E43**.
+  - **`scripts/check_camara_sim.py`: RESULTADO: OK.**
+    - Cámara renderizada con la visión de carril/ en 25 poses de la pista (125 fotos, todas válidas).
+    - Mismo signo que la convención.
+    - Error rms de 1.05 cm y 0.72°, por debajo de lo que simula el entrenamiento: el entrenamiento es conservador.
+- **Rendimiento:**
+  - la primera versión hacía 3 pasadas por los contactos y `np.isin` por paso: ~0.95 ms por paso;
+  - con una sola pasada (`_medir`) y una tabla de búsqueda: **0.61 ms por paso** (la física sola, 0.34 ms);
+  - entrenamiento: ~2,300 pasos/s con 16 entornos, frente a 3,700 de `NaoWalk-v0`.
+- **58b, la política nueva en los 3 carriles:**
+  - `CorredorRLCarrera` en `demo/caminatas/carrera_vivo.py` (opción `--rl`). Por defecto usa
+    `policies/carrera_v01/model.zip` si existe.
+  - La política recibe `d` y `psi` **crudos** de su `VisionCamara`; se agregaron `d_crudo` y `psi_crudo`.
+  - En la captura sin pantalla la cámara del RL estimó d = −2.1 cm con −2.2 cm reales.
+  - `scripts/eval_carrera.py` evalúa con la colocación, el criterio de meta y las métricas de
+    `demo/caminatas/benchmark.py`, para comparar directo con B-Human.
+- **Paso 59, `carrera_v01` lanzado a las 00:26** (`configs/carrera_v01.yaml`, 60M pasos, fricción aleatoria,
+  perturbaciones, `vx_cmd` 0.15–0.5).
+  - A 1.9M pasos: 0 caídas y episodios de 29 s, pero **todavía no camina** (se queda de pie; seguimiento de vx de
+    0.2).
+  - Se revisa a los ~5M pasos.
+- **Errores en consola:** E43 (umbrales de la prueba).
+- **Decisiones:**
+  1. `NaoWalkEnv` no se toca: lo usa la política del sprint en la demo.
+  2. La meta del evaluador es la del benchmark (sitio del pie en x ≥ 5 m), para comparar con B-Human; la del
+     entorno (punta del pie) se guarda como `t_meta_punta`.
+
+### 2026-10-11 ~00:45–00:55 — Paso 48b: choques entre robots de carriles vecinos
+- **Autor:** Claude Code (noche autónoma). Sin commits.
+- **Qué se hizo:**
+  - **`demo/caminatas/choques.py`** (`DetectorChoques`): las poses de los 3 robots, cada uno con su propia física, se
+    copian a la escena de 3 carriles que ya usaba el visor para dibujar (`escena_tres`). `mj_forward` calcula los
+    contactos, y todo contacto entre geometrías de robots distintos es un choque.
+  - **`carrera_vivo`** lo revisa en cada cuadro y marca al robot como "CHOQUE CON OTRO ROBOT".
+- **Simplificación:** no es física compartida completa. La detección es exacta, pero después del choque los robots
+  no se empujan entre sí. Basta para la selección de agentes, porque un solo contacto ya descarta al agente.
+- **Prueba (`scripts/check_choques_robots.py`): RESULTADO: OK.**
+  - De pie en sus carriles: sin choques, a 34.8 cm entre RL y B-Human.
+  - Corriendo al RL de a 1 cm: el choque aparece a los 35 cm. Su pie ya tocaba la línea a los 25.9 cm: **la salida
+    de carril siempre llega antes que el choque**, como supone el diseño (sección 1.2).
+- **Errores en consola:** ninguno.
+
+### 2026-10-11 ~00:55 — Paso 50 bloqueado: faltan las herramientas para compilar el WalkingEngine original
+- **Autor:** Claude Code (noche autónoma).
+- **Qué se revisó:** compilar el runtime de PenaltyStack necesita CMake y Visual Studio 2022 Build Tools.
+  - `which cmake cl` no los encuentra.
+  - No existe `C:/Program Files*/Microsoft Visual Studio`.
+- **Estado:** `[!]` en el `PLAN.md`. Instalarlos es una descarga y un cambio en el sistema, así que lo decide el
+  usuario.
+- **Mientras tanto:** la comparación contra B-Human usa la réplica tipo B-Human del benchmark: 16.2–16.9 s en 5 m con
+  visión, ~0.30 m/s.
+
+### 2026-10-11 ~00:45–01:05 — Paso 51: benchmark completo de los 3 carriles (150 corridas)
+- **Autor:** Claude Code (noche autónoma). Sin commits.
+- **Qué se hizo:** `uv run python -m demo.caminatas.benchmark --procesos 2`, en paralelo con el entrenamiento de
+  `carrera_v01`.
+  - Con solo 2 procesos para no quitarle CPU al entrenamiento: 3 caminatas × con/sin visión × μ (0.4, 0.6, 0.8, 1.0,
+    1.2) × 5 semillas (1000–1004).
+  - Resultados en `results/benchmark/` (`benchmark.md`, `benchmark.json`, `corridas.csv`, `trayectorias.png`).
+- **Resultado:**
+  - **Con visión, 25/25 metas sin faltas** para las tres:
+
+    | Caminata | Tiempo a la meta | Velocidad |
+    |---|---|---|
+    | B-Human | **16.2–18.3 s** (el más lento, 18.3 s con μ 0.4) | ~0.27–0.31 m/s |
+    | NAOqi | 45.3–49.9 s | ~0.10 m/s |
+    | RL del sprint | 24.2–24.3 s | ~0.20 m/s |
+
+  - **Sin visión:** B-Human 14/25, NAOqi 14/25, RL 15/25 metas; el resto son salidas de carril. Muestra otra vez que
+    la cámara es imprescindible.
+- **Meta de la noche:** el RL de carrera tiene que bajar de **16.2–18.3 s** con visión en las 5 fricciones.
+- **Choques entre robots:** cada robot corre en su propia física. Por el paso 48b, un choque solo puede pasar después
+  de salirse del carril, así que las salidas ya lo cubren.
+- **Paso 52 (preparación):** `benchmark.py` tiene una caminata nueva, `rl_carrera` (`--rl-carrera <modelo>`), que
+  usa la misma función que `scripts/eval_carrera.py` (`correr`). Las dos herramientas dan las mismas métricas con
+  el mismo código. Se comprueba con un checkpoint.
+- **Errores en consola:** ninguno.
+
+### 2026-10-11 ~00:58–01:15 — `carrera_v01` a 5M pasos: ya le gana a B-Human con visión; E45; paso 52
+- **Autor:** Claude Code (noche autónoma). Sin commits.
+- **Evaluación del checkpoint de 5M** (`scripts/eval_carrera.py`, `vx_cmd` = 0.5, μ 0.4–1.2, semillas 1000–1001,
+  colocación del benchmark; `results/carrera/carrera_v01/`):
+  - **Con visión: 10/10 metas, 0 caídas, 0 salidas, en 9.2–10.2 s (~0.52 m/s).**
+    - B-Human tarda 16.2–18.3 s en la misma batería.
+    - Desvío máximo de 7–17 cm, rumbo máximo de 1.7–4.2°.
+  - **Con perturbaciones** (asimetrías, empujones, suelo inclinado, deriva de la IMU), con visión, 4 semillas:
+    **16/20 metas, 4 caídas, 0 salidas**, media de 9.9 s.
+  - **Sin visión: 10/10 caídas a los 2.4–7.1 s.** Ver **E45**: `válido = 0` normalizado da −7.6, porque en
+    entrenamiento la cámara casi nunca falta.
+- **Decisión: `carrera_v02`** (`configs/carrera_v02.yaml`), con un solo cambio: más pérdida de visión.
+  - 15 % de episodios sin cámara;
+  - apagones en el 60 % de los episodios, de 1–8 s.
+
+  Continúa desde un checkpoint de `v01` (el de 15M si sigue mejorando) y entrena el resto de la noche. Para eso, el
+  entorno tiene `sin_vision_prob` y `camara.apagon_inicio_s`, que por defecto dejan a `v01` igual.
+- **Paso 52:** `benchmark.py --rl-carrera` y `eval_carrera.py` dan las mismas 9 métricas, idénticas, para las mismas
+  corridas (5M, μ 1.0 y 0.4).
+- **Errores en consola:** ninguno.
+
+### 2026-10-11 ~01:15–01:55 — `carrera_v01`: marcha, 10M pasos y perilla de velocidad
+- **Autor:** Claude Code (noche autónoma). Sin commits.
+- **Cómo camina el checkpoint de 5M** (μ 0.8, `vx_cmd` 0.5; `results/carrera/carrera_v01/marcha_lado_5M.png`):
+  - pasos de verdad: levanta los pies 5–6 cm, ~2.1 pasos/s por pie (coincide con el reloj de 0.5 s);
+  - 30 % de doble apoyo y 1 % de "vuelo";
+  - torso erguido, brazos que se balancean;
+  - 0.53 m/s.
+- **Video de 3 carriles** (`demo/caminatas/video_carrera.py --rl-carrera <modelo>`), con μ 1.0 y semilla 1000:
+  RL 9.2 s, B-Human 16.2 s, NAOqi 49.8 s.
+- **Checkpoint de 10M** (misma batería):
+
+  | Condición | Metas | Caídas | Salidas | Tiempo |
+  |---|---|---|---|---|
+  | Con visión | 9/10 | 0 | 1 (μ 0.4) | 10.0–10.3 s |
+  | Sin visión | 0/10 | **0** | 10 | — |
+  | Con perturbaciones y visión | 9/20 | 1 | 10 | — |
+
+  - Sin visión ya no se cae (camina a ~0.3 m/s), pero se desvía y se sale.
+  - Con visión el centrado empeoró respecto a 5M: desvío máximo de 17–21 cm contra 7–17 cm.
+  - En el entrenamiento el episodio sigue 30 s (~15 m), así que muchas salidas pasan después de la meta.
+- **Perilla de velocidad** (`vx_cmd`, sección 6.3), checkpoint de 5M, con perturbaciones y visión, 4 semillas × 5
+  fricciones:
+
+  | `vx_cmd` | Metas | Caídas | Salidas | Tiempo medio | Mejor |
+  |---|---|---|---|---|---|
+  | 0.50 | 16/20 | 4 | 0 | 9.9 s | — |
+  | **0.40** | **20/20** | **0** | **0** | **12.35 s** | 12.0 s |
+  | 0.30 | 20/20 | 0 | 0 | 16.8 s | 16.25 s |
+
+  **Con 0.40 m/s ya hay una política que le gana a B-Human (16.2–18.3 s) sin faltas, incluso con perturbaciones.**
+
+### 2026-10-11 ~01:58–02:10 — `carrera_v01` a 15M: el mejor; se detiene y arranca `carrera_v02`
+- **Autor:** Claude Code (noche autónoma). Sin commits.
+- **Checkpoint de 15M** (`results/carrera/carrera_v01/eval_model_15000000_steps_*`):
+
+  | Condición | Metas | Faltas | Tiempo | Desvío máximo |
+  |---|---|---|---|---|
+  | Con visión, `vx_cmd` 0.5 | **10/10** | 0 | **10.5–10.6 s** | **3.4–5.6 cm** (5M: 7–17 cm) |
+  | Con perturbaciones, `vx_cmd` 0.5 | **20/20** | 0 | 11.15 s de media (mejor 10.7 s) | — |
+  | Con perturbaciones, `vx_cmd` 0.40 | 20/20 | 0 | 13.6 s | — |
+  | Sin visión | 0/10 | 6 caídas, 4 salidas | — | — (avanza apenas 0.03–0.11 m/s) |
+
+  Con visión, este checkpoint pasa el filtro duro de la sección 11.4 también con perturbaciones; el de 5M no (4
+  caídas). **Se guarda el de 15M en `policies/carrera_v01/`**, reemplazando al de 5M que se había guardado a las
+  02:00.
+- **Decisión: detener `carrera_v01` en 15.3M pasos** (`taskkill` del árbol de procesos; los checkpoints de 5, 10 y
+  15M están guardados) y dedicar el resto de la noche a `carrera_v02`.
+  - Motivo: con visión ya le gana a B-Human por ~6 s, con 0 faltas.
+  - Lo que falta es no depender de la cámara (E45). Seguir con `v01` no lo arregla: en `v01` la cámara casi nunca
+    falta.
+- **`carrera_v02` lanzado a las 02:05** desde el checkpoint de 15M de `v01`: 40M pasos, ~2,800 pasos/s, ~4 h.
+  - Un solo cambio respecto a `v01`: 15 % de episodios sin cámara; apagones en el 60 % de los episodios, de 1–8 s,
+    desde el arranque.
+  - Semilla 2.
+  - El primer intento falló por **E46** (`--continuar` no reconocía la normalización de un checkpoint), corregido en
+    `src/train.py`.
+- **Visor y video:** `carrera_vivo.py` y `video_carrera.py` usan la política de carrera con `--rl-vx` (por defecto
+  0.40, el valor sin faltas con perturbaciones).
+
+### 2026-10-11 ~02:10 — Paso 58: prueba de rectitud de 100 episodios con `carrera_v01` (15M)
+- **Autor:** Claude Code (noche autónoma). Sin commits.
+- **Qué se hizo:** `scripts/eval_carrera.py --modelo policies/carrera_v01/model.zip --vx 0.40 --semillas 20
+  --perturbaciones`.
+  - Con perturbaciones: asimetrías, empujones, suelo inclinado, deriva de la IMU.
+  - 5 fricciones × 20 semillas = 100 episodios con visión y 100 sin visión.
+  - Resultados en `results/carrera/carrera_v01/rectitud_58/`.
+- **Resultado:**
+
+  | Condición | Metas | Caídas | Salidas | Tiempo | Desvío máximo medio | Rumbo máximo medio |
+  |---|---|---|---|---|---|---|
+  | **Con visión** | **100/100** | 0 | 0 | **13.2 ± 0.7 s** | **7.8–8.6 cm** | 5.7–6.1° |
+  | Sin visión | 0/100 | 45 | 47 | — | 15–17 cm | 16.5–19.2° |
+
+  Sin visión, la política casi no avanza (0.03–0.05 m/s) y termina cayéndose o saliéndose. La "deriva sin visión"
+  todavía no es una medida de la marcha, sino del problema E45. Se repite con `carrera_v02`.
+- **Lectura:** con visión, la política es rápida y robusta. Le sobran ~3–5 s contra B-Human aun con `vx_cmd` 0.40 y
+  perturbaciones.
+
+### 2026-10-11 ~02:12–02:20 — Paso 58b: la política de carrera con la cámara renderizada, en lazo cerrado
+- **Autor:** Claude Code (noche autónoma). Sin commits.
+- **Qué se hizo:** `CorredorRLCarrera` (el mismo que usa `run_demo.py --live`), corrido sin pantalla hasta el final.
+  - La política recibe `d`, `psi` y válido **crudos** de su cámara inferior renderizada y de la visión de `carril/`,
+    a 10 Hz.
+  - Sin cámara simulada ni truco del giroscopio.
+  - 18 corridas: μ 0.4/0.8/1.2 × semillas 1000–1002 × `vx_cmd` 0.40 y 0.5.
+  - Resultados en `results/carrera/carrera_v01/camara_renderizada_58b.json`.
+- **Resultado: 18/18 metas, 0 faltas.**
+  - 12.7–12.8 s con `vx_cmd` 0.40 y 10.3–10.5 s con 0.5.
+  - Desvío máximo de 1.4–8.8 cm.
+  - La política entrenada con la cámara simulada funciona igual con la visión real del pipeline, como anticipaba
+    `check_camara_sim.py` (el error real es menor que el simulado).
+- **Video para revisar:** `videos/carrera_v01_3carriles.mp4` (`video_carrera.py --rl-carrera policies/carrera_v01/model.zip
+  --rl-vx 0.40`), con μ 1.0 y semilla 1000: **RL 12.7 s, B-Human 16.2 s, NAOqi 49.8 s**.
+- **Para el usuario (pasos 56 y 58b).** Qué observar:
+  1. en `videos/carrera_v01_3carriles.mp4`, el RL (centro) arranca desde quieto, da pasos reales (no se arrastra ni
+     salta), va recto y llega primero;
+  2. en `uv run python demo/run_demo.py --live`, el carril central usa la política nueva con su cámara (la ventana
+     "Lo que ve cada NAO" muestra su `d`/`psi` estimados) y llega a la meta sin salirse;
+  3. que la postura y el balanceo de brazos se vean naturales; si algo se ve raro (por ejemplo, rodillas muy
+     dobladas o pies que se cruzan), anotarlo.
+
+### 2026-10-11 ~02:15–02:20 — Paso 60: lanzador de barridos de agentes
+- **Autor:** Claude Code (noche autónoma). Sin commits.
+- **Qué se hizo:** `scripts/barrido.py`.
+  - **Sorteo por agente**, reproducible con `--semilla` y el número de agente:
+    - pesos uniformes dentro de los `rangos` del YAML, con choque_robot = 2 × salida;
+    - fricción mínima U(0.3, 0.5) y máxima U(1.0, 1.3);
+    - `vx_max` U(0.40, 0.60);
+    - σ máximos de la cámara U(3, 6) cm y U(3, 5)°;
+    - semilla de PPO.
+  - **Por agente:** `config.yaml` completa, entrenamiento con `--continuar` desde la base, log, evaluación con la
+    batería (visión + perturbaciones, μ 0.4–1.2) y `resultado.json`.
+  - **Puntaje de la sección 11.4:** filtro duro y luego media + 1 σ del tiempo; desempate por desvío.
+  - Escribe `tabla.md` ordenada.
+  - **Reanudable:** salta a los agentes evaluados y repite los entrenamientos que quedaron a medias.
+- **Prueba:** 4 agentes de 20k pasos con 4 entornos (`results/barridos/prueba_paso60/`).
+  - 4/4 completos, ~50 s cada uno; los 4 pasan el filtro con 11.7–12.2 s (`eval_vx` 0.45).
+  - Al relanzar, los 4 se saltan.
+  - Con 20k pasos los agentes casi no se apartan de la base: la prueba valida el mecanismo, no compara pesos.
+- **Costo estimado de la ronda 1 (paso 61):** 100 agentes × 1M pasos a ~2,700 pasos/s ≈ 6 min de entrenamiento +
+  ~1 min de evaluación por agente, es decir **~11–12 h** en este PC. No cabe esta noche junto con `carrera_v02`; se
+  propone correrlo en otra noche (decisión del usuario).
+- **Errores en consola:** ninguno.
+
+### 2026-10-11 ~02:20–02:35 — Paso 55: orden de comportamientos de la recompensa (FALLA parcial, E47)
+- **Autor:** Claude Code (noche autónoma). Sin commits.
+- **Qué se hizo:** `scripts/check_recompensa_carrera.py` (resultado en `results/carrera/orden_recompensa.json`).
+- **Resultado:**
+  - Rápido y limpio (2307) > lento y limpio (547): **OK**.
+  - Salirse es peor que ir lento para toda salida hasta los 4.3 m.
+  - **No** a 4.8–4.9 m: 579–597 > 547.
+  - Con descuento 0.99, cualquier salida después de 4 s "vale más" que ir lento.
+- **Decisión:** paso 55 marcado `[!]`; nuevo **paso 55b**, con `salida_carril` ≤ −300, en su propia generación. Mientras
+  tanto, el filtro duro de la selección garantiza que no pase ninguna política con salidas.
+- **Errores:** E47. El script falló dos veces antes de medir bien (empujón que tumba; sesgo aplicado después de
+  `predict`); detalle en E47.
+
+### 2026-10-11 ~02:37–02:50 — `carrera_v02` a 5M pasos: ya no se cae sin visión
+- **Autor:** Claude Code (noche autónoma). Sin commits.
+- **Evaluación** (`results/carrera/carrera_v02/`, μ 0.4–1.2):
+
+  | Batería | Con visión | Sin visión |
+  |---|---|---|
+  | Nominal, `vx_cmd` 0.5, 2 semillas | **10/10**, 10.1–10.2 s, desvío máximo de 5–7 cm | **7/10 metas, 0 caídas**, 3 salidas (desvío de 12–27 cm) |
+  | Perturbaciones, `vx_cmd` 0.5, 4 semillas | **20/20**, 10.2–10.4 s, desvío de 13–14 cm | 9/20, **0 caídas**, 11 salidas |
+  | Perturbaciones, `vx_cmd` 0.40, 4 semillas | **20/20**, 12.2 s, desvío de 15–16 cm | 6/20, **0 caídas**, 14 salidas |
+
+- **Lectura:**
+  - **La hipótesis de `v02` se confirma:** sin visión pasó de 10/10 caídas (`v01`) a 0 caídas, y camina a
+    ~0.48 m/s solo con la IMU.
+  - Sin cámara deriva ~20 cm en 5 m. Con perturbaciones se sale en ~50 % de las corridas, contra ~45 % de B-Human sin
+    visión en el benchmark.
+  - **Costo:** con visión y perturbaciones el desvío máximo subió de ~8 cm (`v01`, `vx_cmd` 0.40) a 13–16 cm. Sigue
+    sin salidas.
+- Se sigue entrenando; se evalúa cada 5M.
+
+### 2026-10-11 ~03:05–04:35 — `carrera_v02` de 10M a 25M pasos
+- **Autor:** Claude Code (noche autónoma). Sin commits.
+- **Evaluación de cada checkpoint:** misma batería que a 5M (`results/carrera/carrera_v02/`). La tabla completa de
+  la noche está en `results/carrera/resumen.md` (`scripts/resumen_carrera.py`).
+
+  | Checkpoint | Visión, nominal | Visión + pert. 0.5 | Visión + pert. 0.40 | Sin visión, nominal | Sin visión + pert. 0.40 |
+  |---|---|---|---|---|---|
+  | 10M | 10/10, 10.1 s | 20/20, 10.4 s | 20/20, 12.5 s | 5/10 | 5/20 |
+  | **15M** | 10/10, 10.6 s | **20/20**, 10.85 s | **20/20**, 13.1 s | **10/10**, 11.0 s | 14/20 |
+  | 20M | 10/10, 9.8 s | 15/20 (5 salidas) | **20/20**, 12.6 s | **10/10**, 10.2 s | 16/20 |
+  | 25M | 10/10, 10.0 s | 14/20 (1 caída, 5 salidas) | 15/20 (5 salidas) | 6/10 | 15/20 |
+
+  Ningún checkpoint se cae sin visión; solo 25M tiene una caída, con visión y perturbaciones.
+- **Lectura:**
+  - **15M y 20M** son los mejores. Sin visión, sin perturbaciones, ya pasan el filtro: 10/10.
+  - Los checkpoints oscilan; 25M empeora. Por eso se elige por batería y no por el último checkpoint.
+- **03:40:** se guardó el de 15M como `policies/carrera_v02/`, provisional.
+- **Selección:** batería grande (100 episodios por condición, `vx_cmd` 0.40, con perturbaciones) para 15M y 20M, en
+  `results/carrera/carrera_v02/seleccion_100/`.
+
+### 2026-10-11 ~04:35–04:55 — Selección de `carrera_v02`: el checkpoint de 15M
+- **Autor:** Claude Code (noche autónoma). Sin commits.
+- **Batería grande** (`results/carrera/carrera_v02/seleccion_100/`): `vx_cmd` 0.40, con perturbaciones, 5 fricciones
+  × 20 semillas por condición.
+
+  | Checkpoint | Con visión | Tiempo con visión | Sin visión |
+  |---|---|---|---|
+  | **15M** | **100/100**, 0 faltas | 13.0 ± 0.5 s | **89/100**, 0 caídas, 11 salidas |
+  | 20M | **100/100**, 0 faltas | 12.5 ± 0.55 s | 86/100, 0 caídas, 14 salidas |
+  | `v01` (15M), referencia | 100/100 | 13.2 ± 0.7 s | 0/100: 45 caídas, 47 salidas |
+
+- **Elección: 15M** (`policies/carrera_v02/`, guardado a las 03:40).
+  - Por la sección 11.4 (tiempo + 1σ con visión a 0.40), 20M sería algo mejor: 13.05 contra 13.5 s.
+  - Pero 15M es el único que también pasa el filtro con visión y perturbaciones a `vx_cmd` 0.5 (20/20 contra 15/20).
+    Esto da margen para subir la perilla en el robot real.
+  - Sin visión es igual o algo mejor.
+  - La diferencia de tiempo, ~0.5 s, es menor que la ventaja sobre B-Human, de ~3.5 s.
+- **`carrera_v02` contra `carrera_v01`:** mismo desempeño con visión (13.0 contra 13.2 s), y sin visión pasa de 0/100 a
+  **89/100 sin caídas**. Se confirma la hipótesis de `v02` (E45).
+- **Lazo cerrado con la cámara renderizada** (`CorredorRLCarrera`, 36 corridas;
+  `results/carrera/carrera_v02/camara_renderizada_58b.json`):
+
+  | Condición | Metas | Tiempo |
+  |---|---|---|
+  | Con cámara, `vx_cmd` 0.40 | 9/9 | 12.7 s |
+  | Con cámara, `vx_cmd` 0.5 | 9/9 | 10.5–10.7 s |
+  | Sin cámara, `vx_cmd` 0.40 | 9/9 | 13.5–13.7 s |
+  | Sin cámara, `vx_cmd` 0.5 | 9/9 | 11.0 s |
+
+  - Desvío máximo de hasta 17.7 cm con cámara (`v01`: 8.8 cm) y de hasta 23.9 cm sin cámara.
+- **Costo de `v02`:** se aleja más del centro, porque confía menos en la cámara. Sigue sin salidas con visión, pero
+  el margen lateral es menor. Es candidato para la siguiente generación (por ejemplo, con el castigo de salida del
+  paso 55b).
+
+### 2026-10-11 ~05:30–06:05 — `carrera_v02` terminado (40M); se queda el de 15M; cierre de la noche
+- **Autor:** Claude Code (noche autónoma). Sin commits.
+- **Checkpoints finales** (con visión y perturbaciones, `vx_cmd` 0.5):
+
+  | Checkpoint | Metas | Faltas |
+  |---|---|---|
+  | 30M | 19/20 | 1 salida |
+  | 35M | 15/20 | 5 salidas |
+  | 40M (final) | 15/20 | 4 caídas, 1 salida |
+
+  El final es el más rápido sin perturbaciones (9.6 s), pero el menos robusto (**E48**).
+- **Políticas de la noche:**
+
+  | Política | Origen | Uso | Con visión (`vx_cmd` 0.40, perturbaciones) | Sin visión |
+  |---|---|---|---|---|
+  | `policies/carrera_v01/` | 15M de `v01` | La más recta (desvío ~8 cm) | 100/100, 13.2 s | Inútil |
+  | **`policies/carrera_v02/`** | 15M de `v02` | **Recomendada** | **100/100, 13.0 s** | **89/100, 0 caídas** |
+
+  Las dos llegan con la cámara renderizada. B-Human: 16.2–18.3 s con visión.
+- **Estado de los pasos:**
+  - 42–48b, 51–54, 57, 59, 59b y 60: hechos.
+  - 49, 56, 58 y 58b: esperan la revisión del usuario.
+  - 50: bloqueado.
+  - 55: `[!]` → 55b.
+  - **Siguiente en orden: 61** (100 agentes, ~11–12 h): decidir cuándo correrlo.
+- **Para la revisión del usuario:**
+  - `videos/carrera_v01_3carriles.mp4`;
+  - `uv run python demo/run_demo.py --live` (usa `policies/carrera_v02` con su cámara);
+  - `videos/joint_sweep.mp4` (paso 49).
+
+  Las listas de qué observar están en las entradas de los pasos 49 y 58b.
+
+### 2026-10-11 (mañana) — Capítulo del entrenamiento por RL; regla "mejor que sobre documentación a que falte"; E49
+- **Autor:** Claude Code, a pedido de Camilo.
+- **Indicación del usuario:** el entrenamiento es el paso más importante. Cada mínimo dato del RL tiene que estar
+  documentado: cómo funcionó, datos, pesos, variables, qué se cambió y cómo fueron las pruebas. Regla nueva del
+  proyecto: **"mejor que sobre documentación a que falte"**.
+- **Qué se hizo:**
+  - **[`docs/paper/entrenamiento_rl.md`](paper/entrenamiento_rl.md)**, capítulo nuevo del paper:
+    - observación (54 variables, con sensor, escala y normalización);
+    - acción (13 articulaciones y límites);
+    - episodio, perturbaciones y cámara simulada (valores de `v01` y `v02`);
+    - los 17 términos de la recompensa, con fórmula, peso y aporte medido;
+    - PPO y todos sus parámetros, máquina y versiones, y la versión del código;
+    - etapas del aprendizaje de las dos generaciones;
+    - todas las baterías y resultados, y la selección;
+    - qué aprendió la política;
+    - fallos, lo que no se hizo, cómo reproducirlo y las huellas SHA-256 de las políticas.
+  - **`scripts/exportar_curvas.py`:** exporta todas las curvas de TensorBoard a `results/` (`runs/` no se versiona).
+    - `carrera_v01`: 37 curvas, 61,184 puntos;
+    - `carrera_v02`: 37 curvas, 161,097 puntos;
+    - en `results/carrera/carrera_v0N/curvas_entrenamiento.{csv,png}`.
+  - **`results/carrera/analisis_politicas.json`:** estadísticas de normalización de las 54 observaciones, uso de cada
+    acción y métricas de la marcha de las dos políticas.
+- **Hallazgos nuevos:**
+  - **E49:** la política usa acciones saturadas (brazos fijos y asimétricos, caderas hacia adentro en el límite).
+    **Corrige** el "brazos que se balancean" de la entrada de la madrugada.
+  - **Retroceso de `v01` entre 9 y 11M pasos** (salidas del 29 %, retorno de ~2,000 a ~1,300), visto en las curvas.
+    Explica el checkpoint de 10M. Se agregó a E48.
+  - Los dos runs registran `git_commit: ea5e992-modificado`: se entrenó con código sin confirmar. Lo que cambió entre
+    `v01` y `v02` quedó en la sección 7 del capítulo.
+- **Memoria del asistente:** se guardó la regla para futuras sesiones.
+
+### 2026-10-11 (mañana) — ¿Los brazos fijos se deben al RL? Sí, y la política los necesita
+- **Autor:** Claude Code, a pregunta de Camilo.
+- **Prueba:** las dos políticas con los hombros forzados a la pose de pie (acción 0). μ 0.4/0.8/1.2 × semillas
+  1000–1003, `vx_cmd` 0.40, con visión, con y sin perturbaciones (`results/carrera/prueba_brazos_home.json`):
+
+| Política | Brazos | Sin perturbaciones | Con perturbaciones | Rumbo medio |
+|---|---|---|---|---|
+| `v01` | Los aprendidos | 12/12, 12.8 s | 12/12, 13.6 s | +0.5° |
+| `v01` | Forzados a la pose de pie | 12/12, **17.5 s** | 12/12, **20.6 s** | **+3.5°** |
+| `v02` | Los aprendidos | 12/12, 12.7 s | 12/12, 13.1 s | −1.5° |
+| `v02` | Forzados a la pose de pie | **0/12, se cae** | **0/12, se cae** | +4.3° |
+
+- **Conclusión:**
+  - la postura de los brazos es aprendida por el RL y forma parte del equilibrio y del control del rumbo;
+  - no hay ningún premio por balancearlos, moverlos cuesta, y fijos sirven de contrapeso;
+  - para tener brazos naturales hay que pedírselo al RL en una generación propia (premio a balancear los brazos en
+    fase con las piernas, o límites menores). Quitarlos a la fuerza tumba a `v02`.
+- Agregado a E49 y a la sección 12 de `docs/paper/entrenamiento_rl.md`.
+
+### 2026-10-11 (mañana) — README: sección "Dónde está toda la información"
+- **Autor:** Claude Code, a pedido de Camilo.
+- **Pedido:** que quien llegue al repo encuentre toda la información en un solo lugar, sin sobrecargar el README:
+  enlaces a los documentos con una explicación corta.
+- **Qué se hizo:**
+  - nueva sección del README, justo después del estado del proyecto, enlazada desde el índice ("0.") y desde el
+    estado;
+  - tablas por tipo: para empezar, diseño, material del paper, resultados y datos, políticas y configuraciones, y
+    fuera de git;
+  - 32 enlaces revisados con un script, ninguno roto.
+- **Regla nueva:** punto 6 del protocolo en `CLAUDE.md`. Todo documento, resultado, política o config nueva se agrega
+  a esa sección en el mismo paso.
+
+### 2026-10-11 (mañana) — Salidas malas (E50) y estado del silbato
+- **Autor:** Claude Code, a pregunta de Camilo: "¿se varió el ángulo de salida?" y "¿cómo vas con el silbato de
+  PenaltyStack?".
+- **Colocación en el entrenamiento de anoche:** sí se varió.
+  - Corrimiento ~N(0, 2 cm), recortado a ±10 cm.
+  - Rumbo ~N(0, 2°), recortado a ±8°.
+  - Pero casi siempre son salidas buenas: 8° es 4σ.
+- **Prueba de salidas malas** (`results/carrera/carrera_v02/salida_mala.json`):
+
+| Colocación | Con visión | Sin visión |
+|---|---|---|
+| Recto (0°), corrido 0, ±10 o ±15 cm | 10/10, 12.7–13.0 s | 10/10, 13.7 s |
+| +8° | 6/10 (solo con y = 0, −10 y −15 cm) | 0/10 |
+| −8° | 0/10, salidas | 0/10 |
+| ±15° y ±25° | 0/20, salidas a los 2–5 s | 0/20 |
+
+- **Causa y prueba (E50):** el rumbo objetivo de la IMU es el rumbo con que arrancó, así que le pide mantener el
+  ángulo equivocado.
+  - Fijándolo a la dirección del carril (rumbo al arrancar − `psi` de la cámara), sin reentrenar, llega en **12/12
+    salidas torcidas hasta ±25°**.
+  - Nuevo **paso 58c** en el `PLAN.md`.
+- **Silbato:** revisión de PenaltyStack (`gh api`, 2026-10-11).
+  - Último commit `9c08a41` (2026-10-07), el mismo que se revisó el 2026-10-08.
+  - Ramas: `codex/mejora-portero`, `feat/bhuman-simulation` y `feat/rl-contracts`.
+  - Lo único relacionado es la **estructura de datos `Whistle` de B-Human**
+    (`baseline/bhuman/Src/Representations/Modeling/Whistle.h`: confianza, canales y momento de la última detección),
+    copiada con el baseline.
+  - **No está el módulo que detecta el silbato** (en B-Human, el que procesa el audio) ni un proveedor de audio; nada
+    en el código de penales lo usa.
+  - El arranque de PenaltyStack sigue siendo el táctil frontal de la cabeza 0.25 s.
+  - En este repo el silbato no está implementado: el plan actual es la activación manual (táctil), que cumple el
+    reglamento.
+  - Queda a decisión del equipo si se implementa un detector automático.

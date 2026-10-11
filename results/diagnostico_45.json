@@ -1,0 +1,806 @@
+{
+  "modelo": "checkpoints\\best_model.zip",
+  "semillas": [
+    1000,
+    1029
+  ],
+  "pausas": {
+    "demo": {
+      "episodios": 30,
+      "pausas": 62,
+      "caidas": 28,
+      "pct_episodios_con_caida": 93.3,
+      "caidas_por_momento": {
+        "al_reanudar": 9,
+        "en_pausa": 19
+      },
+      "caidas_por_motivo": {
+        "inclinacion": 28
+      },
+      "articulaciones": {
+        "LShoulderPitch": 1,
+        "LHipRoll": 1,
+        "RShoulderPitch": 1,
+        "RHipRoll": 3,
+        "RAnklePitch": 20,
+        "RKneePitch": 1,
+        "LKneePitch": 1
+      },
+      "con_choque_piernas": 6,
+      "detalle": [
+        {
+          "t_s": 10.3,
+          "motivo": "inclinacion",
+          "momento": "al_reanudar",
+          "articulacion": "LShoulderPitch (6 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 13.96,
+          "motivo": "inclinacion",
+          "momento": "al_reanudar",
+          "articulacion": "LHipRoll (4 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 4.74,
+          "motivo": "inclinacion",
+          "momento": "al_reanudar",
+          "articulacion": "RShoulderPitch (33 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 4.22,
+          "motivo": "inclinacion",
+          "momento": "al_reanudar",
+          "articulacion": "RHipRoll (5 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 17.28,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 22.1,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 9.62,
+          "motivo": "inclinacion",
+          "momento": "al_reanudar",
+          "articulacion": "RHipRoll (12 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 21.82,
+          "motivo": "inclinacion",
+          "momento": "al_reanudar",
+          "articulacion": "RKneePitch (4 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 4.2,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 13.18,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 17.54,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 12.22,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RHipRoll (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 16.3,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 4.9,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 4.8,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 4.2,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 13.76,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 5.38,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 4.22,
+          "motivo": "inclinacion",
+          "momento": "al_reanudar",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 5.44,
+          "motivo": "inclinacion",
+          "momento": "al_reanudar",
+          "articulacion": "LKneePitch (5 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 3.6,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 12.86,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (2 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 8.9,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (4 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 5.9,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 4.16,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 3.42,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (4 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 6.0,
+          "motivo": "inclinacion",
+          "momento": "al_reanudar",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 5.98,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        }
+      ]
+    },
+    "demo_reloj_fijo": {
+      "episodios": 30,
+      "pausas": 60,
+      "caidas": 29,
+      "pct_episodios_con_caida": 96.7,
+      "caidas_por_momento": {
+        "en_pausa": 18,
+        "al_reanudar": 11
+      },
+      "caidas_por_motivo": {
+        "inclinacion": 29
+      },
+      "articulaciones": {
+        "RAnklePitch": 19,
+        "RShoulderPitch": 2,
+        "RHipRoll": 5,
+        "LAnklePitch": 2,
+        "RHipPitch": 1
+      },
+      "con_choque_piernas": 7,
+      "detalle": [
+        {
+          "t_s": 25.54,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 4.74,
+          "motivo": "inclinacion",
+          "momento": "al_reanudar",
+          "articulacion": "RShoulderPitch (44 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 4.22,
+          "motivo": "inclinacion",
+          "momento": "al_reanudar",
+          "articulacion": "RHipRoll (4 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 3.66,
+          "motivo": "inclinacion",
+          "momento": "al_reanudar",
+          "articulacion": "RHipRoll (9 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 15.84,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "LAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 15.0,
+          "motivo": "inclinacion",
+          "momento": "al_reanudar",
+          "articulacion": "RShoulderPitch (44 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 15.54,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 4.2,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 13.32,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 23.96,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 9.8,
+          "motivo": "inclinacion",
+          "momento": "al_reanudar",
+          "articulacion": "RHipRoll (8 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 11.14,
+          "motivo": "inclinacion",
+          "momento": "al_reanudar",
+          "articulacion": "RHipRoll (4 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 16.74,
+          "motivo": "inclinacion",
+          "momento": "al_reanudar",
+          "articulacion": "LAnklePitch (20 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 4.9,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 4.8,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 4.2,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 13.92,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 5.38,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 4.22,
+          "motivo": "inclinacion",
+          "momento": "al_reanudar",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 5.44,
+          "motivo": "inclinacion",
+          "momento": "al_reanudar",
+          "articulacion": "RHipRoll (5 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 14.12,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 3.6,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 19.2,
+          "motivo": "inclinacion",
+          "momento": "al_reanudar",
+          "articulacion": "RHipPitch (7 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 8.82,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (4 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 5.9,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 4.16,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 3.42,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (4 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 6.0,
+          "motivo": "inclinacion",
+          "momento": "al_reanudar",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 5.98,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        }
+      ]
+    },
+    "inmediata": {
+      "episodios": 30,
+      "pausas": 36,
+      "caidas": 30,
+      "pct_episodios_con_caida": 100.0,
+      "caidas_por_momento": {
+        "al_reanudar": 4,
+        "en_pausa": 26
+      },
+      "caidas_por_motivo": {
+        "inclinacion": 30
+      },
+      "articulaciones": {
+        "RHipRoll": 8,
+        "LKneePitch": 7,
+        "RKneePitch": 4,
+        "LHipRoll": 1,
+        "RAnklePitch": 9,
+        "RShoulderPitch": 1
+      },
+      "con_choque_piernas": 16,
+      "detalle": [
+        {
+          "t_s": 14.9,
+          "motivo": "inclinacion",
+          "momento": "al_reanudar",
+          "articulacion": "RHipRoll (6 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 4.5,
+          "motivo": "inclinacion",
+          "momento": "al_reanudar",
+          "articulacion": "LKneePitch (19 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 3.88,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RHipRoll (3 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 3.3,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RKneePitch (3 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 2.68,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RKneePitch (3 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 3.44,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "LKneePitch (4 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 8.7,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RKneePitch (3 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 3.5,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "LHipRoll (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 3.26,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (5 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 3.34,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "LKneePitch (7 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 3.02,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "LKneePitch (4 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 3.82,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "LKneePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 3.68,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "LKneePitch (4 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 5.12,
+          "motivo": "inclinacion",
+          "momento": "al_reanudar",
+          "articulacion": "LKneePitch (46 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 4.9,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 4.04,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (4 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 4.0,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (4 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 12.96,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RHipRoll (4 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 4.5,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (4 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 3.66,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RHipRoll (4 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 4.5,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RHipRoll (3 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 3.9,
+          "motivo": "inclinacion",
+          "momento": "al_reanudar",
+          "articulacion": "RShoulderPitch (30 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 2.74,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RKneePitch (3 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 12.86,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (2 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 8.6,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RHipRoll (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 5.56,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RHipRoll (4 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 3.26,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (5 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 3.24,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 5.38,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RHipRoll (4 grados)",
+          "choque_piernas_1s": true
+        },
+        {
+          "t_s": 5.98,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RAnklePitch (3 grados)",
+          "choque_piernas_1s": false
+        }
+      ]
+    },
+    "pose_home": {
+      "episodios": 30,
+      "pausas": 142,
+      "caidas": 8,
+      "pct_episodios_con_caida": 26.7,
+      "caidas_por_momento": {
+        "en_pausa": 7,
+        "al_reanudar": 1
+      },
+      "caidas_por_motivo": {
+        "inclinacion": 7,
+        "altura": 1
+      },
+      "articulaciones": {
+        "RKneePitch": 6,
+        "LHipPitch": 1,
+        "LKneePitch": 1
+      },
+      "con_choque_piernas": 0,
+      "detalle": [
+        {
+          "t_s": 8.48,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RKneePitch (1 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 10.74,
+          "motivo": "altura",
+          "momento": "al_reanudar",
+          "articulacion": "LHipPitch (2 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 9.96,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RKneePitch (2 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 21.06,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RKneePitch (2 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 4.78,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RKneePitch (2 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 9.24,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RKneePitch (2 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 13.24,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "RKneePitch (2 grados)",
+          "choque_piernas_1s": false
+        },
+        {
+          "t_s": 27.74,
+          "motivo": "inclinacion",
+          "momento": "en_pausa",
+          "articulacion": "LKneePitch (2 grados)",
+          "choque_piernas_1s": false
+        }
+      ]
+    }
+  },
+  "piernas": [
+    {
+      "fuente": "acciones aleatorias uniformes",
+      "episodios": 20,
+      "pasos": 751,
+      "caidas": 20,
+      "pasos_con_choque": 58,
+      "pct_pasos_con_choque": 7.723,
+      "distancia_min_cm": -1.28
+    },
+    {
+      "fuente": "acciones aleatorias uniformes, contrato v1 con presupuesto lateral (NaoRace-v0)",
+      "episodios": 20,
+      "pasos": 660,
+      "caidas": 20,
+      "pasos_con_choque": 7,
+      "pct_pasos_con_choque": 1.061,
+      "distancia_min_cm": -0.43
+    },
+    {
+      "fuente": "politica del sprint (best_model.zip) de corrido",
+      "episodios": 10,
+      "pasos": 10000,
+      "caidas": 0,
+      "pasos_con_choque": 0,
+      "pct_pasos_con_choque": 0.0,
+      "distancia_min_cm": 0.15
+    },
+    {
+      "fuente": "politica desde cero en el V6 (diag45_desde_cero_2M)",
+      "episodios": 10,
+      "pasos": 10000,
+      "caidas": 0,
+      "pasos_con_choque": 16,
+      "pct_pasos_con_choque": 0.16,
+      "distancia_min_cm": -0.12
+    }
+  ]
+}

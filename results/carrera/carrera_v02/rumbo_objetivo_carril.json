@@ -1,0 +1,77 @@
+{
+ "metodo": "policies/carrera_v02, mu 0.8, vx_cmd 0.40, semilla 1000, con vision, sin perturbaciones. 'actual' = rumbo objetivo de la IMU = rumbo al arrancar; 'carril' = rumbo al arrancar - psi medido por la camara al terminar los 0.5 s de pie",
+ "resultados": [
+  {
+   "y_cm": 0,
+   "rumbo_grados": 8,
+   "actual": "META 13.0 s",
+   "carril": "META 12.7 s"
+  },
+  {
+   "y_cm": 10,
+   "rumbo_grados": 8,
+   "actual": "salida_carril",
+   "carril": "META 12.7 s"
+  },
+  {
+   "y_cm": 0,
+   "rumbo_grados": -8,
+   "actual": "salida_carril",
+   "carril": "META 12.7 s"
+  },
+  {
+   "y_cm": 10,
+   "rumbo_grados": -8,
+   "actual": "salida_carril",
+   "carril": "META 12.7 s"
+  },
+  {
+   "y_cm": 0,
+   "rumbo_grados": 15,
+   "actual": "salida_carril",
+   "carril": "META 12.7 s"
+  },
+  {
+   "y_cm": 10,
+   "rumbo_grados": 15,
+   "actual": "salida_carril",
+   "carril": "META 12.7 s"
+  },
+  {
+   "y_cm": 0,
+   "rumbo_grados": -15,
+   "actual": "salida_carril",
+   "carril": "META 12.7 s"
+  },
+  {
+   "y_cm": 10,
+   "rumbo_grados": -15,
+   "actual": "salida_carril",
+   "carril": "META 12.7 s"
+  },
+  {
+   "y_cm": 0,
+   "rumbo_grados": 25,
+   "actual": "salida_carril",
+   "carril": "META 12.9 s"
+  },
+  {
+   "y_cm": 10,
+   "rumbo_grados": 25,
+   "actual": "salida_carril",
+   "carril": "META 13.0 s"
+  },
+  {
+   "y_cm": 0,
+   "rumbo_grados": -25,
+   "actual": "salida_carril",
+   "carril": "META 13.0 s"
+  },
+  {
+   "y_cm": 10,
+   "rumbo_grados": -25,
+   "actual": "salida_carril",
+   "carril": "META 13.0 s"
+  }
+ ]
+}

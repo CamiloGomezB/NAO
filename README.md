@@ -6,14 +6,81 @@ articulares programadas a mano.
 
 ## Proyecto actual: Carrera Individual — Copa NAO CCM MX 2026
 
-> **Estado:** **paso 46 de 80** (ruta crítica del RL: quitar los valores del modelo aproximado). Hechos: 40 (los 3 carriles
-> con cámara en MuJoCo) y 41 (contrato de observación y acción en código, `src/race/contract.py`).
-> Actualizado el 2026-10-10.
+> **Estado (2026-10-11, madrugada):** **primera política de carrera que le gana a B-Human en simulación.**
 >
-> - Plan: [`PLAN.md`](PLAN.md)
-> - Diseño del RL: [`docs/plan_rl_carrera.md`](docs/plan_rl_carrera.md)
-> - Repo final: [`docs/integracion_penaltystack.md`](docs/integracion_penaltystack.md)
-> - Historial, errores y soluciones: [`docs/bitacora.md`](docs/bitacora.md)
+> - **`carrera_v01`** ([`policies/carrera_v01/`](policies/carrera_v01/)): entrenada desde cero en el entorno de carrera
+>   `NaoRace-v0` (contrato v1, cámara simulada, fricción aleatoria, perturbaciones).
+>   - Con visión llega en **10.5 s** (`vx_cmd` 0.5) o **12.7 s** (0.40) contra **16.2–18.3 s** de B-Human, con 0 faltas;
+>     también con la cámara renderizada de verdad (18/18).
+>   - **Sin visión no sirve** (E45).
+> - **`carrera_v02`** ([`policies/carrera_v02/`](policies/carrera_v02/)), con más pérdida de visión en el entrenamiento:
+>   igual de rápida con visión (13.0 s a 0.40 m/s, 100/100) y **sin visión llega en 89/100 sin caerse**.
+> - Hechos: 40–48b, 51–54, 57 y 60. Revisión del usuario pendiente en 49, 56 y 58b. 50 bloqueado (faltan VS Build
+>   Tools). 55 con hallazgo (E47 → 55b).
+>
+> **¿Buscas algo?** Todo está enlazado en [Dónde está toda la información](#dónde-está-toda-la-información).
+
+### Dónde está toda la información
+
+Cada archivo tiene su enlace y una línea que dice qué contiene. Se mantiene al día en cada paso.
+
+**Para empezar**
+
+| Archivo | Qué tiene |
+|---|---|
+| [`PLAN.md`](PLAN.md) | Los pasos del proyecto con su criterio de aceptación, su estado (`[ ]` pendiente, `[~]` en curso, `[x]` hecho, `[!]` fallido o bloqueado), una nota con el resultado de cada uno y el **paso actual** |
+| [`docs/bitacora.md`](docs/bitacora.md) | **Diario de trabajo**, en orden cronológico: qué se hizo en cada sesión, resultados con números, problemas, decisiones y siguiente paso |
+| [`CLAUDE.md`](CLAUDE.md) | Reglas del proyecto (protocolo de trabajo, convenciones, compatibilidad con PenaltyStack, robot real) para el equipo y los asistentes de IA |
+
+**Diseño**
+
+| Archivo | Qué tiene |
+|---|---|
+| [`docs/plan_rl_carrera.md`](docs/plan_rl_carrera.md) | **Diseño del RL de carrera**: reglamento y faltas, observación de 54 valores, acción de 13 ángulos, recompensa con pesos y rangos, cámara simulada, fricción, 100 agentes, valores del V6 e implementación del entorno (§6.8) |
+| [`docs/integracion_penaltystack.md`](docs/integracion_penaltystack.md) | Qué exige el repo final del equipo (PenaltyStack): sensores, orden de articulaciones, ciclo de 12 ms, arranque y paro, despliegue a bordo |
+| [`docs/camara_y_carriles.md`](docs/camara_y_carriles.md) | La cámara y la demo de 3 carriles: cómo se usan |
+| [`docs/variables_rl.md`](docs/variables_rl.md) | Variables de la **política del sprint inicial** (histórico, sin cámara). Para la de carrera, ver el capítulo del entrenamiento |
+
+**Material del paper** ([`docs/paper/`](docs/paper/README.md))
+
+| Archivo | Qué tiene |
+|---|---|
+| [`docs/paper/entrenamiento_rl.md`](docs/paper/entrenamiento_rl.md) | **Capítulo del entrenamiento por RL**: qué ve y hace la política, cada término de la recompensa (fórmula, peso y aporte medido), PPO y sus parámetros, etapas del aprendizaje, todas las pruebas, cómo se eligió, qué aprendió la política, fallos y cómo reproducirlo |
+| [`docs/paper/historial_pasos.md`](docs/paper/historial_pasos.md) | Resumen de cada paso: qué se hizo, cómo se verificó y resultado |
+| [`docs/paper/registro_errores.md`](docs/paper/registro_errores.md) | **Todos los errores y callejones** (E01, E02, …), con síntoma, causa, solución y la salida de consola textual |
+| [`docs/paper/fuentes_y_repositorios.md`](docs/paper/fuentes_y_repositorios.md) | De dónde sale cada pieza externa (modelo V6 de B-Human, PenaltyStack, nao_linea), con commit o SHA-256, y por qué se usa |
+| [`docs/paper/vision_carril.md`](docs/paper/vision_carril.md) | Capítulo de la visión de carril: método, precisión, colores y cómo entra al RL |
+
+**Resultados y datos** ([`results/`](results/))
+
+| Archivo o carpeta | Qué tiene |
+|---|---|
+| [`results/carrera/resumen.md`](results/carrera/resumen.md) | **Tabla de todas las evaluaciones** de las políticas de carrera (metas, caídas, salidas, tiempo, desvío) con la referencia de B-Human |
+| [`results/carrera/carrera_v01/`](results/carrera/carrera_v01/) y [`carrera_v02/`](results/carrera/carrera_v02/) | Por generación: cada evaluación de cada checkpoint (`eval_*.md` legible y `.json` con cada corrida), las **curvas completas del entrenamiento** (`curvas_entrenamiento.csv` y `.png`), pruebas con la cámara renderizada, la prueba de rectitud de 100 episodios (`rectitud_58/`) y la batería de selección (`seleccion_100/`) |
+| [`results/carrera/analisis_politicas.json`](results/carrera/analisis_politicas.json) | Qué aprendió cada política: normalización de las 54 observaciones, uso de cada acción y métricas de la marcha |
+| [`results/carrera/orden_recompensa.json`](results/carrera/orden_recompensa.json) | Prueba de si salirse siempre es peor que ir lento (E47) |
+| [`results/carrera/prueba_brazos_home.json`](results/carrera/prueba_brazos_home.json) | Prueba de la política con los brazos forzados a la pose de pie (E49) |
+| [`results/carrera/carrera_v02/salida_mala.json`](results/carrera/carrera_v02/salida_mala.json) y [`rumbo_objetivo_carril.json`](results/carrera/carrera_v02/rumbo_objetivo_carril.json) | Salidas malas (corrida hasta ±15 cm, torcida hasta ±25°) y la prueba de alinear la IMU con el carril (E50) |
+| [`results/benchmark/benchmark.md`](results/benchmark/benchmark.md) | **Benchmark de los 3 carriles** (RL del sprint, B-Human, NAOqi): 150 corridas, 5 fricciones, con y sin visión; datos en `benchmark.json` y `corridas.csv` |
+| [`results/diagnostico_45.md`](results/diagnostico_45.md) | Diagnóstico de las caídas al pausar la demo y del choque entre piernas en el V6 |
+| [`results/camara/`](results/camara/) | Validación de la visión: modelo de error, matriz de colores, lazo cerrado, cámara simulada contra renderizada |
+| [`results/barridos/`](results/barridos/) | Barridos de agentes (por ahora, la prueba del lanzador con 4) |
+| [`results/comparison.md`](results/comparison.md), [`results/metrics.json`](results/metrics.json) | Resultados de la política del sprint inicial (septiembre) |
+
+**Políticas y configuraciones**
+
+| Archivo o carpeta | Qué tiene |
+|---|---|
+| [`policies/carrera_v02/`](policies/carrera_v02/README.md) | **Política de carrera recomendada**: modelo, normalización, config, metadatos y README con su origen y resultados |
+| [`policies/carrera_v01/`](policies/carrera_v01/README.md) | Primera política de carrera (la más recta; se cae sin visión) |
+| [`configs/carrera_v01.yaml`](configs/carrera_v01.yaml), [`configs/carrera_v02.yaml`](configs/carrera_v02.yaml) | Config completa de cada generación, con su hipótesis escrita |
+| [`configs/carrera/pesos.yaml`](configs/carrera/pesos.yaml) | Pesos de la recompensa y rangos para el barrido de agentes (un solo archivo) |
+| [`config/pista.yaml`](config/pista.yaml) | Colores de la pista; se cambian con `scripts/cambiar_colores.py` |
+
+**Fuera de git (solo en el PC que entrena)**
+- `runs/`: cada entrenamiento completo (checkpoints, TensorBoard, log de consola). Lo importante se copia a
+  `results/` y `policies/`.
+- `videos/`: videos de las demos y de las pruebas.
 
 **Objetivo.** Entrenar por RL una caminata para que un **NAO V6 real** recorra el carril de **5 m × 70 cm**
 de la Carrera Individual **más rápido que los dos baselines, NAOqi (1) y B-Human (2)**, sin salirse del carril y
@@ -55,11 +122,12 @@ Se actualiza con cada resultado:
 
 | Carril | Caminata | Tiempo 5 m (sim) | Velocidad (sim) | Faltas (sim) | Tiempo 5 m (real) | Faltas (real) | Fuente |
 |---|---|---|---|---|---|---|---|
-| **Baseline 1: NAOqi** | Réplica tipo NAOqi (ZMP), con visión | 47.8–49.8 s | ~0.10 m/s | 0 | pendiente | pendiente | Reproducido en este repo (benchmark corto, 2026-10-10); completo en el paso 51 |
-| **Baseline 2: B-Human** | Réplica tipo B-Human (parámetros de PenaltyStack), con visión | 16.2–16.9 s | ~0.30 m/s | 0 | pendiente | pendiente | Reproducido en este repo (benchmark corto, 2026-10-10); completo en el paso 51 |
+| **Baseline 1: NAOqi** | Réplica tipo NAOqi (ZMP), con visión | 45.3–49.9 s (25/25 metas) | ~0.10 m/s | 0 | pendiente | pendiente | [`results/benchmark/`](results/benchmark/benchmark.md): 5 fricciones × 5 semillas (paso 51, 2026-10-11) |
+| **Baseline 2: B-Human** | Réplica tipo B-Human (parámetros de PenaltyStack), con visión | 16.2–18.3 s (25/25; 18.3 s con mu 0.4) | ~0.27–0.31 m/s | 0 | pendiente | pendiente | [`results/benchmark/`](results/benchmark/benchmark.md) (paso 51). Sin visión: 14/25 metas, 11 salidas |
 | **Baseline 2: B-Human** | WalkingEngine original (PenaltyStack) | pendiente (~18.7 s teórico) | — | — | — | — | Pasos 50 y 73 |
-| RL | `v2_brazos` del sprint inicial, con visión (truco del giroscopio) | 24.3–24.5 s | ~0.20 m/s | 0 | — | — | Reproducido en este repo (benchmark corto, 2026-10-10); completo en el paso 51 |
-| RL | `carrera_v01` y siguientes | pendiente | — | — | — | — | Fase M |
+| RL | `v2_brazos` del sprint inicial, con visión (truco del giroscopio) | 24.2–24.3 s (25/25) | ~0.20 m/s | 0 | — | — | [`results/benchmark/`](results/benchmark/benchmark.md) (paso 51) |
+| **RL** | **`carrera_v01`** (15M pasos, NaoRace-v0, cámara simulada, fricción aleatoria), con visión, `vx_cmd` 0.5 | **10.5–10.6 s** (10/10); con perturbaciones 11.2 s (20/20) | ~0.47 m/s | 0 | — | — | [`results/carrera/carrera_v01/`](results/carrera/carrera_v01/) (paso 59). **Sin visión se cae o se sale** (E45) |
+| **RL** | **`carrera_v02`** (15M pasos sobre `v01`, más pérdida de visión), con visión y perturbaciones, `vx_cmd` 0.40 | **13.0 s** (100/100) | ~0.38 m/s | 0 | — | — | [`results/carrera/carrera_v02/`](results/carrera/carrera_v02/) (paso 59b). **Sin visión: 89/100 metas, 0 caídas.** Cámara renderizada: 36/36 |
 
 **Cambiar los colores de la pista** (los avisan poco antes del evento): `uv run python scripts/cambiar_colores.py --piso <color> --linea <color>`.
 
@@ -112,6 +180,7 @@ Instalación con pip y más opciones en las secciones [1](#1-instalación) y [2]
 
 ## Contenido
 
+0. [Dónde está toda la información](#dónde-está-toda-la-información)
 1. [Instalación](#1-instalación)
 2. [Demo rápida (sin entrenar)](#2-demo-rápida-sin-entrenar)
 3. [Entrenamiento](#3-entrenamiento)
@@ -438,7 +507,12 @@ NAO/
 
 | Script | Qué verifica |
 |---|---|
-| `scripts/inspect_model.py` | Carga del modelo, masas (5.305 kg), articulaciones y actuadores |
+| `scripts/inspect_model.py` | Carga del modelo, masas (5.360 kg en el V6), articulaciones y actuadores |
+| `scripts/check_modelo_v6.py` | El modelo V6 es idéntico al RSI3 de B-Human; masa igual al URDF de Aldebaran (paso 44) |
+| `scripts/check_valores_v6.py` | Valores del V6 para la carrera; las piernas no se cruzan con ninguna acción (paso 46) |
+| `scripts/check_contract.py` | Contrato de observación y acción (54 valores, 13 acciones, formato PenaltyStack) (pasos 41 y 46) |
+| `scripts/check_friction.py` | Fricción explícita y aleatoria por episodio (paso 47) |
+| `scripts/check_vision.py` | Visión de carril con la cámara renderizada en 50 posiciones conocidas (pasos 40 y 48) |
 | `scripts/check_contacts.py` | Contacto pie-suelo: penetración, rebote, deslizamiento |
 | `scripts/check_standing.py` | Estabilidad de pie con los servos PD, con ruido y empujones |
 | `scripts/joint_sweep.py` | Cada articulación recorre su rango, sin atravesar el cuerpo (genera video) |
@@ -513,17 +587,19 @@ y `scripts/export_model.py` (copia un modelo de `runs/` a `checkpoints/`).
 
 ## 10. Modelo del robot, créditos y licencias
 
-> **Desactualizado (2026-10-08):** esta sección describe el modelo V5 del sprint inicial. Desde el commit
-> `d9207ec`, `assets/nao/nao.xml` se genera desde la descripción del NAO V6 de B-Human
-> (`scripts/build_nao_v6.py`). Se actualizará al validar ese modelo (paso 44 de [`PLAN.md`](PLAN.md)).
-
-- **Modelo MuJoCo del NAO:** derivado de
-  [nico-bohlinger/one_policy_to_run_them_all](https://github.com/nico-bohlinger/one_policy_to_run_them_all)
-  (MIT), con parámetros cinemáticos y dinámicos de [ros-naoqi/nao_robot](https://github.com/ros-naoqi/nao_robot)
-  (BSD-3). Es un NAO **V5**: el V6 conserva la misma estructura mecánica, dimensiones y articulaciones.
-- **Modificaciones:** geometrías simplificadas (sin las mallas de Aldebaran, que tienen licencia
-  CC BY-NC-ND), sin dedos, HipYawPitch acoplado como en el robot real, ejes en la convención oficial de
-  Aldebaran (NAOqi), autocolisiones y servos de posición. Detalle completo en
-  [`assets/nao/SOURCE.md`](assets/nao/SOURCE.md).
-- **Referencia:** N. Bohlinger et al., *One Policy to Run Them All: an End-to-end Learning Approach to
-  Multi-Embodiment Locomotion*, CoRL 2024.
+- **Modelo actual: NAO V6 de B-Human.**
+  - `assets/nao/nao.xml` se genera con `scripts/build_nao_v6.py` desde `NaoV6H25.rsi3` de
+    [bhuman/BHumanCodeRelease](https://github.com/bhuman/BHumanCodeRelease) (revisión `d89d603`), el mismo archivo que
+    usa PenaltyStack.
+  - **Validado** con `scripts/check_modelo_v6.py`: cuerpos, articulaciones y servos idénticos al RSI3, y masa de
+    5.35975 kg, igual al URDF oficial de Aldebaran.
+  - Detalle en [`assets/nao/SOURCE.md`](assets/nao/SOURCE.md); procedencia en
+    [`docs/paper/fuentes_y_repositorios.md`](docs/paper/fuentes_y_repositorios.md).
+- **Modelo del sprint inicial (histórico):** un NAO V5 derivado de
+  [nico-bohlinger/one_policy_to_run_them_all](https://github.com/nico-bohlinger/one_policy_to_run_them_all) (MIT), con
+  datos de [ros-naoqi/nao_robot](https://github.com/ros-naoqi/nao_robot) (BSD-3). La política de `checkpoints/` se
+  entrenó con él.
+- **Referencias:**
+  - N. Bohlinger et al., *One Policy to Run Them All: an End-to-end Learning Approach to Multi-Embodiment
+    Locomotion*, CoRL 2024;
+  - B-Human, *Team Report and Code Release*, licencia en `assets/nao/bhuman/License.md`.

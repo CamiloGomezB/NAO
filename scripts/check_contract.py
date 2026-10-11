@@ -137,15 +137,34 @@ def main() -> int:
     print("5. Accion -> angulos objetivo")
     cero = C.accion_a_objetivos([0.0] * 13)
     revisar(all(abs(cero[n] - C.POSE_HOME[n]) < 1e-12 for n in C.ARTICULACIONES_ACCION), "accion 0 = pose home")
-    mas = C.accion_a_objetivos([1.0] * 13)
-    menos = C.accion_a_objetivos([-1.0] * 13)
-    revisar(all(abs(mas[n] - (C.POSE_HOME[n] + C.LIMITES_ACCION[n][1])) < 1e-12 and
-                abs(menos[n] - (C.POSE_HOME[n] + C.LIMITES_ACCION[n][0])) < 1e-12 for n in C.ARTICULACIONES_ACCION),
-            "accion +1 / -1 = home + limite superior / inferior")
-    revisar(abs(mas["LHipRoll"] - 0.25) < 1e-12 and abs(menos["LHipRoll"] + 0.07) < 1e-12 and
-            abs(mas["RHipRoll"] - 0.07) < 1e-12 and abs(menos["RHipRoll"] + 0.25) < 1e-12,
+    def una(i, v):
+        a = [0.0] * 13
+        a[i] = v
+        return C.accion_a_objetivos(a)
+    ok_lim = all(abs(una(i, 1.0)[n] - (C.POSE_HOME[n] + C.LIMITES_ACCION[n][1])) < 1e-12 and
+                 abs(una(i, -1.0)[n] - (C.POSE_HOME[n] + C.LIMITES_ACCION[n][0])) < 1e-12
+                 for i, n in enumerate(C.ARTICULACIONES_ACCION))
+    revisar(ok_lim, "una articulacion a la vez: +1 / -1 = home + limite superior / inferior")
+    iL, iR = C.ARTICULACIONES_ACCION.index("LHipRoll"), C.ARTICULACIONES_ACCION.index("RHipRoll")
+    revisar(abs(una(iL, 1.0)["LHipRoll"] - 0.25) < 1e-12 and abs(una(iL, -1.0)["LHipRoll"] + 0.07) < 1e-12 and
+            abs(una(iR, 1.0)["RHipRoll"] - 0.07) < 1e-12 and abs(una(iR, -1.0)["RHipRoll"] + 0.25) < 1e-12,
             "HipRoll asimetrico: hacia afuera 0.25, hacia adentro 0.07 en las dos piernas")
-    revisar(C.accion_a_objetivos([5.0] * 13) == mas, "acciones fuera de [-1, 1] se recortan")
+    revisar(C.accion_a_objetivos([5.0] * 13) == C.accion_a_objetivos([1.0] * 13), "acciones fuera de [-1, 1] se recortan")
+    # Presupuesto lateral (paso 46): las dos piernas hacia adentro a la vez se escalan; hacia afuera no se toca.
+    adentro = [1.0] * 13
+    adentro[iL] = -1.0                                  # LHipRoll hacia adentro
+    adentro[C.ARTICULACIONES_ACCION.index("LAnkleRoll")] = -1.0
+    obj = C.accion_a_objetivos(adentro)
+    off = dict((n, obj[n] - C.POSE_HOME[n]) for n in C.ARTICULACIONES_ACCION)
+    revisar(abs(C.cuanto_adentro(off) - C.PRESUPUESTO_ADENTRO_RAD) < 1e-9,
+            f"las dos piernas hacia adentro al maximo se escalan al presupuesto ({C.cuanto_adentro(off):.3f} rad)")
+    revisar(abs(obj["LHipPitch"] - (C.POSE_HOME["LHipPitch"] + 0.5)) < 1e-12,
+            "el presupuesto no toca las articulaciones de pitch")
+    afuera = [0.0] * 13
+    afuera[iL], afuera[iR] = 1.0, -1.0                  # las dos caderas hacia afuera
+    obj = C.accion_a_objetivos(afuera)
+    revisar(abs(obj["LHipRoll"] - 0.25) < 1e-12 and abs(obj["RHipRoll"] + 0.25) < 1e-12,
+            "hacia afuera no hay presupuesto: las dos caderas abren 0.25")
 
     print("6. Salida para PenaltyStack (orden B-Human)")
     angulos, rigidez = C.objetivos_a_salida_bhuman(C.accion_a_objetivos([0.5] * 13))

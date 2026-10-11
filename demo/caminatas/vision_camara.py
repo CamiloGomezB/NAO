@@ -53,6 +53,7 @@ class VisionCamara(object):
         self.imagen = None        # ultima imagen (RGB) para mostrarla
         self.puntos = None        # pixeles de la linea detectados en la ultima imagen
         self.valida = False
+        self.d_crudo = self.psi_crudo = None
 
     def medir(self):
         self.renderer.update_scene(self.d, camera=self.cam_id)
@@ -63,6 +64,7 @@ class VisionCamara(object):
         self.puntos = self.est._uv.copy() if len(self.est._uv) else None
         self.valida = bool(e.valid)
         if e.valid:
+            self.d_crudo, self.psi_crudo = float(e.d), float(e.psi)    # sin filtrar: lo que recibe la politica RL
             if self.d_est is None:
                 self.d_est, self.psi_est = e.d, e.psi
             else:

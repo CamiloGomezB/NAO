@@ -70,6 +70,9 @@ desactualizado. Esa revisión se registra en la bitácora como parte del paso. L
      - si se toma algo de otro repositorio o fuente (código, modelo, datos, parámetros), se registra en
        `docs/paper/fuentes_y_repositorios.md`: qué es la fuente, cómo funciona, qué se tomó (commit o
        SHA-256), por qué y qué se le cambió.
+  6. **Mapa del README:** si se creó un documento, una carpeta de resultados, una política o una config nueva, se
+     agrega a la sección **"Dónde está toda la información"** del README, con su enlace y una línea que explique qué
+     contiene. Quien llegue al repo debe encontrar todo desde ahí, sin buscar.
 - **Los fallos no se borran.** Un paso fallido se marca `[!]` y se documenta. Si hace falta corregirlo, se
   agrega un paso nuevo (p. ej. `56b`). Las entradas viejas de la bitácora no se editan; se corrigen con
   una entrada nueva.

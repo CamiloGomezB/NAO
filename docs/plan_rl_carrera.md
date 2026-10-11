@@ -251,13 +251,30 @@ Los colores tampoco: la política solo recibe lo que la visión ya calculó.
 | Articulación | Escala (rad) | Para qué |
 |---|---|---|
 | HipYawPitch (un motor para ambas piernas) | ±0.10 **(a validar)** | Girar para **corregir el rumbo** |
-| LHipRoll / RHipRoll | **Asimétrica:** hacia afuera 0.25, hacia adentro ~0.07 **(a validar)** | Pasar el peso **sin cruzar las piernas** (sección 12) |
+| LHipRoll / RHipRoll | **Asimétrica:** hacia afuera 0.25, hacia adentro 0.07 | Pasar el peso **sin cruzar las piernas** (sección 12) |
 | L/R HipPitch | ±0.5 | Largo del paso: más rango = más velocidad posible |
 | L/R KneePitch | ±0.5 | Levantar el pie |
 | L/R AnklePitch | ±0.4 | Despegue y apoyo |
 | L/R AnkleRoll | ±0.25 | Equilibrio lateral |
 | L/R ShoulderPitch | ±0.5 | Balanceo de brazos |
 | Cabeza, resto de brazos | Fijos | La cabeza fija mantiene estable la pose de la cámara |
+
+**Presupuesto lateral combinado** (paso 46). Los límites por articulación no bastan: con las dos caderas y los dos
+tobillos hacia adentro a la vez, los pies se cruzan en el 2.2 % de las acciones al azar. Por eso:
+
+- si la **suma** de lo que entran las dos piernas pasa de **0.09 rad** equivalentes de cadera, esas componentes se
+  escalan;
+- hacia afuera no hay presupuesto;
+- los pesos salen de cuánto acerca los pies cada articulación en el V6:
+
+  | Articulación | Acercamiento | Peso |
+  |---|---|---|
+  | HipRoll | 22.1 cm/rad | 1 |
+  | AnkleRoll | 3.85 cm/rad | 0.17 |
+  | HipYawPitch positivo | 10.6 cm/rad | 0.48 |
+  | HipYawPitch negativo | 5.4 cm/rad | 0.24 |
+
+**Resultado:** 0 cruces en 20,000 acciones al azar más todos los extremos (`scripts/check_valores_v6.py`).
 
 ### 6.3 Comandos
 
@@ -345,6 +362,30 @@ corto a salirse del carril.
 **Recompensa y selección usan los valores reales.** La recompensa (sección 6.4) usa la `d` y la `psi` reales
 del simulador. La política solo ve las estimadas. La selección de agentes mide las faltas con la posición
 real de los pies. Así una política no puede "engañar" a su propia visión.
+
+### 6.8 Implementación: `NaoRace-v0` (pasos 53–58, 2026-10-11)
+
+Código: [`src/envs/nao_race_env.py`](../src/envs/nao_race_env.py). Pruebas: `scripts/check_race_env.py` y
+`scripts/check_camara_sim.py`. Los valores que el diseño no fijaba se eligieron así:
+
+| Elemento | Implementación |
+|---|---|
+| Pista | Carril centrado en y = 0, salida en x = 0, meta en x = 5 m. Las líneas no son geometría: se mide con la posición real |
+| Salida de carril | Una **esquina de la suela** pasa el borde interior de la línea (\|y\| > 0.35 m). Es más estricto que el benchmark, que usa el centro del pie + 4.5 cm |
+| Meta | La punta de un pie llega a x ≥ 5 m: +20 una vez. El episodio sigue. `scripts/eval_carrera.py` mide el tiempo con el criterio del benchmark (centro de la suela) para comparar con B-Human |
+| Inicio | Colocación normal de σ 2 cm / 2°, recortada a ±10 cm / ±8°. **0.5 s de pie dentro de `reset`**: la cámara mide y la política empieza con el reloj de marcha en 0 |
+| Rumbo objetivo de la IMU | El que mide la IMU al arrancar, con su deriva. La cámara corrige el error de colocación |
+| `vx_cmd` | Uniforme en [0.15, 0.5] m/s por episodio; en el 30 % cambia una vez entre 3 y 20 s |
+| Carga de los pies | Fuerza normal pie-suelo / g / 5.36 kg, como la suma de los FSR, recortada a [0, 2] |
+| Cámara simulada | Por episodio: σ_d U(1, 5) cm, σ_psi U(1, 4)°, retardo U(50, 250) ms, pérdidas U(0, 30) %, malas U(0, 8) % con hasta ±15 cm. Apagón de 0.5–2 s en el 30 % de los episodios |
+| Pérdida de visión (desde `carrera_v02`) | 15 % de los episodios **sin cámara** (`sin_vision_prob`); apagones en el 60 % de los episodios, de 1–8 s y desde el arranque. Con la cámara casi siempre presente (`v01`), `válido = 0` quedaba fuera de distribución y la política se caía sin visión (E45) |
+| Asimetrías | kp de los servos de cada pierna ×U(0.85, 1.15); calibración U(±1.5°) por articulación; centro de masa del torso ±1 cm; suelo inclinado ±1° (dirección de la gravedad) |
+| Empujones | Cada 2–6 s, durante 50–150 ms: hasta ±6 N en x e y y ±0.4 N·m de giro en el torso |
+| IMU y sensores | Deriva del rumbo de 0.003 rad/√s (paseo aleatorio) + ruido de 0.005 rad; giroscopio ±0.02 rad/s y ángulos ±0.002 rad (σ) |
+| Rendimiento | 0.61 ms por paso (la física sola, 0.34 ms); ~2,400 pasos/s de PPO con 16 entornos |
+
+En el robot real, el rumbo objetivo de la IMU también se toma al arrancar, al tocar la cabeza. La cámara hace el
+resto.
 
 ---
 
@@ -469,6 +510,7 @@ Cada agente sortea su configuración dentro de los rangos de la sección 6.4:
 - pesos de la recompensa;
 - rango de fricción de entrenamiento: centro 0.5–1.0, ancho 0.2–0.8, asimetría entre pies 0–0.2;
 - velocidad máxima del currículo: 0.35–0.5 m/s;
+- período de marcha: 0.4–0.7 s (nominal 0.5 s, el de B-Human);
 - multiplicador del ruido de la cámara: 1–3;
 - semilla.
 
@@ -524,17 +566,21 @@ agentes (paso 65). La torre con RTX 5060 no está disponible por ahora.
 - Un HipRoll hacia adentro de ~0.075 rad por pierna cierra ese espacio.
 - La escala actual (±0.25 rad, simétrica) es del modelo aproximado.
 
-**Valores del código que todavía son del modelo aproximado** (paso 46):
+**Valores que eran del modelo aproximado, ya resueltos en el paso 46.** Los valores nuevos están en
+`src/race/contract.py` y `src/race/valores_v6.py`. El entorno del sprint, `src/envs/nao_walk_env.py`, conserva los
+viejos, porque los usa la política del sprint en la demo.
 
-| Valor | Hoy | Acción |
-|---|---|---|
-| Pose de pie `home` (cadera −0.4, rodilla 0.8, tobillo −0.4) | Del modelo anterior | Comparar con la altura de cadera de B-Human (230 mm) |
-| Escalas de acción | Simétricas | HipRoll asimétrico y HipYawPitch nuevo |
-| Altura objetivo (0.31 m) y altura de caída (0.22 m) | Del modelo anterior | Recalcular con el V6 |
-| Período de marcha (0.6 s) | Del modelo anterior | Contrastar con B-Human: pasos de 250 ms |
-| Ciclo de control (20 ms) | Del sprint inicial | 24 ms |
-| Fricción (1.0) | Valor por defecto de MuJoCo | Explícita y aleatoria (sección 9) |
-| Autocolisión entre piernas | Activada, sin castigo | Castigarla (sección 6.4) |
+| Valor | Antes (aproximado) | V6 (medido) | Cómo se obtuvo |
+|---|---|---|---|
+| Pose de pie `home` | cadera −0.4, rodilla 0.8, tobillo −0.4 | **Igual** | La cadera queda a 232 mm de la suela; B-Human camina con 230 mm |
+| HipRoll | ±0.25, simétrico | **Afuera 0.25 / adentro 0.07 + presupuesto lateral de 0.09 rad** | Cruce de piernas: 23.9 % → 2.2 % → **0 %** de 20,000 acciones |
+| HipYawPitch | Fija en 0 | **±0.10** (dentro del presupuesto) | Para girar con la cámara |
+| Altura objetivo del torso | 0.31 m | **0.316 m** | De pie, asentado 2 s |
+| Altura de caída | 0.22 m | **0.24 m** | Agachado al máximo = 291.6 mm; −5 cm de margen |
+| Período de marcha | 0.6 s | **0.5 s** (barrido 0.4–0.7) | 2 pasos de 250 ms, como B-Human |
+| Ciclo de control | 20 ms | **24 ms** (12 × 2 ms) | Ciclo de 12 ms de PenaltyStack ×2 |
+| Fricción | 1.0 por defecto | Aleatoria [0.4, 1.2] | Paso 47 |
+| Autocolisión entre piernas | Activada, sin castigo | Se castiga en la recompensa (sección 6.4) | Paso 55 |
 
 **Caídas vistas en la demo interactiva.** Ocurren al pausar y reanudar: la política no sabe arrancar desde
 quieto. En la carrera no se pausa, pero se arranca desde quieto. Por eso el episodio siempre arranca así

@@ -20,6 +20,7 @@ import copy
 import datetime as dt
 import platform
 import subprocess
+import re
 import sys
 from pathlib import Path
 
@@ -63,6 +64,22 @@ def git_commit() -> str:
         return "desconocido"
 
 
+def resolver_politica(ruta: Path) -> tuple[Path, Path] | None:
+    """(modelo .zip, normalizacion .pkl) de una carpeta de policies/ (model.zip) o de un .zip de un run."""
+    ruta = ruta if ruta.is_absolute() else ROOT / ruta
+    if ruta.is_dir():
+        modelo, pkl = ruta / "model.zip", ruta / "model_vecnormalize.pkl"
+    else:
+        modelo = ruta
+        stem = ruta.stem
+        candidatos = [ruta.parent / f"{stem}_vecnormalize.pkl", ruta.parent / f"{stem.split('_')[0]}_vecnormalize.pkl"]
+        m = re.fullmatch(r"model_(\d+)_steps", stem)      # checkpoint de CheckpointCallback
+        if m:
+            candidatos.append(ruta.parent / f"model_vecnormalize_{m.group(1)}_steps.pkl")
+        pkl = next((c for c in candidatos if c.exists()), candidatos[0])
+    return (modelo, pkl) if modelo.exists() and pkl.exists() else None
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--config", type=Path, default=ROOT / "configs" / "ppo.yaml")
@@ -74,7 +91,13 @@ def main() -> int:
     parser.add_argument("--eval-every", type=int, default=None)
     parser.add_argument("--friccion-fija", action="store_true",
                         help="permitir una config con friccion fija (solo para reproducir el sprint inicial)")
+    parser.add_argument("--continuar", type=Path, default=None,
+                        help="seguir entrenando desde una politica: carpeta de policies/ o archivo .zip de un run")
     args = parser.parse_args()
+    continuar = resolver_politica(args.continuar) if args.continuar else None
+    if args.continuar and continuar is None:
+        print(f"ERROR: no se encontro modelo + normalizacion en {args.continuar}")
+        return 1
 
     cfg = load_config(args.config, args)
     # Regla del proyecto: todo entrenamiento usa friccion aleatoria, porque no se sabe que piso habra en la
@@ -100,6 +123,7 @@ def main() -> int:
         "stable_baselines3": stable_baselines3.__version__,
         "torch": str(torch.__version__),
         "comando": " ".join(sys.argv),
+        "continua_de": continuar[0].relative_to(ROOT).as_posix() if continuar else None,
     }
     (run_dir / "metadata.yaml").write_text(yaml.safe_dump(metadata, sort_keys=False), encoding="utf-8")
 
@@ -109,11 +133,17 @@ def main() -> int:
     env_kwargs = copy.deepcopy(cfg["env"])
     norm = cfg["normalize"]
 
-    venv = make_vec_env(n_envs, seed=seed, env_kwargs=env_kwargs)
-    venv = VecNormalize(venv, norm_obs=norm["obs"], norm_reward=norm["reward"],
-                        clip_obs=norm["clip_obs"], gamma=cfg["ppo"]["gamma"])
+    venv = make_vec_env(n_envs, seed=seed, env_kwargs=env_kwargs, env_id=cfg.get("env_id", "NaoWalk-v0"))
+    if continuar:
+        # La normalizacion de la politica de partida se carga y se sigue actualizando.
+        venv = VecNormalize.load(str(continuar[1]), venv)
+        venv.training, venv.norm_reward = True, norm["reward"]
+    else:
+        venv = VecNormalize(venv, norm_obs=norm["obs"], norm_reward=norm["reward"],
+                            clip_obs=norm["clip_obs"], gamma=cfg["ppo"]["gamma"])
     # Entorno de evaluacion: semillas distintas, normalizacion sincronizada con la de entrenamiento.
-    eval_env = make_vec_env(1, seed=seed + 10_000, env_kwargs=env_kwargs, subprocess=False)
+    eval_env = make_vec_env(1, seed=seed + 10_000, env_kwargs=env_kwargs, subprocess=False,
+                            env_id=cfg.get("env_id", "NaoWalk-v0"))
     eval_env = VecNormalize(eval_env, norm_obs=norm["obs"], norm_reward=False,
                             clip_obs=norm["clip_obs"], training=False)
 
@@ -123,8 +153,12 @@ def main() -> int:
         "activation_fn": ACTIVATIONS[pol["activation"]],
         "log_std_init": pol["log_std_init"],
     }
-    model = PPO("MlpPolicy", venv, policy_kwargs=policy_kwargs, tensorboard_log=str(run_dir / "tb"),
-                seed=seed, device="cpu", verbose=0, **cfg["ppo"])
+    if continuar:
+        model = PPO.load(continuar[0], env=venv, device="cpu", tensorboard_log=str(run_dir / "tb"))
+        print(f"Continuando desde {continuar[0].relative_to(ROOT).as_posix()} ({model.num_timesteps:,} pasos previos)")
+    else:
+        model = PPO("MlpPolicy", venv, policy_kwargs=policy_kwargs, tensorboard_log=str(run_dir / "tb"),
+                    seed=seed, device="cpu", verbose=0, **cfg["ppo"])
 
     dt_control = venv.get_attr("dt", indices=[0])[0]
     callbacks = CallbackList([

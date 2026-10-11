@@ -1,0 +1,11 @@
+fecha: '2026-10-11T02:05:41'
+git_commit: ea5e992-modificado
+python: 3.12.10
+sistema: Windows-11-10.0.26300-SP0
+mujoco: 3.14.0
+gymnasium: 1.3.0
+stable_baselines3: 2.9.0
+torch: 2.14.0+cpu
+comando: C:\Users\camil\Documents\GitHub\NAO\src\train.py --config configs/carrera_v02.yaml
+  --continuar runs/carrera_v01/checkpoints/model_15000000_steps.zip --run-name carrera_v02
+continua_de: runs/carrera_v01/checkpoints/model_15000000_steps.zip

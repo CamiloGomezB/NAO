@@ -1,0 +1,57 @@
+# carrera_v02 — Continua desde carrera_v01 con MAS PERDIDA DE VISION en el entrenamiento (un solo cambio).
+# Problema de v01 (5M pasos): con vision llega en ~9.6 s, pero SIN vision se cae a los ~3 s. En v01 la camara casi
+# nunca falta (valido = 1 el 98 % del tiempo), y VecNormalize convierte valido = 0 en -7.6: una entrada que la politica
+# casi no vio (bitacora 2026-10-11, registro E45).
+# Hipotesis: con episodios enteros sin camara y apagones largos, la politica aprende a caminar solo con la IMU cuando
+# pierde la vision (sin caerse y con poca deriva) sin perder velocidad con vision.
+# Uso: uv run python -m src.train --config configs/carrera_v02.yaml --continuar <checkpoint de v01> --run-name carrera_v02
+
+experiment: carrera_v02
+env_id: NaoRace-v0
+seed: 2
+total_timesteps: 40_000_000    # pasos NUEVOS sobre los de v01 (~4.5 h en este PC)
+n_envs: 16
+torch_threads: 4
+
+env:
+  pesos: {}
+  vx_rango: [0.15, 0.50]
+  vx_cambio_prob: 0.3
+  friction_range: [0.4, 1.2]
+  friction_asym: 0.1
+  gait_period: 0.5
+  stance_fraction: 0.6
+  perturbaciones: true
+  # --- el cambio de v02 ---
+  sin_vision_prob: 0.15                 # 15 % de los episodios sin camara de principio a fin (v01: 0)
+  camara:
+    apagon_prob: 0.6                    # v01: 0.3
+    apagon_s: [1.0, 8.0]                # v01: 0.5-2 s
+    apagon_inicio_s: [0.0, 20.0]        # v01: 0.5-20 s
+
+normalize:
+  obs: true
+  reward: true
+  clip_obs: 10.0
+
+ppo:
+  learning_rate: 3.0e-4
+  n_steps: 512
+  batch_size: 2048
+  n_epochs: 5
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  ent_coef: 0.0
+  vf_coef: 0.5
+  max_grad_norm: 1.0
+
+policy:
+  net_arch: [256, 256]
+  activation: elu
+  log_std_init: -1.0
+
+checkpoint_every: 5_000_000
+eval:
+  every: 1_000_000
+  n_episodes: 5

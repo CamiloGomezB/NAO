@@ -29,11 +29,16 @@ NOMBRES = {"rl": "RL (equipo)", "naoqi": "tipo NAOqi", "bhuman": "tipo B-Human"}
 COLORES = {"rl": (26, 115, 232), "naoqi": (232, 113, 10), "bhuman": (11, 128, 67)}
 
 
-def simular(vision, mu, seed):
-    from demo.caminatas.benchmark import correr_clasica, correr_rl
+def simular(vision, mu, seed, rl_carrera=None, rl_vx=0.40):
+    from demo.caminatas.benchmark import correr_clasica, correr_rl, correr_rl_carrera
     out = {}
     for c in ("rl", "naoqi", "bhuman"):
-        info = correr_rl(mu, seed, vision, grabar=True) if c == "rl" else correr_clasica(c, mu, seed, vision, grabar=True)
+        if c == "rl" and rl_carrera:          # politica de carrera (NaoRace-v0) con su camara simulada
+            info = correr_rl_carrera(rl_carrera, mu, seed, vision, vx=rl_vx, grabar=True)
+        elif c == "rl":
+            info = correr_rl(mu, seed, vision, grabar=True)
+        else:
+            info = correr_clasica(c, mu, seed, vision, grabar=True)
         h = info["hist"]
         out[c] = {"t": h[:, 0], "q": info["qpos"], "resultado": info["resultado"], "T": info["t"]}
         print("%-7s %-16s t=%.1f s" % (c, info["resultado"], info["t"]))
@@ -51,9 +56,13 @@ def main():
     ap.add_argument("--ancho", type=int, default=960)
     ap.add_argument("--alto", type=int, default=540)
     ap.add_argument("--acelerar", type=float, default=2.0, help="velocidad del video respecto al tiempo real")
+    ap.add_argument("--rl-carrera", default=None, help="modelo .zip de la politica de carrera para el carril central")
+    ap.add_argument("--rl-vx", type=float, default=0.40, help="vx_cmd de la politica de carrera [m/s]")
     a = ap.parse_args()
+    if a.rl_carrera:
+        NOMBRES["rl"] = "RL carrera (%s)" % Path(a.rl_carrera).stem
 
-    datos = simular(not a.sin_vision, a.mu, a.semilla)
+    datos = simular(not a.sin_vision, a.mu, a.semilla, a.rl_carrera, a.rl_vx)
     import mujoco
     import imageio
     from PIL import Image, ImageDraw, ImageFont

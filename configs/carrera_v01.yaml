@@ -1,0 +1,51 @@
+# carrera_v01 — Base comun del entorno de carrera (paso 59 del PLAN). Primera generacion de NaoRace-v0.
+# Hipotesis: con el contrato v1 (54 obs, 13 acciones cada 24 ms), la camara simulada con ruido, la friccion sorteada
+# y la perdida de rectitud simulada, PPO aprende desde cero a arrancar desde quieto y correr los 5 m sin faltas,
+# y con vx_cmd hasta 0.5 m/s llega al menos a la velocidad de la replica de B-Human (~0.30 m/s, 16-17 s en 5 m).
+# Pesos de la recompensa: configs/carrera/pesos.yaml (sin cambios).
+# Uso: uv run python -m src.train --config configs/carrera_v01.yaml --run-name carrera_v01
+
+experiment: carrera_v01
+env_id: NaoRace-v0
+seed: 0
+total_timesteps: 60_000_000    # ~5.5-6 h en este PC (noche del 2026-10-11); checkpoints cada 5M
+n_envs: 16
+torch_threads: 4
+
+# Parametros de NaoRaceEnv (src/envs/nao_race_env.py)
+env:
+  pesos: {}                     # sobrescribe configs/carrera/pesos.yaml (vacio = pesos iniciales)
+  vx_rango: [0.15, 0.50]        # vx_cmd sorteado por episodio [m/s]
+  vx_cambio_prob: 0.3           # a veces cambia una vez a mitad del episodio
+  friction_range: [0.4, 1.2]    # mu por episodio (regla del proyecto: friccion aleatoria siempre)
+  friction_asym: 0.1
+  gait_period: 0.5              # contrato v1 (2 pasos de 250 ms, como B-Human)
+  stance_fraction: 0.6          # 20 % de doble apoyo (aprendido en el sprint)
+  perturbaciones: true          # asimetrias, empujones, suelo inclinado, deriva de la IMU, apagones de vision
+
+normalize:
+  obs: true
+  reward: true
+  clip_obs: 10.0
+
+ppo:
+  learning_rate: 3.0e-4
+  n_steps: 512                  # 16 x 512 = 8192 pasos por actualizacion
+  batch_size: 2048
+  n_epochs: 5
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  ent_coef: 0.0
+  vf_coef: 0.5
+  max_grad_norm: 1.0
+
+policy:
+  net_arch: [256, 256]
+  activation: elu
+  log_std_init: -1.0
+
+checkpoint_every: 5_000_000
+eval:
+  every: 1_000_000
+  n_episodes: 5

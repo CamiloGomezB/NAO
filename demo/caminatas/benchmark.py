@@ -160,12 +160,32 @@ def correr_rl(mu, seed, vision, grabar=False):
             "torque2_por_m": torque2 / max(0.05, h[-1, 1]), "pasos": None, "hist": h}
 
 
+# ---------------------------------------------------------------------------- politica de carrera (NaoRace-v0)
+_CARRERA = {}
+
+
+def correr_rl_carrera(modelo, mu, seed, vision, vx=0.5, grabar=False):
+    """Politica de carrera con la MISMA funcion que scripts/eval_carrera.py (paso 52: mismas metricas y numeros)."""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import eval_carrera
+    if _CARRERA.get("ruta") != modelo:
+        import torch
+        torch.set_num_threads(1)
+        _CARRERA.update(ruta=modelo, cargado=eval_carrera.cargar(Path(modelo)))
+    model, vn, env_kwargs, _ = _CARRERA["cargado"]
+    return eval_carrera.correr(model, vn, env_kwargs, mu, seed, vision, vx, False, grabar=grabar)
+
+
 # ---------------------------------------------------------------------------- orquestacion
 def una(args):
-    caminata, mu, seed, vision = args
+    caminata, mu, seed, vision = args[:4]
     t0 = time.time()
     if caminata == "rl":
         info = correr_rl(mu, seed, vision)
+    elif caminata == "rl_carrera":
+        info = correr_rl_carrera(args[4], mu, seed, vision)
+        info.update(semilla=seed, vision=int(vision), seg_reales=round(time.time() - t0, 1))
+        return info                                   # ya trae su traza
     else:
         info = correr_clasica(caminata, mu, seed, vision)
     h = info.pop("hist")
@@ -231,8 +251,8 @@ def figura(filas, ruta):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    colores = {"rl": "#1a73e8", "naoqi": "#e8710a", "bhuman": "#0b8043"}
-    nombres = {"rl": "RL (equipo)", "naoqi": "tipo NAOqi", "bhuman": "tipo B-Human"}
+    colores = {"rl": "#1a73e8", "naoqi": "#e8710a", "bhuman": "#0b8043", "rl_carrera": "#7b1fa2"}
+    nombres = {"rl": "RL sprint", "naoqi": "tipo NAOqi", "bhuman": "tipo B-Human", "rl_carrera": "RL carrera"}
     fig, ax = plt.subplots(2, 1, figsize=(11, 6.5), sharex=True)
     for i, v in enumerate((0, 1)):
         a = ax[i]
@@ -266,11 +286,16 @@ def main():
     ap.add_argument("--rapido", action="store_true", help="1 semilla, mu 0.6 y 1.0")
     ap.add_argument("--procesos", type=int, default=max(1, (os.cpu_count() or 2)))
     ap.add_argument("--out", default=str(ROOT / "results" / "benchmark"))
+    ap.add_argument("--rl-carrera", default=None,
+                    help="modelo .zip de una politica de carrera (NaoRace-v0); agrega la caminata rl_carrera")
     a = ap.parse_args()
+    if a.rl_carrera and "rl_carrera" not in a.caminatas:
+        a.caminatas.append("rl_carrera")
     if a.rapido:
         a.semillas, a.mu = 1, [0.6, 1.0]
     visiones = {"ambas": (False, True), "si": (True,), "no": (False,)}[a.vision]
-    trabajos = [(c, mu, 1000 + s, v) for c in a.caminatas for v in visiones for mu in a.mu for s in range(a.semillas)]
+    trabajos = [(c, mu, 1000 + s, v, a.rl_carrera) for c in a.caminatas for v in visiones for mu in a.mu
+                for s in range(a.semillas)]
     print("Corridas: %d (%d procesos)" % (len(trabajos), a.procesos))
     os.makedirs(a.out, exist_ok=True)
     filas = []

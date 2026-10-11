@@ -1,0 +1,100 @@
+{
+ "politica": "policies/carrera_v01/model.zip",
+ "peso_salida_carril": -200.0,
+ "gamma": 0.99,
+ "A_rapido_limpio": {
+  "retorno": 2306.99013837201,
+  "retorno_descontado": 178.68799299964982,
+  "t_meta": 10.251999999999926,
+  "falta": null
+ },
+ "B_lento_limpio": {
+  "retorno": 546.8558701254221,
+  "retorno_descontado": 90.4316355751553,
+  "t_meta": null,
+  "falta": null
+ },
+ "C_salida": [
+  {
+   "t_salida": 1.0,
+   "x": 0.4305388932971105,
+   "retorno": -130.94429319867695,
+   "retorno_descontado": -75.99920061197433
+  },
+  {
+   "t_salida": 2.0,
+   "x": 0.9089322079920181,
+   "retorno": -54.08973982429822,
+   "retorno_descontado": 9.778408018010396
+  },
+  {
+   "t_salida": 3.0,
+   "x": 1.3898450001459195,
+   "retorno": 24.194348980535096,
+   "retorno_descontado": 67.5549114022481
+  },
+  {
+   "t_salida": 4.0,
+   "x": 1.8739124094705508,
+   "retorno": 104.48770416087876,
+   "retorno_descontado": 105.89405509085204
+  },
+  {
+   "t_salida": 5.0,
+   "x": 2.3473663811576544,
+   "retorno": 181.33724947861208,
+   "retorno_descontado": 130.30467553155353
+  },
+  {
+   "t_salida": 6.0,
+   "x": 2.8367601418969657,
+   "retorno": 260.6367946141506,
+   "retorno_descontado": 146.86828364069467
+  },
+  {
+   "t_salida": 7.0,
+   "x": 3.324942430657026,
+   "retorno": 340.81110168329326,
+   "retorno_descontado": 157.77438849150454
+  },
+  {
+   "t_salida": 8.0,
+   "x": 3.8046896225456246,
+   "retorno": 418.23306496660916,
+   "retorno_descontado": 164.75319987484136
+  },
+  {
+   "t_salida": 9.0,
+   "x": 4.293347100560238,
+   "retorno": 498.3581128425807,
+   "retorno_descontado": 169.49201348804596
+  },
+  {
+   "t_salida": 10.0,
+   "x": 4.7815614924813055,
+   "retorno": 579.1901062944439,
+   "retorno_descontado": 172.61047937138122
+  },
+  {
+   "t_salida": 10.227999999999927,
+   "x": 4.887768700398585,
+   "retorno": 596.8372992655735,
+   "retorno_descontado": 173.12859116205323
+  }
+ ],
+ "salidas_mejores_que_lento": [
+  10.0,
+  10.23
+ ],
+ "salidas_mejores_que_lento_descontado": [
+  4.0,
+  5.0,
+  6.0,
+  7.0,
+  8.0,
+  9.0,
+  10.0,
+  10.23
+ ],
+ "peso_salida_minimo_sin_descuento": -271.4858675215505
+}

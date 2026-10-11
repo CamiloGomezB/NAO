@@ -51,16 +51,21 @@ class RewardTermsCallback(BaseCallback):
         self._count = 0
         self._falls = Counter()
         self._episodes = 0
+        self._metas = 0
 
     def _on_step(self) -> bool:
         for info, done in zip(self.locals["infos"], self.locals["dones"]):
-            for name, value in info.get("reward_terms", {}).items():
+            # NaoWalk-v0 usa reward_terms/fall_reason; NaoRace-v0 usa terminos/falta (y meta).
+            for name, value in (info.get("reward_terms") or info.get("terminos") or {}).items():
                 self._sums[name] += value
             self._count += 1
             if done:
                 self._episodes += 1
-                if info.get("fall_reason"):
-                    self._falls[info["fall_reason"]] += 1
+                motivo = info.get("fall_reason") or info.get("falta")
+                if motivo:
+                    self._falls[motivo] += 1
+                if info.get("meta"):
+                    self._metas += 1
         return True
 
     def _on_rollout_end(self) -> None:
@@ -71,10 +76,12 @@ class RewardTermsCallback(BaseCallback):
             self.logger.record("episodes/fall_rate", sum(self._falls.values()) / self._episodes)
             for reason, n in self._falls.items():
                 self.logger.record(f"episodes/fall_{reason}", n / self._episodes)
+            self.logger.record("episodes/meta_rate", self._metas / self._episodes)
         self._sums.clear()
         self._count = 0
         self._falls.clear()
         self._episodes = 0
+        self._metas = 0
 
 
 class SaveVecNormalizeCallback(BaseCallback):

@@ -15,8 +15,9 @@ Ventanas:
     - "Lo que ve cada NAO": la camara inferior de cada robot, con las lineas detectadas en celeste y la
       posicion estimada por la vision (d, psi) frente a la real.
 
-Como funciona: cada robot se simula en su propia fisica (no se tocan, igual que en la carrera real, donde
-corren por separado) y en el visor se dibujan los tres juntos. Con --vision camara (por defecto) cada robot
+Como funciona: cada robot se simula en su propia fisica (igual que en la carrera real, donde
+corren por separado) y en el visor se dibujan los tres juntos; en esa escena de 3 se detectan los choques entre
+robots vecinos (demo/caminatas/choques.py, paso 48b). Con --vision camara (por defecto) cada robot
 corrige su rumbo con SU camara renderizada y la vision de carril/; con --vision simulada se usa el modelo de
 error medido (sigma 1.6 cm y 1.2 deg), como en el benchmark.
 
@@ -166,6 +167,72 @@ class CorredorRL(object):
             self.t_fin = self.t
 
 
+class CorredorRLCarrera(object):
+    """Politica de carrera (NaoRace-v0, contrato v1, paso 58b). Recibe d, psi y valido de SU camara renderizada
+    (VisionCamara, medicion cruda sin filtrar, 10 Hz), sin el truco del giroscopio. Con --vision simulada usa la
+    camara simulada del entorno; con --vision no, valido = 0 todo el tiempo."""
+
+    def __init__(self, modelo, mu, d0, psi0, vision, pista, seed, vx=0.40):
+        import pickle
+
+        from stable_baselines3 import PPO
+        from demo.caminatas.vision_camara import VisionCamara
+        from src.envs.nao_race_env import NaoRaceEnv
+        from src.evaluate import find_vecnormalize
+        modelo = Path(modelo)
+        self.model = PPO.load(modelo, device="cpu")
+        self.vn = pickle.load(open(find_vecnormalize(modelo), "rb"))
+        self.env = NaoRaceEnv(escena=str(ROOT / "assets" / "nao" / "scene_carril.xml"), friction=mu,
+                              perturbaciones=False, vision=(vision == "simulada"))
+        self.obs, _ = self.env.reset(seed=seed, options={"y0": d0, "yaw0": psi0, "vx_cmd": vx})
+        m, d = self.env.model, self.env.data
+        rng = np.random.RandomState(seed + 7)
+        self.vis = VisionCamara(m, d, self.env._torso, pista, rng) if vision == "camara" else None
+        self.t_foto = -1e9
+        self.nombre = "rl"
+        self.resultado, self.t_fin = None, None
+        self._camara()
+        self.obs = self.env._obs()
+
+    def _camara(self):
+        """Cada 100 ms: foto, vision de carril y medicion cruda a la observacion de la politica (EstadoCamara)."""
+        if self.vis is None or self.env.t - self.t_foto < 0.1 - 1e-9:
+            return
+        self.t_foto = self.env.t
+        self.vis.medir()
+        if self.vis.valida:
+            self.env.camara.nueva_medicion(self.env.t, self.vis.d_crudo, self.vis.psi_crudo, True)
+
+    @property
+    def t(self):
+        return self.env.t
+
+    @property
+    def qpos(self):
+        return self.env.data.qpos
+
+    def pose(self):
+        d = self.env.data
+        pl, pr = d.site("left_foot").xpos, d.site("right_foot").xpos
+        R = d.xmat[self.env._torso].reshape(3, 3)
+        return 0.5 * (pl[0] + pr[0]), 0.5 * (pl[1] + pr[1]), math.atan2(R[1, 0], R[0, 0])
+
+    def paso(self):
+        from demo.caminatas.simular import LENGTH
+        action, _ = self.model.predict(self.vn.normalize_obs(self.obs), deterministic=True)
+        self.obs, _, terminated, _, info = self.env.step(action)
+        self._camara()
+        if self.vis is not None:
+            self.obs = self.env._obs()          # con la medicion de la foto recien tomada
+        d = self.env.data
+        if terminated:
+            self.resultado = "SALIO DEL CARRIL" if info["falta"] == "salida_carril" else "CAIDA"
+        elif max(d.site("left_foot").xpos[0], d.site("right_foot").xpos[0]) >= LENGTH:
+            self.resultado = "META"
+        if self.resultado:
+            self.t_fin = self.t
+
+
 # ---------------------------------------------------------------------------- escena con los 3 robots
 def escena_tres(mujoco):
     """Pista con 3 NAOs solo para DIBUJAR (nunca se simula: se copian las poses de cada fisica).
@@ -287,6 +354,11 @@ def agregar_argumentos(ap):
                     help="colocacion de los 3: girados a la izquierda (+) o derecha (-) [grados]")
     ap.add_argument("--velocidad", type=float, default=1.0, help="1 = tiempo real, 2 = el doble de rapido")
     ap.add_argument("--sin-camaras", action="store_true", help="no abrir la ventana 'Lo que ve cada NAO'")
+    ap.add_argument("--rl", default=None,
+                    help="modelo .zip de la politica de carrera (NaoRace-v0) para el carril central; por defecto "
+                         "policies/carrera_v02 o carrera_v01 si existen, si no la politica del sprint (checkpoints/)")
+    ap.add_argument("--rl-vx", type=float, default=0.40,
+                    help="vx_cmd de la politica de carrera [m/s] (perilla de seguridad; 0.40 = sin faltas en la bateria)")
     ap.add_argument("--captura", default=None,
                     help="(pruebas, sin pantalla) guarda <ruta>.png del visor y <ruta>_camaras.png a los 8 s")
 
@@ -309,7 +381,14 @@ def main(argv=None):
 
     print("Preparando los 3 robots (vision: %s, mu = %.2f, colocacion d = %+.1f cm, psi = %+.1f grados)..."
           % (vision, a.mu, 100 * d0, math.degrees(psi0)))
-    corredores = [CorredorRL(a.mu, d0, psi0, vision, pista, a.semilla)]   # primero el RL: importa torch antes que OpenGL
+    rl = a.rl or next((ROOT / "policies" / g / "model.zip" for g in ("carrera_v02", "carrera_v01")
+                       if (ROOT / "policies" / g / "model.zip").exists()), ROOT / "policies" / "carrera_v01" / "model.zip")
+    if Path(rl).exists():                                      # politica de carrera con su propia camara (paso 58b)
+        print("RL: politica de carrera %s" % rl)
+        corredores = [CorredorRLCarrera(rl, a.mu, d0, psi0, vision, pista, a.semilla, a.rl_vx)]
+    else:                                                      # politica del sprint con el truco del giroscopio
+        print("RL: politica del sprint (checkpoints/best_model.zip)")
+        corredores = [CorredorRL(a.mu, d0, psi0, vision, pista, a.semilla)]   # primero el RL: importa torch antes que OpenGL
     import mujoco
     corredores += [CorredorClasico(n, a.mu, d0, psi0, vision, pista, a.semilla) for n in ("bhuman", "naoqi")]
     m = escena_tres(mujoco)
@@ -317,12 +396,20 @@ def main(argv=None):
     mapas = {c.nombre: mapa_qpos(mujoco, (c.env.model if c.nombre == "rl" else c.sim.m), m, PREFIJO[c.nombre])
              for c in corredores}
 
+    from demo.caminatas.choques import DetectorChoques
+    detector = DetectorChoques(m)
+
     def dibujar():
         for c in corredores:
             o, de = mapas[c.nombre]
             d.qpos[de] = c.qpos[o]
             d.qpos[de[1]] += CARRILES[c.nombre]            # cada uno en su carril
         mujoco.mj_forward(m, d)
+        # Choques entre robots de carriles vecinos (paso 48b): la escena de 3 detecta los contactos.
+        for par in detector.choques(d):
+            for c in corredores:
+                if c.nombre in par and c.resultado in (None, "SALIO DEL CARRIL", "CAIDA"):
+                    c.resultado, c.t_fin = "CHOQUE CON OTRO ROBOT", c.t
 
     def avanzar_hasta(t):
         for c in corredores:

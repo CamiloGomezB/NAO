@@ -23,7 +23,8 @@ VERSION_CONTRATO = "v1"
 CICLO_S = 0.012                 # ciclo del motor de PenaltyStack y de LoLA en el NAO V6
 CICLOS_POR_ACCION = 2
 PERIODO_POLITICA_S = CICLO_S * CICLOS_POR_ACCION   # 24 ms (~41.7 Hz)
-PERIODO_MARCHA_S = 0.6          # reloj de marcha (a validar, paso 46: B-Human usa pasos de 250 ms)
+PERIODO_MARCHA_S = 0.5          # ciclo de marcha = 2 pasos de 250 ms, como el WalkingEngine de B-Human (paso 46).
+                                # El sprint usaba 0.6 s. Es un parametro del barrido de 100 agentes (rango 0.4-0.7).
 PERIODO_CAMARA_S = 0.1          # 10 FPS
 VALIDEZ_CAMARA_S = 0.3          # "valido" = hubo medicion en los ultimos 300 ms
 
@@ -73,6 +74,17 @@ LIMITES_ACCION = {
     "LAnkleRoll": (-0.25, 0.25), "RAnkleRoll": (-0.25, 0.25),
     "LShoulderPitch": (-0.5, 0.5), "RShoulderPitch": (-0.5, 0.5),
 }
+
+# Presupuesto lateral COMBINADO (paso 46). Los limites por articulacion no bastan: con las dos caderas y los dos
+# tobillos hacia adentro a la vez, los pies se cruzan (2.2 % de acciones al azar, hasta 2.1 cm; registro E40). Si la
+# SUMA de lo que entran las dos piernas pasa del presupuesto, esas componentes se escalan. Cada peso es cuanto acerca
+# los pies cada articulacion respecto a HipRoll (medido en el V6: HipRoll 22.1 cm/rad por pierna, AnkleRoll 3.85,
+# HipYawPitch +10.6 / -5.4 cm/rad). Presupuesto 0.09 rad equivalentes de cadera: 0 cruces en 20,000 acciones al azar
+# y todos los extremos, con margen minimo de 0.34 cm (scripts/check_valores_v6.py).
+PRESUPUESTO_ADENTRO_RAD = 0.09
+PESO_ADENTRO_TOBILLO = 0.174
+PESO_HIPYAWPITCH_POS = 0.48
+PESO_HIPYAWPITCH_NEG = 0.245
 
 # ------------------------------------------------------------------------------ observacion (54 valores)
 ESCALA_GIRO = 0.25              # giroscopio [rad/s] * 0.25
@@ -202,12 +214,34 @@ def accion_a_objetivos(accion):
     accion = 0 es la pose home; +1 suma el limite superior y -1 el inferior (asimetrico en HipRoll)."""
     if len(accion) != N_ACCION:
         raise ValueError("la accion debe tener %d valores" % N_ACCION)
-    out = {}
+    off = {}
     for nombre, a in zip(ARTICULACIONES_ACCION, accion):
         a = _recortar(float(a), -1.0, 1.0)
         lo, hi = LIMITES_ACCION[nombre]
-        out[nombre] = POSE_HOME[nombre] + (a * hi if a >= 0.0 else -a * lo)
-    return out
+        off[nombre] = a * hi if a >= 0.0 else -a * lo
+    _aplicar_presupuesto_adentro(off)
+    return dict((n, POSE_HOME[n] + off[n]) for n in ARTICULACIONES_ACCION)
+
+
+def cuanto_adentro(off):
+    """Cuanto entran las dos piernas, en radianes equivalentes de HipRoll, para desviaciones off respecto a home.
+    Convencion NAOqi: hacia adentro es LHipRoll/LAnkleRoll negativo y RHipRoll/RAnkleRoll positivo."""
+    y = off["LHipYawPitch"]
+    return (max(0.0, -off["LHipRoll"]) + max(0.0, off["RHipRoll"])
+            + PESO_ADENTRO_TOBILLO * (max(0.0, -off["LAnkleRoll"]) + max(0.0, off["RAnkleRoll"]))
+            + (PESO_HIPYAWPITCH_POS * y if y > 0.0 else PESO_HIPYAWPITCH_NEG * (-y)))
+
+
+def _aplicar_presupuesto_adentro(off):
+    """Si las dos piernas entran mas que el presupuesto, escala solo las componentes que van hacia adentro."""
+    total = cuanto_adentro(off)
+    if total <= PRESUPUESTO_ADENTRO_RAD:
+        return
+    f = PRESUPUESTO_ADENTRO_RAD / total
+    for nombre, signo_adentro in (("LHipRoll", -1), ("RHipRoll", 1), ("LAnkleRoll", -1), ("RAnkleRoll", 1)):
+        if off[nombre] * signo_adentro > 0.0:
+            off[nombre] *= f
+    off["LHipYawPitch"] *= f
 
 
 def objetivos_a_salida_bhuman(objetivos, rigidez=100.0):

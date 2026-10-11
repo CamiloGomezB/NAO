@@ -1,0 +1,146 @@
+[
+ {
+  "vx": 0.4,
+  "mu": 0.4,
+  "semilla": 1000,
+  "resultado": "META",
+  "t": 12.7,
+  "desvio_max_cm": 1.6
+ },
+ {
+  "vx": 0.4,
+  "mu": 0.4,
+  "semilla": 1001,
+  "resultado": "META",
+  "t": 12.75,
+  "desvio_max_cm": 8.2
+ },
+ {
+  "vx": 0.4,
+  "mu": 0.4,
+  "semilla": 1002,
+  "resultado": "META",
+  "t": 12.77,
+  "desvio_max_cm": 8.1
+ },
+ {
+  "vx": 0.4,
+  "mu": 0.8,
+  "semilla": 1000,
+  "resultado": "META",
+  "t": 12.72,
+  "desvio_max_cm": 4.7
+ },
+ {
+  "vx": 0.4,
+  "mu": 0.8,
+  "semilla": 1001,
+  "resultado": "META",
+  "t": 12.75,
+  "desvio_max_cm": 4.0
+ },
+ {
+  "vx": 0.4,
+  "mu": 0.8,
+  "semilla": 1002,
+  "resultado": "META",
+  "t": 12.75,
+  "desvio_max_cm": 4.6
+ },
+ {
+  "vx": 0.4,
+  "mu": 1.2,
+  "semilla": 1000,
+  "resultado": "META",
+  "t": 12.75,
+  "desvio_max_cm": 5.3
+ },
+ {
+  "vx": 0.4,
+  "mu": 1.2,
+  "semilla": 1001,
+  "resultado": "META",
+  "t": 12.77,
+  "desvio_max_cm": 2.8
+ },
+ {
+  "vx": 0.4,
+  "mu": 1.2,
+  "semilla": 1002,
+  "resultado": "META",
+  "t": 12.77,
+  "desvio_max_cm": 3.4
+ },
+ {
+  "vx": 0.5,
+  "mu": 0.4,
+  "semilla": 1000,
+  "resultado": "META",
+  "t": 10.3,
+  "desvio_max_cm": 5.1
+ },
+ {
+  "vx": 0.5,
+  "mu": 0.4,
+  "semilla": 1001,
+  "resultado": "META",
+  "t": 10.44,
+  "desvio_max_cm": 2.1
+ },
+ {
+  "vx": 0.5,
+  "mu": 0.4,
+  "semilla": 1002,
+  "resultado": "META",
+  "t": 10.3,
+  "desvio_max_cm": 1.8
+ },
+ {
+  "vx": 0.5,
+  "mu": 0.8,
+  "semilla": 1000,
+  "resultado": "META",
+  "t": 10.47,
+  "desvio_max_cm": 8.2
+ },
+ {
+  "vx": 0.5,
+  "mu": 0.8,
+  "semilla": 1001,
+  "resultado": "META",
+  "t": 10.47,
+  "desvio_max_cm": 2.2
+ },
+ {
+  "vx": 0.5,
+  "mu": 0.8,
+  "semilla": 1002,
+  "resultado": "META",
+  "t": 10.47,
+  "desvio_max_cm": 1.5
+ },
+ {
+  "vx": 0.5,
+  "mu": 1.2,
+  "semilla": 1000,
+  "resultado": "META",
+  "t": 10.47,
+  "desvio_max_cm": 8.8
+ },
+ {
+  "vx": 0.5,
+  "mu": 1.2,
+  "semilla": 1001,
+  "resultado": "META",
+  "t": 10.49,
+  "desvio_max_cm": 2.5
+ },
+ {
+  "vx": 0.5,
+  "mu": 1.2,
+  "semilla": 1002,
+  "resultado": "META",
+  "t": 10.49,
+  "desvio_max_cm": 1.4
+ }
+]

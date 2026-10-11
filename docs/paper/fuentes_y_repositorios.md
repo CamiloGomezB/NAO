@@ -220,6 +220,8 @@ flowchart TB
 | `assets/nao/bhuman/NaoV6H25.rsi3` | BHumanCodeRelease, `Config/Scenes/Includes/` (vía PenaltyStack) | `d89d603`, SHA-256 `73f8c9a7…` | B-Human |
 | `assets/nao/nao.xml`, `assets/nao/meshes/` | Generados por `scripts/build_nao_v6.py` desde el RSI3 | Reproducible | B-Human (derivado) |
 | `third_party/penaltystack/motion_contract.py` | PenaltyStack, `penalty/motion_contract.py` | `9c08a41`, copia exacta | Uso autorizado por el equipo |
+| `src/race/contract.py`: `PERIODO_MARCHA_S = 0.5` y la verificación de la altura de cadera de `home` (paso 46) | Parámetros del WalkingEngine de B-Human (`baseWalkPeriod` 250 ms, `walkHipHeight` 230 mm) en `baseline/bhuman/Config/Robots/Default/walkingEngineCommon.cfg` de PenaltyStack | `9c08a41`; se usan como **referencia**, no se copia código | B-Human |
+| `src/race/contract.py`: `JOINT_NAMES_BHUMAN` y `CICLO_S` (paso 41) | Los mismos datos de `motion_contract.py` de PenaltyStack. El resto del contrato es propio. Formato del `frame` según el `SensorAdapter` de PenaltyStack | `9c08a41`; `scripts/check_contract.py` compara los nombres con la copia | Uso autorizado por el equipo |
 | `carril/`, `demo/`, `robot/` | nao_linea | `f8e0cc6`, con los cambios de los pasos 40 y 48 | Del equipo |
 | `assets/nao/scene_carril.xml`, `nao_cam.xml`, `duela.png` | Generados por `demo/build_scene.py` (de nao_linea) | Reproducible desde `config/pista.yaml` | Del equipo |
 | `results/camara/modelo_error.md`, `lazo_cerrado.md` | nao_linea | `f8e0cc6` | Del equipo |

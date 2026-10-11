@@ -1,0 +1,44 @@
+# Pesos de la recompensa del entorno de carrera NaoRace-v0 y sus rangos para el barrido de 100 agentes (diseno,
+# seccion 6.4). UN SOLO archivo: el entorno lee "pesos" (cada config puede sobrescribir algunos en env.pesos) y el
+# lanzador de barridos (paso 60) sortea dentro de "rangos". Un termino sin rango queda fijo.
+# Cada peso multiplica su termino por paso de control (24 ms), salvo los marcados "una vez".
+# La recompensa usa la d, la psi y la velocidad REALES del simulador; la politica solo ve las de la camara simulada.
+
+pesos:
+  # Velocidad
+  seguimiento_vx: 1.0        # exp(-((vx - vx_cmd)/0.1)^2)
+  meta: 20.0                 # una vez, al pisar la franja de meta (punta de un pie en x >= 5 m)
+  # Rectitud
+  rumbo: 0.5                 # exp(-(psi/0.1)^2)
+  centrado: -2.0             # d^2
+  barrera_margen: -5.0       # sum_pies ((0.10 - margen)/0.10)^2 si el pie esta a menos de 10 cm de la linea
+  vel_lateral: -10.0         # vy^2
+  vel_giro: -0.5             # wz^2
+  # Faltas (terminan el episodio; una vez)
+  salida_carril: -200.0      # una esquina de un pie toca el borde interior de la linea
+  choque_robot: -400.0       # referencia: 2 x salida. Sin robots vecinos en el entrenamiento: se mide en la seleccion
+  caida: -100.0              # torso bajo o inclinado, o algo que no es el pie toca el suelo
+  # Estabilidad y robot real
+  patron_marcha: 0.5         # pies que coinciden con el reloj de marcha
+  vivo: 0.1                  # constante mientras no cae
+  inclinacion: -2.0          # gx^2 + gy^2
+  altura: -50.0              # (z - 0.316)^2
+  choque_piernas: -1.0       # 1 si una pierna toca la otra
+  cambio_accion: -0.02       # ||a_t - a_{t-1}||^2
+  torque: -0.001             # sum(tau^2)
+
+rangos:                      # [min, max] del barrido (tabla de la seccion 6.4)
+  seguimiento_vx: [0.5, 2.0]
+  meta: [0.0, 50.0]
+  rumbo: [0.2, 1.0]
+  centrado: [-5.0, -0.5]
+  barrera_margen: [-20.0, -1.0]
+  vel_lateral: [-20.0, -2.0]
+  vel_giro: [-2.0, -0.1]
+  salida_carril: [-400.0, -50.0]
+  choque_robot: 2x_salida_carril   # siempre el doble de salida_carril
+  caida: [-300.0, -50.0]
+  patron_marcha: [0.0, 1.0]
+  inclinacion: [-5.0, -0.5]
+  choque_piernas: [-5.0, -0.5]
+  cambio_accion: [-0.1, -0.005]

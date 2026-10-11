@@ -1,0 +1,5 @@
+Continuando desde policies/carrera_v01/model.zip (15,000,000 pasos previos)
+Entrenando 'barrido_prueba_paso60_003': 20,000 pasos, 4 entornos, semilla 1253345725
+Resultados en: runs\barrido_prueba_paso60_003
+[  0.02M / 0.0M]   673 pasos/s | retorno medio   2443.0 | episodio medio 30.00 s | transcurrido   0.5 min | faltan ~  0.0 min
+Listo. Modelo final: runs\barrido_prueba_paso60_003\final_model.zip

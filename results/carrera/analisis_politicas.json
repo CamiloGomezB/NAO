@@ -1,0 +1,630 @@
+{
+ "carrera_v01": {
+  "obs": {
+   "gravedad_proyectada[0]": {
+    "media": 0.03274814169733075,
+    "std": 0.06552661499239897
+   },
+   "gravedad_proyectada[1]": {
+    "media": -0.021737706153373924,
+    "std": 0.0376312605400464
+   },
+   "gravedad_proyectada[2]": {
+    "media": -0.9963031567454727,
+    "std": 0.011190712265997183
+   },
+   "vel_angular_torso[0]": {
+    "media": 0.00015735729368663212,
+    "std": 0.09430995529357414
+   },
+   "vel_angular_torso[1]": {
+    "media": 4.187997194938229e-05,
+    "std": 0.20415623203505964
+   },
+   "vel_angular_torso[2]": {
+    "media": 0.0006583862353160603,
+    "std": 0.12749730025289144
+   },
+   "error_rumbo_imu": {
+    "media": -0.011173780003955965,
+    "std": 0.12608230380499788
+   },
+   "d_camara": {
+    "media": 0.008404247538847326,
+    "std": 0.09142126180969365
+   },
+   "psi_camara": {
+    "media": 0.010156777064612493,
+    "std": 0.13366778572721472
+   },
+   "valido_camara": {
+    "media": 0.9824450187187701,
+    "std": 0.13132712560670787
+   },
+   "q_articular[LHipYawPitch]": {
+    "media": 0.00721164379355766,
+    "std": 0.027910668146919396
+   },
+   "q_articular[LHipRoll]": {
+    "media": -0.04458491541766018,
+    "std": 0.02925067025277571
+   },
+   "q_articular[LHipPitch]": {
+    "media": 0.16915849610727363,
+    "std": 0.2163369459543507
+   },
+   "q_articular[LKneePitch]": {
+    "media": -0.016361505344735308,
+    "std": 0.27189353533551475
+   },
+   "q_articular[LAnklePitch]": {
+    "media": -0.11555787249110812,
+    "std": 0.14960718250533894
+   },
+   "q_articular[LAnkleRoll]": {
+    "media": 0.037423732151975087,
+    "std": 0.0498462510452412
+   },
+   "q_articular[RHipRoll]": {
+    "media": 0.04096929789916148,
+    "std": 0.029918194753508296
+   },
+   "q_articular[RHipPitch]": {
+    "media": -0.007047784554488752,
+    "std": 0.2212369144657323
+   },
+   "q_articular[RKneePitch]": {
+    "media": 0.08088261115569365,
+    "std": 0.23854877483575096
+   },
+   "q_articular[RAnklePitch]": {
+    "media": -0.07839982343917495,
+    "std": 0.1577625221195787
+   },
+   "q_articular[RAnkleRoll]": {
+    "media": -0.0676309915535847,
+    "std": 0.05920338480424097
+   },
+   "q_articular[LShoulderPitch]": {
+    "media": 0.2906368615059605,
+    "std": 0.19489282238891947
+   },
+   "q_articular[RShoulderPitch]": {
+    "media": -0.30319193547029594,
+    "std": 0.1936226752151488
+   },
+   "dq_articular[LHipYawPitch]": {
+    "media": 0.0007543441688526658,
+    "std": 0.036400127838543364
+   },
+   "dq_articular[LHipRoll]": {
+    "media": -0.00030975791144977706,
+    "std": 0.03832558540692775
+   },
+   "dq_articular[LHipPitch]": {
+    "media": 0.0005642641383915058,
+    "std": 0.14334537903256844
+   },
+   "dq_articular[LKneePitch]": {
+    "media": 0.00039816586631140534,
+    "std": 0.22168234540352677
+   },
+   "dq_articular[LAnklePitch]": {
+    "media": -0.0025122382835946195,
+    "std": 0.15092378857232797
+   },
+   "dq_articular[LAnkleRoll]": {
+    "media": 0.0003524215031121374,
+    "std": 0.10296008020421801
+   },
+   "dq_articular[RHipRoll]": {
+    "media": 0.0003367193356894088,
+    "std": 0.038683697922632335
+   },
+   "dq_articular[RHipPitch]": {
+    "media": 0.0009717371453348073,
+    "std": 0.1547104355046536
+   },
+   "dq_articular[RKneePitch]": {
+    "media": -5.89648626145295e-05,
+    "std": 0.2060060045511501
+   },
+   "dq_articular[RAnklePitch]": {
+    "media": -0.0022078203005372276,
+    "std": 0.15096651521464757
+   },
+   "dq_articular[RAnkleRoll]": {
+    "media": -0.0005454045370310327,
+    "std": 0.10175185277112545
+   },
+   "dq_articular[LShoulderPitch]": {
+    "media": 0.0004853029207538236,
+    "std": 0.08318698784300763
+   },
+   "dq_articular[RShoulderPitch]": {
+    "media": -0.000501363905272525,
+    "std": 0.08994499902377202
+   },
+   "accion_anterior[LHipYawPitch]": {
+    "media": 0.13584599128693123,
+    "std": 0.4040596308400035
+   },
+   "accion_anterior[LHipRoll]": {
+    "media": -0.46637902305274936,
+    "std": 0.34238420978948636
+   },
+   "accion_anterior[LHipPitch]": {
+    "media": 0.34948002219486224,
+    "std": 0.4615057991128334
+   },
+   "accion_anterior[LKneePitch]": {
+    "media": -0.04174520840282823,
+    "std": 0.5481762957580222
+   },
+   "accion_anterior[LAnklePitch]": {
+    "media": -0.22049497128892992,
+    "std": 0.39550411835288746
+   },
+   "accion_anterior[LAnkleRoll]": {
+    "media": 0.1814323701902103,
+    "std": 0.2769425803632869
+   },
+   "accion_anterior[RHipRoll]": {
+    "media": 0.45455633181701915,
+    "std": 0.3340401321396672
+   },
+   "accion_anterior[RHipPitch]": {
+    "media": -0.015210195644087834,
+    "std": 0.4735602012950465
+   },
+   "accion_anterior[RKneePitch]": {
+    "media": 0.11786897482779511,
+    "std": 0.5099244938922192
+   },
+   "accion_anterior[RAnklePitch]": {
+    "media": -0.1743332951959921,
+    "std": 0.39451013686023717
+   },
+   "accion_anterior[RAnkleRoll]": {
+    "media": -0.27814749542538064,
+    "std": 0.2914558466154908
+   },
+   "accion_anterior[LShoulderPitch]": {
+    "media": 0.58882561092184,
+    "std": 0.42813281667325576
+   },
+   "accion_anterior[RShoulderPitch]": {
+    "media": -0.6162940793887957,
+    "std": 0.43026681862935773
+   },
+   "carga_pies[0]": {
+    "media": 0.5384913478366573,
+    "std": 0.5094117831434654
+   },
+   "carga_pies[1]": {
+    "media": 0.5281281874537341,
+    "std": 0.5212590053980585
+   },
+   "reloj_marcha[0]": {
+    "media": 0.0017639633575007602,
+    "std": 0.7070418746795638
+   },
+   "reloj_marcha[1]": {
+    "media": 0.0001819214220851762,
+    "std": 0.7071694715324791
+   },
+   "vx_cmd": {
+    "media": 0.3219953256420398,
+    "std": 0.10075441434668087
+   }
+  },
+  "recompensa_std": 61.97922112348524,
+  "obs_rms_count": 15000016.0001,
+  "clip_obs": 10.0,
+  "gamma": 0.99,
+  "acciones": {
+   "LHipYawPitch": {
+    "media": 0.34173160791397095,
+    "std": 0.1928287148475647,
+    "abs_media": 0.3444689214229584,
+    "saturada_pct": 0.7333333333333333
+   },
+   "LHipRoll": {
+    "media": -0.7770675420761108,
+    "std": 0.21297676861286163,
+    "abs_media": 0.7770675420761108,
+    "saturada_pct": 36.666666666666664
+   },
+   "LHipPitch": {
+    "media": 0.46605023741722107,
+    "std": 0.4243183434009552,
+    "abs_media": 0.5053394436836243,
+    "saturada_pct": 22.8
+   },
+   "LKneePitch": {
+    "media": -0.07038473337888718,
+    "std": 0.6950908303260803,
+    "abs_media": 0.6318541169166565,
+    "saturada_pct": 13.933333333333334
+   },
+   "LAnklePitch": {
+    "media": -0.21954841911792755,
+    "std": 0.2932538092136383,
+    "abs_media": 0.3151465356349945,
+    "saturada_pct": 0.0
+   },
+   "LAnkleRoll": {
+    "media": 0.16624967753887177,
+    "std": 0.12436872720718384,
+    "abs_media": 0.1732519119977951,
+    "saturada_pct": 0.0
+   },
+   "RHipRoll": {
+    "media": 0.840872585773468,
+    "std": 0.1575569361448288,
+    "abs_media": 0.8411839008331299,
+    "saturada_pct": 25.333333333333336
+   },
+   "RHipPitch": {
+    "media": 0.05119219794869423,
+    "std": 0.4948875606060028,
+    "abs_media": 0.43201205134391785,
+    "saturada_pct": 0.06666666666666667
+   },
+   "RKneePitch": {
+    "media": 0.2577151954174042,
+    "std": 0.564828097820282,
+    "abs_media": 0.5240620374679565,
+    "saturada_pct": 23.733333333333334
+   },
+   "RAnklePitch": {
+    "media": -0.3158072233200073,
+    "std": 0.33468103408813477,
+    "abs_media": 0.3819807171821594,
+    "saturada_pct": 0.0
+   },
+   "RAnkleRoll": {
+    "media": -0.33576250076293945,
+    "std": 0.12554948031902313,
+    "abs_media": 0.33939799666404724,
+    "saturada_pct": 0.0
+   },
+   "LShoulderPitch": {
+    "media": 0.9490382671356201,
+    "std": 0.08195129781961441,
+    "abs_media": 0.9490382671356201,
+    "saturada_pct": 56.46666666666667
+   },
+   "RShoulderPitch": {
+    "media": -0.8464398384094238,
+    "std": 0.1960563063621521,
+    "abs_media": 0.8464398384094238,
+    "saturada_pct": 51.66666666666667
+   }
+  },
+  "marcha_vx040": {
+   "doble_apoyo": 0.20466666666666666,
+   "un_pie": 0.7953333333333333,
+   "vuelo": 0.0,
+   "altura_pie_mm": [
+    55.08442293923552,
+    49.34542518265479
+   ],
+   "pasos_por_s_por_pie": 2.0
+  }
+ },
+ "carrera_v02": {
+  "obs": {
+   "gravedad_proyectada[0]": {
+    "media": 0.012670152067827945,
+    "std": 0.06091831328990703
+   },
+   "gravedad_proyectada[1]": {
+    "media": -0.03133208650514022,
+    "std": 0.03435097266457526
+   },
+   "gravedad_proyectada[2]": {
+    "media": -0.9969433937925872,
+    "std": 0.008404580172771871
+   },
+   "vel_angular_torso[0]": {
+    "media": 0.00020482669117968683,
+    "std": 0.08248144418476361
+   },
+   "vel_angular_torso[1]": {
+    "media": 0.0004916576000784246,
+    "std": 0.17586365595593043
+   },
+   "vel_angular_torso[2]": {
+    "media": 0.00036044469311295854,
+    "std": 0.10573021801469794
+   },
+   "error_rumbo_imu": {
+    "media": -0.005864368294562922,
+    "std": 0.09526302488024317
+   },
+   "d_camara": {
+    "media": -0.0026133834593424633,
+    "std": 0.09362700329576006
+   },
+   "psi_camara": {
+    "media": 0.004261313031157624,
+    "std": 0.10315990531187824
+   },
+   "valido_camara": {
+    "media": 0.8904424835251035,
+    "std": 0.3123374410187354
+   },
+   "q_articular[LHipYawPitch]": {
+    "media": 0.008868014780699022,
+    "std": 0.02682535826609997
+   },
+   "q_articular[LHipRoll]": {
+    "media": -0.047902700079983394,
+    "std": 0.02483114314289702
+   },
+   "q_articular[LHipPitch]": {
+    "media": 0.19626407176810115,
+    "std": 0.20212041555245683
+   },
+   "q_articular[LKneePitch]": {
+    "media": 0.0004617715437353067,
+    "std": 0.30673324769719074
+   },
+   "q_articular[LAnklePitch]": {
+    "media": -0.1199538254480012,
+    "std": 0.13654799197106007
+   },
+   "q_articular[LAnkleRoll]": {
+    "media": 0.028644335582572233,
+    "std": 0.043617272901315694
+   },
+   "q_articular[RHipRoll]": {
+    "media": 0.050764955125241894,
+    "std": 0.027224905302272895
+   },
+   "q_articular[RHipPitch]": {
+    "media": 0.05860352322845828,
+    "std": 0.23597249776106377
+   },
+   "q_articular[RKneePitch]": {
+    "media": 0.09540168917173464,
+    "std": 0.25969925261935844
+   },
+   "q_articular[RAnklePitch]": {
+    "media": -0.11587921017969567,
+    "std": 0.15290179230487225
+   },
+   "q_articular[RAnkleRoll]": {
+    "media": -0.08085743975887408,
+    "std": 0.055718247796221206
+   },
+   "q_articular[LShoulderPitch]": {
+    "media": 0.38525562862411517,
+    "std": 0.16981353296085308
+   },
+   "q_articular[RShoulderPitch]": {
+    "media": -0.3621605007546353,
+    "std": 0.16477005653512675
+   },
+   "dq_articular[LHipYawPitch]": {
+    "media": 0.000992605825882859,
+    "std": 0.030910696486323018
+   },
+   "dq_articular[LHipRoll]": {
+    "media": -0.0003145006028352919,
+    "std": 0.0317926724532855
+   },
+   "dq_articular[LHipPitch]": {
+    "media": 0.0008274483528691967,
+    "std": 0.13523242636453606
+   },
+   "dq_articular[LKneePitch]": {
+    "media": 8.801589851787285e-05,
+    "std": 0.22121525084120586
+   },
+   "dq_articular[LAnklePitch]": {
+    "media": -0.002653433380240793,
+    "std": 0.13309606332117746
+   },
+   "dq_articular[LAnkleRoll]": {
+    "media": 0.0003343733309289562,
+    "std": 0.08212394844372124
+   },
+   "dq_articular[RHipRoll]": {
+    "media": 0.0003537031275885923,
+    "std": 0.032819328813762115
+   },
+   "dq_articular[RHipPitch]": {
+    "media": 0.001321717808656652,
+    "std": 0.1501414682385574
+   },
+   "dq_articular[RKneePitch]": {
+    "media": -0.0001616714022430135,
+    "std": 0.2011162152760591
+   },
+   "dq_articular[RAnklePitch]": {
+    "media": -0.0025724385793891506,
+    "std": 0.13493988696892661
+   },
+   "dq_articular[RAnkleRoll]": {
+    "media": -0.0005332005754784018,
+    "std": 0.08566035418565188
+   },
+   "dq_articular[LShoulderPitch]": {
+    "media": 0.0006391631681508144,
+    "std": 0.06175453042346881
+   },
+   "dq_articular[RShoulderPitch]": {
+    "media": -0.0006749874786425528,
+    "std": 0.07905486525322734
+   },
+   "accion_anterior[LHipYawPitch]": {
+    "media": 0.17342030192341204,
+    "std": 0.4459706690141525
+   },
+   "accion_anterior[LHipRoll]": {
+    "media": -0.6127207650046093,
+    "std": 0.34902667666908244
+   },
+   "accion_anterior[LHipPitch]": {
+    "media": 0.3976565417662187,
+    "std": 0.4295598103684296
+   },
+   "accion_anterior[LKneePitch]": {
+    "media": -0.01099890592147088,
+    "std": 0.6091085043397622
+   },
+   "accion_anterior[LAnklePitch]": {
+    "media": -0.24256437782456844,
+    "std": 0.35159508564866554
+   },
+   "accion_anterior[LAnkleRoll]": {
+    "media": 0.13803089389126066,
+    "std": 0.24959947543352426
+   },
+   "accion_anterior[RHipRoll]": {
+    "media": 0.6872062912858867,
+    "std": 0.35238059784360526
+   },
+   "accion_anterior[RHipPitch]": {
+    "media": 0.11558375033184669,
+    "std": 0.49320550082973197
+   },
+   "accion_anterior[RKneePitch]": {
+    "media": 0.15578537928576044,
+    "std": 0.5355432254565636
+   },
+   "accion_anterior[RAnklePitch]": {
+    "media": -0.2546977087390493,
+    "std": 0.3688464216856384
+   },
+   "accion_anterior[RAnkleRoll]": {
+    "media": -0.3246253432002125,
+    "std": 0.2710675414467524
+   },
+   "accion_anterior[LShoulderPitch]": {
+    "media": 0.7807677214570132,
+    "std": 0.3646196811654262
+   },
+   "accion_anterior[RShoulderPitch]": {
+    "media": -0.7362145225172824,
+    "std": 0.3667743576859684
+   },
+   "carga_pies[0]": {
+    "media": 0.503564681155435,
+    "std": 0.4836669353999388
+   },
+   "carga_pies[1]": {
+    "media": 0.5300202066047802,
+    "std": 0.500779682236912
+   },
+   "reloj_marcha[0]": {
+    "media": 0.0012221374468313637,
+    "std": 0.7070719541916161
+   },
+   "reloj_marcha[1]": {
+    "media": 0.0001467473202466238,
+    "std": 0.7071405483250861
+   },
+   "vx_cmd": {
+    "media": 0.32284804640044407,
+    "std": 0.1003096868142704
+   }
+  },
+  "recompensa_std": 58.30784481621375,
+  "obs_rms_count": 30000032.0001,
+  "clip_obs": 10.0,
+  "gamma": 0.99,
+  "acciones": {
+   "LHipYawPitch": {
+    "media": -0.27474743127822876,
+    "std": 0.1643218994140625,
+    "abs_media": 0.2773827612400055,
+    "saturada_pct": 0.0
+   },
+   "LHipRoll": {
+    "media": -0.779183566570282,
+    "std": 0.2599928677082062,
+    "abs_media": 0.779183566570282,
+    "saturada_pct": 42.333333333333336
+   },
+   "LHipPitch": {
+    "media": 0.49773845076560974,
+    "std": 0.4292219579219818,
+    "abs_media": 0.5549396872520447,
+    "saturada_pct": 19.933333333333334
+   },
+   "LKneePitch": {
+    "media": 0.1548035442829132,
+    "std": 0.6602662205696106,
+    "abs_media": 0.5945628881454468,
+    "saturada_pct": 18.6
+   },
+   "LAnklePitch": {
+    "media": -0.30402302742004395,
+    "std": 0.24404752254486084,
+    "abs_media": 0.33434849977493286,
+    "saturada_pct": 0.0
+   },
+   "LAnkleRoll": {
+    "media": 0.025752786546945572,
+    "std": 0.17376385629177094,
+    "abs_media": 0.1593743860721588,
+    "saturada_pct": 0.0
+   },
+   "RHipRoll": {
+    "media": 0.9997673630714417,
+    "std": 0.0035378076136112213,
+    "abs_media": 0.9997673630714417,
+    "saturada_pct": 99.6
+   },
+   "RHipPitch": {
+    "media": 0.3722124397754669,
+    "std": 0.46675726771354675,
+    "abs_media": 0.5075339078903198,
+    "saturada_pct": 11.266666666666666
+   },
+   "RKneePitch": {
+    "media": 0.3512468934059143,
+    "std": 0.5570904016494751,
+    "abs_media": 0.5723346471786499,
+    "saturada_pct": 26.53333333333333
+   },
+   "RAnklePitch": {
+    "media": -0.46698957681655884,
+    "std": 0.1883316934108734,
+    "abs_media": 0.46698957681655884,
+    "saturada_pct": 0.0
+   },
+   "RAnkleRoll": {
+    "media": -0.43925023078918457,
+    "std": 0.1209058091044426,
+    "abs_media": 0.43931761384010315,
+    "saturada_pct": 0.0
+   },
+   "LShoulderPitch": {
+    "media": 0.9998577237129211,
+    "std": 0.0025375946424901485,
+    "abs_media": 0.9998577237129211,
+    "saturada_pct": 99.73333333333333
+   },
+   "RShoulderPitch": {
+    "media": -0.9997605085372925,
+    "std": 0.005904508754611015,
+    "abs_media": 0.9997605085372925,
+    "saturada_pct": 99.8
+   }
+  },
+  "marcha_vx040": {
+   "doble_apoyo": 0.24333333333333335,
+   "un_pie": 0.7566666666666667,
+   "vuelo": 0.0,
+   "altura_pie_mm": [
+    51.7856958169768,
+    52.505367782721144
+   ],
+   "pasos_por_s_por_pie": 2.0555555555555554
+  }
+ }
+}
