@@ -3,7 +3,7 @@
 Stack: **MuJoCo + Stable-Baselines3 (PPO)**, Windows nativo, entrenamiento en CPU.
 Regla: cada paso termina con una **confirmación**, una **entrada en la bitácora** ([`docs/bitacora.md`](docs/bitacora.md)) y un **commit**.
 
-> **Paso actual: 41** · Objetivo vigente: **caminata por RL para la Carrera Individual de la Copa NAO CCM MX 2026 (3 de noviembre de 2026)**,
+> **Paso actual: 46** (ruta crítica; 42–45 se intercalan) · Objetivo vigente: **caminata por RL para la Carrera Individual de la Copa NAO CCM MX 2026 (3 de noviembre de 2026)**,
 > más rápida que las caminatas de **B-Human** y **NAOqi** (tres carriles de comparación), con visión de carril y portable al repo final **PenaltyStack**.
 > Diseño: [`docs/plan_rl_carrera.md`](docs/plan_rl_carrera.md) · Repo final: [`docs/integracion_penaltystack.md`](docs/integracion_penaltystack.md) · Historial, errores y soluciones: [`docs/bitacora.md`](docs/bitacora.md).
 
@@ -134,7 +134,8 @@ del equipo.
     - `run_demo.py --live` abre los 3 carriles con sus 3 robots, cada uno con su color y con su cámara real;
     - la meta está en los 3 carriles y hay una ventana con las 3 cámaras.
   - 2026-10-10: el visor se veía roto por la GPU integrada AMD → los scripts piden la NVIDIA. **Aprobado por el usuario** el 2026-10-10: los 3 carriles, la cámara, `d`/`psi` y la fricción (μ = 1.0 en la demo) funcionan bien.
-- [ ] **41. Contrato v1 en código** (`src/race/contract.py`): orden de articulaciones de B-Human, ciclo de 24 ms, observación de 54 valores (incluye `d`, `psi` y válido de la cámara) armada desde un `frame` con el formato de PenaltyStack, y acción de 13 ángulos — ✅ Prueba automática: un `frame` de ejemplo produce la observación esperada y la acción vuelve con los nombres correctos
+- [x] **41. Contrato v1 en código** (`src/race/contract.py`): orden de articulaciones de B-Human, ciclo de 24 ms, observación de 54 valores (incluye `d`, `psi` y válido de la cámara) armada desde un `frame` con el formato de PenaltyStack, y acción de 13 ángulos — ✅ Prueba automática: un `frame` de ejemplo produce la observación esperada y la acción vuelve con los nombres correctos
+  - Hecho (2026-10-10): `src/race/contract.py` (Python 2.7/3, sin numpy) + `scripts/check_contract.py` en OK (8 grupos de pruebas). Pendiente para el paso 69: correrlo en el Python 2.7 real del NAO (en el PC no hay 2.7).
 - [ ] **42. Políticas compartidas en el repo** (`policies/carrera_vNN/`: modelo, normalización, config, métricas y README de la generación) — ✅ Desde un clon limpio se evalúa la misma política sin entrenar y se puede continuar desde ella
 - [ ] **43. Rendimiento de entrenamiento en este PC** (laptop Ryzen 7 5800H, el único equipo de entrenamiento): pasos/s con el modelo V6 y la fricción aleatoria — ✅ Pasos/s medidos y costo real del barrido de 100 agentes recalculado (sección 11.3 del diseño)
 

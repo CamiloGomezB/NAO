@@ -803,3 +803,39 @@ sin salida y cómo se resolvieron. Tiene tres usos:
     - el `historial_pasos.md` ahora registra también el trabajo de documentación de hoy.
 - **Errores en este paso:** ninguno nuevo.
 - **Siguiente:** paso 41, contrato v1 en código.
+
+### 2026-10-10 — Paso 41: contrato v1 en código
+- **Autor:** Camilo, con Claude Code (laptop Ryzen 7 5800H).
+- **Revisión previa de la documentación** (regla nueva de `CLAUDE.md`): hecha justo antes, en la entrada anterior. 0
+  enlaces rotos, sin contradicciones y avisos agregados en `SOURCE.md` y `variables_rl.md`.
+- **Objetivo:** escribir en código la observación de 54 valores, que incluye `d`, `psi` y válido de la cámara, y la
+  acción de 13 ángulos, con el formato de PenaltyStack, para que entrenamiento, demo y robot usen exactamente lo mismo.
+- **Qué se hizo:**
+  - **`src/race/contract.py`:**
+    - orden de articulaciones de B-Human;
+    - tiempos de 12 y 24 ms;
+    - `armar_observacion(frame, …)`, `accion_a_objetivos`, `objetivos_a_salida_bhuman` y `EstadoCamara`;
+    - compatible con Python 2.7 y sin numpy.
+  - **`scripts/check_contract.py`:** 8 grupos de pruebas.
+  - **De dónde sale cada dato:**
+    - orden y ciclo: PenaltyStack (`third_party/penaltystack/motion_contract.py`, `9c08a41`);
+    - formato del frame: `SensorAdapter` de PenaltyStack;
+    - `home` y rangos: modelo V6 (RSI3 de B-Human);
+    - observación y acción: diseño, secciones 6.1, 6.2 y 6.7.
+- **Resultado:** `RESULTADO: OK` en la primera corrida. Datos clave con un frame real de MuJoCo (robot de pie, girado
+  10°):
+  - error de rumbo −10.00°;
+  - carga de los pies 0.50 / 0.50;
+  - gravedad proyectada igual a la del simulador (tolerancia 1e-9);
+  - HipRoll asimétrico verificado (afuera 0.25, adentro 0.07).
+- **Errores:** ninguno en consola.
+- **Pendiente:** en el PC no hay Python 2.7 (`py -0` → solo `-V:3.12`). La compatibilidad se verificó con una revisión
+  estática (sin f-strings, sin anotaciones, solo `math`). La prueba real va en el paso 69, en el NAO.
+- **Decisiones:**
+  - el contrato no importa numpy ni MuJoCo, para poder copiarlo tal cual a PenaltyStack;
+  - los valores "(a validar)" (`home`, período de marcha, límites de HipYawPitch y HipRoll) se revisan en el paso 46.
+- **Cambio de regla de commits:** el usuario indicó que el asistente **no haga commits**; él los hace manualmente
+  cuando decida. Este paso queda **sin commit**. `CLAUDE.md` se actualizó; la autorización del 2026-10-10 queda
+  retirada.
+- **Siguiente:** paso 46 (ruta crítica), quitar los valores del modelo aproximado. Según la regla, antes se revisa toda la
+  documentación.

@@ -112,12 +112,14 @@ avance de 0.06 m/s (`docs/SIMULACION.md`). Hay que medir el baseline a velocidad
 
 1. **Exportar la política a un formato liviano:** pesos y normalización en JSON o `.npz`, con la versión
    del contrato de observación y acción.
-2. **Un módulo de inferencia** compatible con Python 2.7 y 3, sin dependencias o con numpy opcional. Recibe
+2. **El contrato** [`src/race/contract.py`](../src/race/contract.py) (paso 41) ya arma la observación desde el `frame`
+   de PenaltyStack y devuelve `angles[26]` + `stiffness[26]` en el orden de B-Human. Es Python 2.7/3 y no usa numpy.
+3. **Un módulo de inferencia** compatible con Python 2.7 y 3, sin dependencias o con numpy opcional. Recibe
    los sensores con el formato de PenaltyStack (sección 3) y devuelve ángulos en el orden de
    `motion_contract.py`.
-3. **Probarla primero dentro del simulador de PenaltyStack**, en lugar del WalkingEngine de B-Human. Así
+4. **Probarla primero dentro del simulador de PenaltyStack**, en lugar del WalkingEngine de B-Human. Así
    se comparan las dos caminatas en el mismo simulador.
-4. **Ejecutor a bordo** con el bucle de 24 ms y el arranque y paro de la sección 3, desplegado con el
+5. **Ejecutor a bordo** con el bucle de 24 ms y el arranque y paro de la sección 3, desplegado con el
    mecanismo de PenaltyStack.
 
 Estos pasos son la Fase N del [`PLAN.md`](../PLAN.md).

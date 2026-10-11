@@ -6,7 +6,8 @@ articulares programadas a mano.
 
 ## Proyecto actual: Carrera Individual — Copa NAO CCM MX 2026
 
-> **Estado:** Fase I, **paso 41 de 80** (contrato v1 en código). Paso 40 terminado: los 3 carriles con cámara se ven y funcionan en MuJoCo.
+> **Estado:** **paso 46 de 80** (ruta crítica del RL: quitar los valores del modelo aproximado). Hechos: 40 (los 3 carriles
+> con cámara en MuJoCo) y 41 (contrato de observación y acción en código, `src/race/contract.py`).
 > Actualizado el 2026-10-10.
 >
 > - Plan: [`PLAN.md`](PLAN.md)

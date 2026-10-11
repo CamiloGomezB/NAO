@@ -217,6 +217,10 @@ flowchart LR
 
 ### 6.1 Espacio de observación: 54 valores, solo sensores del NAO
 
+> **En código:** [`src/race/contract.py`](../src/race/contract.py) (paso 41), compatible con Python 2.7 y sin numpy,
+> para que la misma función arme la observación en el entrenamiento, en la demo y en el NAO a través de
+> PenaltyStack. Prueba: `uv run python scripts/check_contract.py`.
+
 | Componente | Dim | En simulación | En el NAO / PenaltyStack | Escala |
 |---|---|---|---|---|
 | Gravedad proyectada (inclinación del torso) | 3 | Orientación del torso | `InertialSensor/AngleX, AngleY` / `orientation` | — |

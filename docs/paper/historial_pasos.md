@@ -236,6 +236,45 @@ noviembre de 2026.
 
 ---
 
+### Paso 41 — Contrato v1 en código (2026-10-10)
+- **Qué se hizo:** [`src/race/contract.py`](../../src/race/contract.py), el "idioma común" de la política de carrera
+  entre el entrenamiento, la demo de 3 carriles y el NAO real (vía PenaltyStack):
+  - **orden de las 26 articulaciones de B-Human**, copiado de PenaltyStack (`motion_contract.py`, commit `9c08a41`);
+  - **tiempos:** ciclo de 12 ms y política cada 24 ms;
+  - **observación de 54 valores** armada desde un `frame` con el formato del `SensorAdapter` de PenaltyStack:
+    - gravedad proyectada desde el cuaternión de la IMU;
+    - giroscopio;
+    - error de rumbo;
+    - **`d`, `psi` y válido de la cámara**;
+    - ángulos y velocidades de las 13 articulaciones;
+    - acción anterior;
+    - carga de cada pie desde los 8 FSR;
+    - reloj de marcha;
+    - `vx_cmd`;
+  - **acción de 13 ángulos:** HipYawPitch ±0.10 y **HipRoll asimétrico** (0.25 hacia afuera, 0.07 hacia adentro, por
+    E16), y la salida `angles[26]` + `stiffness[26]` para PenaltyStack, con RHipYawPitch = LHipYawPitch;
+  - **`EstadoCamara`:** última medición cruda, mantenida entre fotos, y válido < 300 ms (diseño, sección 6.7).
+- **De dónde sale cada dato:**
+  - orden de articulaciones y ciclo: PenaltyStack;
+  - formato del `frame`: `SensorAdapter` de PenaltyStack;
+  - pose `home` y rangos articulares: modelo V6 (keyframe `home` de `nao.xml`, generado desde el RSI3 de B-Human);
+  - observación, acción y escalas: diseño, secciones 6.1, 6.2 y 6.7.
+- **Restricción de diseño:** compatible con **Python 2.7 y sin numpy**, porque corre a bordo del NAO (NAOqi 2.8).
+- **Verificación:** `scripts/check_contract.py` → **RESULTADO: OK** en la primera corrida. Comprueba:
+  - nombres idénticos a PenaltyStack;
+  - 54 valores con la cámara en las posiciones 7–9;
+  - `POSE_HOME` = keyframe `home` en los 23 actuadores y los 13 límites dentro del rango articular;
+  - con un frame real de MuJoCo (robot de pie girado 10°): gravedad igual a la del simulador, error de rumbo de
+    −10.00°, carga de los pies 0.50 + 0.50, ángulos respecto a `home` < 0.021 rad;
+  - gravedad y rumbo correctos en 50 orientaciones al azar;
+  - acción 0 = `home`, ±1 = límites, recorte fuera de [−1, 1];
+  - salida de 26 valores con RHipYawPitch copiado;
+  - reglas de la cámara;
+  - revisión estática de compatibilidad con Python 2.7: sin f-strings, sin anotaciones, solo `math`.
+- **Errores:** ninguno en consola.
+- **Pendiente:** el PC no tiene Python 2.7 (`py -0` solo lista 3.12). La prueba en el intérprete 2.7 real se hace en
+  el NAO, en el paso 69.
+
 ## Trabajo de documentación (sin número de paso, 2026-10-10)
 
 Pedido por el usuario para el paper. Commits `441dcb0`, `a266095` y el de la revisión previa al paso 41.

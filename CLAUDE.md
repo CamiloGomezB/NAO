@@ -73,8 +73,10 @@ desactualizado. Esa revisión se registra en la bitácora como parte del paso. L
 - **Los fallos no se borran.** Un paso fallido se marca `[!]` y se documenta. Si hace falta corregirlo, se
   agrega un paso nuevo (p. ej. `56b`). Las entradas viejas de la bitácora no se editan; se corrigen con
   una entrada nueva.
-- **Commits:** **uno por paso, en `main`**. Desde el 2026-10-10 el usuario autoriza al asistente a hacer
-  el commit de cada paso terminado en `main`. El **push** se hace solo cuando el usuario lo pide.
+- **Commits:** en `main`, los hace **el usuario manualmente**, cuando él decida, a veces agrupando varios pasos.
+  El asistente **no hace commit ni push**: al terminar, deja los cambios sin confirmar, resume qué cambió y
+  propone el mensaje del commit. Hubo una autorización temporal del 2026-10-10 que el usuario retiró ese
+  mismo día.
 
 ## Convenciones
 
