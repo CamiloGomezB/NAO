@@ -200,6 +200,12 @@ para la visión, el trabajo de Daniel en [danielpaya/nao_linea](https://github.c
   `scripts/build_nao_v6.py` (commit `d9207ec`). Es el mismo archivo que usa PenaltyStack, el repo final, así
   que los dos repos tienen el mismo robot. El plan original apuntaba al URDF; el motivo del cambio de fuente
   no quedó registrado en ese momento.
+- **Procedencia verificada (2026-10-10):**
+  - el RSI3 es `Config/Scenes/Includes/NaoV6H25.rsi3` de BHumanCodeRelease, revisión `d89d603`;
+  - PenaltyStack lo agregó el 6 de octubre (`21dbb16`) y este repo el 7 (`d9207ec`), con el mismo SHA-256;
+  - el script de conversión de este repo es propio.
+
+  Ver [`fuentes_y_repositorios.md`](fuentes_y_repositorios.md#23-b-human-y-su-naov6h25rsi3-el-modelo-v6-actual-desde-el-7-de-octubre).
 - **Estado:** ⚠️ El modelo está generado pero **no validado** (paso 44), y sus valores heredados (E16)
   siguen pendientes.
 

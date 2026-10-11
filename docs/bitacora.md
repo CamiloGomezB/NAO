@@ -736,3 +736,39 @@ sin salida y cómo se resolvieron. Tiene tres usos:
   (`NAOH25V60.urdf`), pero el modelo se generó desde el RSI3 de B-Human. El motivo del cambio no quedó
   registrado en su momento (ver E12).
 - **Siguiente:** paso 41.
+
+### 2026-10-10 — Procedencia de todas las piezas externas (fuentes y repositorios)
+- **Autor:** Camilo, con Claude Code.
+- **Indicación:** de aquí en adelante, aclarar en cada paso qué se hizo, cómo, de dónde se sacó, y si hubo
+  errores o no. Explicar lo que se sacó de otros repositorios, cómo funcionan y por qué se usan; en
+  particular el modelo de B-Human y la cámara. La cámara salió de este repo como un apartado, que otro
+  compañero (Daniel) desarrolló en otro repositorio.
+- **Qué se verificó, con el historial de Git de cada repo:**
+  - **Modelo V6:**
+    - `NaoV6H25.rsi3` es `Config/Scenes/Includes/NaoV6H25.rsi3` de **bhuman/BHumanCodeRelease**, revisión
+      `d89d603`;
+    - PenaltyStack lo agregó el **6 de octubre** (commit `21dbb16`, Luis Mario) y este repo el **7 de
+      octubre** (`d9207ec`), con el **mismo SHA-256** `73f8c9a7…`. Llegó por PenaltyStack;
+    - nuestro `scripts/build_nao_v6.py` es propio, distinto de `tools/build_bhuman_model.py` de PenaltyStack.
+  - **PenaltyStack** deriva de **SabanaHerons2026** (`2360ab11`), basado en B-Human, del que conserva 559
+    archivos del motor de movimiento.
+  - **nao_linea:**
+    - empezó el **9 de octubre a las 21:06** como la rama `fase-p-camara-carril` de **este** repo, sobre
+      nuestro `4ca136d` (3 commits);
+    - a las **21:47** pasó al repo de Daniel, con `src/`, `checkpoints/` y `assets/` idénticos a los
+      nuestros;
+    - el **10 de octubre a las 00:11** agregó las caminatas tipo NAOqi y tipo B-Human y la carrera de 3
+      carriles;
+    - se integró en nuestro `main` el **10 de octubre a las 22:12** (paso 40).
+- **Qué se hizo:**
+  - **Nuevo `docs/paper/fuentes_y_repositorios.md`:** mapa de fuentes y, para cada una, qué es, cómo
+    funciona, qué se tomó (commit o SHA-256), por qué y qué se cambió. Cubre one_policy_to_run_them_all,
+    el URDF de Aldebaran, B-Human y el RSI3, SabanaHerons2026, PenaltyStack, nao_linea, cómo funcionan las
+    réplicas de los baselines, el reglamento y el software. Incluye una tabla de procedencia por archivo.
+  - Se agregó la cronología del origen en `vision_carril.md` y la procedencia verificada en E12 del
+    registro.
+  - **`CLAUDE.md`:** todo lo que se tome de otra fuente se registra en `fuentes_y_repositorios.md`.
+- **Sigue sin registro:** por qué los pasos 34–35 usaron el RSI3 de B-Human en lugar del URDF oficial que
+  decía el plan.
+- **Errores en este paso:** ninguno.
+- **Siguiente:** paso 41.

@@ -11,6 +11,12 @@ Capítulo para el paper sobre cómo el NAO **ve el carril con su propia cámara*
 
 Los errores de este capítulo están en el [registro](registro_errores.md): E24–E27 y E30–E37.
 
+**Origen.** La cámara nació en **este repo**: el 9 de octubre Daniel abrió la rama `fase-p-camara-carril` sobre
+nuestro commit `4ca136d`. Esa misma noche la separó en su propio repo, `nao_linea`, con copias idénticas de
+nuestro `src/`, `checkpoints/` y `assets/`. El 10 de octubre agregó las caminatas de los baselines y la carrera
+de 3 carriles, y ese mismo día se integró de vuelta en nuestro `main` (paso 40). Cronología verificada en
+[`fuentes_y_repositorios.md`](fuentes_y_repositorios.md#4-nao_linea-la-visión-de-carril-que-salió-de-este-repo).
+
 ---
 
 ## 1. El problema: la IMU no ve el carril
