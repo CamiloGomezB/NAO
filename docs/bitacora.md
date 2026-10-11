@@ -673,3 +673,36 @@ sin salida y cómo se resolvieron. Tiene tres usos:
     color, y la meta en los 3 carriles;
   - **ventana "Lo que ve cada NAO":** las cámaras detectando las líneas en vivo.
 - **Siguiente:** revisión del usuario en vivo.
+
+### 2026-10-10 — Paso 40 cerrado y ajuste del plan del RL
+- **Autor:** Camilo, con Claude Code.
+- **Paso 40 aprobado por el usuario.** Funcionan bien:
+  - los 3 carriles en el visor;
+  - la cámara;
+  - la distancia `d` y el ángulo `psi`;
+  - la fricción, con μ = 1.0 en la demo.
+- **Indicación:** el RL tiene que ir variando esos valores (fricción y pesos) y tener en cuenta los pesos
+  importantes de las faltas del reglamento (`docs/plan_rl_carrera.md`, secciones 1.2 y 6.4) y los nuevos
+  `d` y `psi` de la cámara, para que no nos descalifiquen.
+- **Revisión del plan.** Ya estaban cubiertos:
+  - fricción aleatoria en todo entrenamiento (paso 47, hecho);
+  - pesos de las faltas con rangos para el barrido (pasos 55 y 60);
+  - `d` y `psi` en la observación (paso 53);
+  - selección de agentes con filtro duro de faltas (sección 11.4).
+- **Huecos encontrados y corregidos en el plan:**
+  1. **Faltaba un paso para correr la política nueva en los 3 carriles con su propia cámara.** Hoy el RL
+     de `carrera_vivo` y del benchmark usa el truco del giroscopio. Nuevo **paso 58b**. La selección final
+     de agentes usa este mismo camino.
+  2. **No estaba definido cómo llegan `d` y `psi` a la política.** Nueva **sección 6.7 del diseño**:
+     - signos (+ = robot a la izquierda o girado a la izquierda);
+     - última medición cruda, mantenida entre fotos a 10 Hz;
+     - `válido` con una ventana de 300 ms;
+     - la misma señal en entrenamiento, demo y robot.
+
+     El paso 57 ahora exige comprobar que la cámara simulada y la renderizada dan la misma señal.
+  3. **Los pesos vivían solo en el documento.** El paso 55 ahora pide un solo archivo
+     `configs/carrera/pesos.yaml`, con los pesos iniciales y los rangos del barrido, del que leen el entorno
+     y el lanzador.
+- **Ruta crítica del RL, agregada al plan:** 41 → 46 → 53–58 → 58b → 59 → 60–63 → 77–78. Los demás pasos se
+  intercalan mientras haya entrenamientos corriendo.
+- **Siguiente:** paso 41, contrato v1 en código.

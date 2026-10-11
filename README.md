@@ -6,7 +6,7 @@ articulares programadas a mano.
 
 ## Proyecto actual: Carrera Individual — Copa NAO CCM MX 2026
 
-> **Estado:** Fase I, **paso 40 de 80** (integrar la visión de carril y las 3 caminatas de Daniel).
+> **Estado:** Fase I, **paso 41 de 80** (contrato v1 en código). Paso 40 terminado: los 3 carriles con cámara se ven y funcionan en MuJoCo.
 > Actualizado el 2026-10-10.
 >
 > - Plan: [`PLAN.md`](PLAN.md)

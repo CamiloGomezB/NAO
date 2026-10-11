@@ -319,6 +319,29 @@ garantiza que, sea cual sea el peso, ninguna política con faltas pase.
 - **Tamaño de la red:** 256×256 de partida. Se baja a 128×128 o 64×64 si la inferencia en Python 2.7 a bordo
   no cabe en los 24 ms, junto con la visión **(a medir en el paso 69)**.
 
+### 6.7 Cómo llegan `d` y `psi` a la política (igual en entrenamiento, demo y robot)
+
+**La regla de oro.** La política tiene que recibir **la misma señal** en los tres lugares:
+- el entrenamiento, con la cámara simulada;
+- el demo y la selección de agentes, con la cámara renderizada (`demo/caminatas/vision_camara.py`);
+- el NAO real, con `robot/race_nao.py`.
+
+Si la señal cambia de un lugar a otro, la política aprende con una y corre con otra. Ese es el camino más
+corto a salirse del carril.
+
+| Elemento | Convención |
+|---|---|
+| `d` | Distancia del robot (punto entre los pies) al **centro del carril**, en metros. **+ = robot a la izquierda del centro** |
+| `psi` | Ángulo del robot respecto a las líneas, en radianes. **+ = robot girado a la izquierda** |
+| `válido` | 1 si hubo una medición con al menos una línea en los últimos 300 ms; 0 si no |
+| Frecuencia | Una medición nueva cada 100 ms (10 FPS de la cámara). Entre fotos se **mantiene** el último valor |
+| Filtro | La política recibe la **última medición cruda**, sin filtrar, y aprende sola a promediar. El filtro de `VisionCamara` (α = 0.5) es solo para los baselines y la demo |
+| Sin medición | Se mantiene el último valor y `válido = 0`. Al principio del episodio, `d = psi = 0` y `válido = 0` hasta la primera foto |
+
+**Recompensa y selección usan los valores reales.** La recompensa (sección 6.4) usa la `d` y la `psi` reales
+del simulador. La política solo ve las estimadas. La selección de agentes mide las faltas con la posición
+real de los pies. Así una política no puede "engañar" a su propia visión.
+
 ---
 
 ## 7. Cámara simulada con ruido gaussiano

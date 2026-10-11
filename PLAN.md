@@ -3,7 +3,7 @@
 Stack: **MuJoCo + Stable-Baselines3 (PPO)**, Windows nativo, entrenamiento en CPU.
 Regla: cada paso termina con una **confirmación**, una **entrada en la bitácora** ([`docs/bitacora.md`](docs/bitacora.md)) y un **commit**.
 
-> **Paso actual: 40** · Objetivo vigente: **caminata por RL para la Carrera Individual de la Copa NAO CCM MX 2026 (3 de noviembre de 2026)**,
+> **Paso actual: 41** · Objetivo vigente: **caminata por RL para la Carrera Individual de la Copa NAO CCM MX 2026 (3 de noviembre de 2026)**,
 > más rápida que las caminatas de **B-Human** y **NAOqi** (tres carriles de comparación), con visión de carril y portable al repo final **PenaltyStack**.
 > Diseño: [`docs/plan_rl_carrera.md`](docs/plan_rl_carrera.md) · Repo final: [`docs/integracion_penaltystack.md`](docs/integracion_penaltystack.md) · Historial, errores y soluciones: [`docs/bitacora.md`](docs/bitacora.md).
 
@@ -119,15 +119,21 @@ del equipo.
 > | 53–56 rectitud | 58 | | 72 cámara en el robot | 68 y 72 |
 > | 57–60 generaciones | 59–64 | | 73–76 cierre | 77–80 |
 
+**Ruta crítica del RL** (lo que hay que hacer en orden para tener la política de carrera):
+
+> 41 contrato → 46 valores del V6 → 53–58 entorno de carrera con cámara y faltas → 58b la política en los 3 carriles → 59 base → 60–63 los 100 agentes → 77–78 selección
+>
+> Los demás pasos (42, 43, 44, 45, 48b, 49, 50–52) se intercalan cuando haya un entrenamiento corriendo.
+
 ## Fase I — Organización e integración
 - [x] **39. Documentación y replanificación** (`CLAUDE.md`, bitácora, `docs/plan_rl_carrera.md`, `docs/integracion_penaltystack.md`, contrato de articulaciones en `third_party/penaltystack/`, README, este plan) — ✅ El compañero entiende el plan, el paso actual, el baseline y las condiciones de PenaltyStack sin preguntar
-- [~] **40. Integrar nao_linea en `main`**: visión de carril (`carril/`), escena MuJoCo de la pista con la cámara del NAO (`demo/build_scene.py`), demo con el RL actual (`demo/run_demo.py`), caminatas de los baselines y benchmark de 3 carriles (`demo/caminatas/`), kit del robot (`robot/`) y resultados. Sin `__pycache__`, `MUJOCO_LOG.TXT`, `.bundle` ni `.zip` — ✅ La demo con cámara y la carrera de 3 carriles corren en este PC con el RL actual; el usuario ve la cámara funcionando
+- [x] **40. Integrar nao_linea en `main`**: visión de carril (`carril/`), escena MuJoCo de la pista con la cámara del NAO (`demo/build_scene.py`), demo con el RL actual (`demo/run_demo.py`), caminatas de los baselines y benchmark de 3 carriles (`demo/caminatas/`), kit del robot (`robot/`) y resultados. Sin `__pycache__`, `MUJOCO_LOG.TXT`, `.bundle` ni `.zip` — ✅ La demo con cámara y la carrera de 3 carriles corren en este PC con el RL actual; el usuario ve la cámara funcionando
   - Hecho (2026-10-10): código integrado; pista, cámara y visión verificadas (`scripts/check_vision.py`: 100 % válidas, error medio 1.27 cm y 0.86°); caminatas de los baselines llegan a la meta.
   - ~~Bloqueado por Smart App Control~~ → resuelto el 2026-10-10: el usuario lo desactivó. Demo RL + cámara sin ventanas: solo RL se sale a 0.54 m; RL + visión llega en 24.2 s. Benchmark corto idéntico al de nao_linea.
   - 2026-10-10: el usuario vio que el visor no mostraba bien los 3 carriles. Se corrigió:
     - `run_demo.py --live` abre los 3 carriles con sus 3 robots, cada uno con su color y con su cámara real;
     - la meta está en los 3 carriles y hay una ventana con las 3 cámaras.
-  - **Falta:** que el usuario lo vea en vivo.
+  - 2026-10-10: el visor se veía roto por la GPU integrada AMD → los scripts piden la NVIDIA. **Aprobado por el usuario** el 2026-10-10: los 3 carriles, la cámara, `d`/`psi` y la fricción (μ = 1.0 en la demo) funcionan bien.
 - [ ] **41. Contrato v1 en código** (`src/race/contract.py`): orden de articulaciones de B-Human, ciclo de 24 ms, observación de 54 valores (incluye `d`, `psi` y válido de la cámara) armada desde un `frame` con el formato de PenaltyStack, y acción de 13 ángulos — ✅ Prueba automática: un `frame` de ejemplo produce la observación esperada y la acción vuelve con los nombres correctos
 - [ ] **42. Políticas compartidas en el repo** (`policies/carrera_vNN/`: modelo, normalización, config, métricas y README de la generación) — ✅ Desde un clon limpio se evalúa la misma política sin entrenar y se puede continuar desde ella
 - [ ] **43. Rendimiento de entrenamiento en este PC** (laptop Ryzen 7 5800H, el único equipo de entrenamiento): pasos/s con el modelo V6 y la fricción aleatoria — ✅ Pasos/s medidos y costo real del barrido de 100 agentes recalculado (sección 11.3 del diseño)
@@ -151,10 +157,11 @@ del equipo.
 ## Fase L — Entorno de carrera `NaoRace` con cámara (contrato v1)
 - [ ] **53. Observación de 54 valores** (IMU, rumbo, `d`, `psi`, válido, articulaciones, acción anterior, carga de los pies, reloj, `vx_cmd`) — ✅ `inspect_obs` en OK y coincide con el contrato del paso 41
 - [ ] **54. Acción de 13 ángulos cada 24 ms** + comando `vx_cmd` — ✅ `inspect_actions` en OK
-- [ ] **55. Recompensa con las faltas del reglamento** (sección 6.4 del diseño): salida de carril, caída y choque como terminales, barrera de margen, bono de meta y pesos configurables por YAML para el barrido — ✅ `inspect_reward` ordena bien los comportamientos: salirse siempre es peor que ir lento
+- [ ] **55. Recompensa con las faltas del reglamento** (sección 6.4 del diseño): salida de carril (−200), choque con otro robot (−400) y caída (−100) como terminales, barrera de margen a menos de 10 cm de la línea, centrado (`d`²) y rumbo (`psi`) del carril, bono de meta. **Pesos iniciales y rangos del barrido en un solo archivo** (`configs/carrera/pesos.yaml`), del que leen el entorno y el lanzador de los 100 agentes — ✅ `inspect_reward` ordena bien los comportamientos: salirse del carril siempre es peor que ir lento, y el YAML coincide con la tabla del diseño
 - [ ] **56. Episodio de carrera** (desde quieto, error de colocación, 0.5 s de medición de la visión, carril, meta, 30 s, fricción sorteada) — ✅ `check_env` en OK + video revisado por el usuario
-- [ ] **57. Cámara simulada**: `d` y `psi` reales + ruido gaussiano, retardo, pérdidas y mediciones malas a 10 Hz, con los σ de nao_linea y su rango hasta 3× — ✅ Prueba automática de la estadística del ruido, reproducible con semilla
+- [ ] **57. Cámara simulada**: `d` y `psi` reales + ruido gaussiano, retardo, pérdidas y mediciones malas a 10 Hz, con los σ de nao_linea y su rango hasta 3×, **con las mismas convenciones que la visión real** (sección 6.7 del diseño) — ✅ Prueba automática de la estadística del ruido, reproducible con semilla; en las mismas trayectorias, la señal simulada y la de `VisionCamara` (cámara renderizada) tienen el mismo signo, frecuencia y error dentro del rango
 - [ ] **58. Pérdida de rectitud simulada** (asimetrías, perturbaciones, deriva de la IMU, tramos sin visión) + prueba de rectitud de 100 episodios — ✅ Deriva sin visión y desvío con visión registrados
+- [ ] **58b. La política nueva en los 3 carriles**: en `carrera_vivo` y el benchmark, el RL recibe `d`, `psi` y válido **de su propia cámara** (`VisionCamara`), sin el truco del giroscopio; los baselines siguen igual — ✅ `run_demo.py --live` muestra el RL nuevo corriendo con su cámara junto a B-Human y NAOqi; la batería de selección (pasos 61–63) usa este mismo camino
 
 ## Fase M — Entrenamiento por población: 100 agentes
 - [ ] **59. Base común `carrera_v01`** con los pesos iniciales y fricción aleatoria — ✅ Cruza los 5 m sin caer ni salirse en la batería; fila en la tabla de generaciones
