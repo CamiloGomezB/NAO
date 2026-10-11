@@ -570,3 +570,34 @@ sin salida y cómo se resolvieron. Tiene tres usos:
 - **Siguiente:**
   - resolver el bloqueo de PyTorch (decisión del usuario, ver la entrada del paso 40);
   - después, pasos 41 (contrato v1), 44–46 (modelo V6) y 48b.
+
+### 2026-10-10 — Paso 40 (continuación): PyTorch desbloqueado, demo RL + cámara verificada
+- **Autor:** Camilo, con Claude Code (laptop Ryzen 7 5800H).
+- **Qué pasó:** el usuario **desactivó Smart App Control** de Windows. PyTorch 2.14.0 y Stable-Baselines3
+  vuelven a cargar. Se resuelve el bloqueo de la entrada del paso 40.
+- **Verificaciones con el RL actual** (`checkpoints/best_model.zip`, el del sprint inicial):
+  - **Demo RL + cámara sin ventanas** (`demo/run_demo.py --inicio-d 12 --inicio-psi 8`, robot 12 cm
+    corrido y 8° girado):
+    - **solo RL:** se sale del carril a los 2.8 s (0.54 m), con un desvío de 27.1 cm;
+    - **RL + visión:** mide de pie d = +12.3 cm y psi = +7.6° (los reales son +12.0 cm y +8.0°), se centra
+      a los 12.1 s (2.47 m) y **llega a la meta en 24.2 s**, con un desvío máximo de 15.2 cm.
+  - **Benchmark corto de 3 carriles** (`demo.caminatas.benchmark --rapido`: μ = 0.6 y 1.0, con y sin
+    visión, una semilla): **números idénticos a los de nao_linea**.
+
+    | Caminata, con visión | Tiempo en 5 m |
+    |---|---|
+    | Tipo B-Human | 16.2–16.9 s |
+    | RL | 24.3–24.5 s |
+    | Tipo NAOqi | 47.8–49.8 s |
+
+    Sin visión se salen: tipo B-Human con μ = 0.6 y tipo NAOqi con μ = 1.0. La integración reproduce los
+    resultados originales.
+  - **Entrenamiento de humo con fricción aleatoria:** `configs/ppo_brazos_friccion.yaml`, 40,000 pasos,
+    4 entornos.
+    - Corre a ~1,570 pasos/s y guarda el modelo.
+    - Una config con fricción fija (`configs/ppo.yaml`) se rechaza sin crear el run.
+    - `src.evaluate` informa la fricción aleatoria de cada episodio.
+    - El modelo de humo se cae, como se espera con tan pocos pasos.
+- **Estado del paso:** `[~]`. Falta la revisión visual del usuario de la demo en vivo y de la carrera de 3
+  carriles.
+- **Siguiente:** revisión visual del usuario; después, pasos 41, 44–46 y 48b.

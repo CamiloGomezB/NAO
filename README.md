@@ -54,10 +54,10 @@ Se actualiza con cada resultado:
 
 | Carril | Caminata | Tiempo 5 m (sim) | Velocidad (sim) | Faltas (sim) | Tiempo 5 m (real) | Faltas (real) | Fuente |
 |---|---|---|---|---|---|---|---|
-| **Baseline 1: NAOqi** | Réplica tipo NAOqi (ZMP), con visión | 45–50 s | ~0.10 m/s | 0 | pendiente | pendiente | nao_linea, sin regenerar (paso 51) |
-| **Baseline 2: B-Human** | Réplica tipo B-Human (parámetros de PenaltyStack), con visión | 16.2–18.3 s | ~0.30 m/s | 0 | pendiente | pendiente | nao_linea, sin regenerar (paso 51) |
+| **Baseline 1: NAOqi** | Réplica tipo NAOqi (ZMP), con visión | 47.8–49.8 s | ~0.10 m/s | 0 | pendiente | pendiente | Reproducido en este repo (benchmark corto, 2026-10-10); completo en el paso 51 |
+| **Baseline 2: B-Human** | Réplica tipo B-Human (parámetros de PenaltyStack), con visión | 16.2–16.9 s | ~0.30 m/s | 0 | pendiente | pendiente | Reproducido en este repo (benchmark corto, 2026-10-10); completo en el paso 51 |
 | **Baseline 2: B-Human** | WalkingEngine original (PenaltyStack) | pendiente (~18.7 s teórico) | — | — | — | — | Pasos 50 y 73 |
-| RL | `v2_brazos` del sprint inicial, con visión (truco del giroscopio) | 24.2–24.3 s | ~0.20 m/s | 0 | — | — | nao_linea, sin regenerar (paso 51) |
+| RL | `v2_brazos` del sprint inicial, con visión (truco del giroscopio) | 24.3–24.5 s | ~0.20 m/s | 0 | — | — | Reproducido en este repo (benchmark corto, 2026-10-10); completo en el paso 51 |
 | RL | `carrera_v01` y siguientes | pendiente | — | — | — | — | Fase M |
 
 **Cambiar los colores de la pista** (los avisan poco antes del evento): `uv run python scripts/cambiar_colores.py --piso <color> --linea <color>`.
