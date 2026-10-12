@@ -1,0 +1,52 @@
+Continuando desde runs/barrido_ronda1_074/final_model.zip (1,007,616 pasos previos)
+Entrenando 'barrido_ronda2_074': 5,000,000 pasos, 16 entornos, semilla 2013267892
+Resultados en: runs\barrido_ronda2_074
+[  0.11M / 5.0M]  3531 pasos/s | retorno medio   2219.7 | episodio medio 24.46 s | transcurrido   0.5 min | faltan ~ 23.1 min
+[  0.21M / 5.0M]  3499 pasos/s | retorno medio   2474.5 | episodio medio 25.57 s | transcurrido   1.0 min | faltan ~ 22.8 min
+[  0.32M / 5.0M]  3487 pasos/s | retorno medio   2379.1 | episodio medio 25.16 s | transcurrido   1.5 min | faltan ~ 22.4 min
+[  0.43M / 5.0M]  3474 pasos/s | retorno medio   2422.0 | episodio medio 25.58 s | transcurrido   2.0 min | faltan ~ 21.9 min
+[  0.53M / 5.0M]  3470 pasos/s | retorno medio   2626.5 | episodio medio 25.36 s | transcurrido   2.6 min | faltan ~ 21.5 min
+[  0.64M / 5.0M]  3465 pasos/s | retorno medio   2393.6 | episodio medio 24.61 s | transcurrido   3.1 min | faltan ~ 21.0 min
+[  0.75M / 5.0M]  3453 pasos/s | retorno medio   2566.2 | episodio medio 25.95 s | transcurrido   3.6 min | faltan ~ 20.5 min
+[  0.85M / 5.0M]  3452 pasos/s | retorno medio   2612.1 | episodio medio 25.67 s | transcurrido   4.1 min | faltan ~ 20.0 min
+[  0.96M / 5.0M]  3453 pasos/s | retorno medio   2861.6 | episodio medio 27.79 s | transcurrido   4.6 min | faltan ~ 19.5 min
+[  1.05M / 5.0M]  3409 pasos/s | retorno medio   2504.8 | episodio medio 24.83 s | transcurrido   5.1 min | faltan ~ 19.3 min
+[  1.16M / 5.0M]  3413 pasos/s | retorno medio   2622.8 | episodio medio 25.52 s | transcurrido   5.6 min | faltan ~ 18.8 min
+[  1.26M / 5.0M]  3415 pasos/s | retorno medio   2787.1 | episodio medio 26.58 s | transcurrido   6.2 min | faltan ~ 18.2 min
+[  1.37M / 5.0M]  3418 pasos/s | retorno medio   2526.7 | episodio medio 25.16 s | transcurrido   6.7 min | faltan ~ 17.7 min
+[  1.47M / 5.0M]  3419 pasos/s | retorno medio   2208.5 | episodio medio 23.07 s | transcurrido   7.2 min | faltan ~ 17.2 min
+[  1.58M / 5.0M]  3421 pasos/s | retorno medio   2197.7 | episodio medio 22.92 s | transcurrido   7.7 min | faltan ~ 16.7 min
+[  1.69M / 5.0M]  3422 pasos/s | retorno medio   2397.3 | episodio medio 24.91 s | transcurrido   8.2 min | faltan ~ 16.1 min
+[  1.79M / 5.0M]  3423 pasos/s | retorno medio   2473.2 | episodio medio 25.22 s | transcurrido   8.7 min | faltan ~ 15.6 min
+[  1.90M / 5.0M]  3425 pasos/s | retorno medio   2768.8 | episodio medio 26.78 s | transcurrido   9.2 min | faltan ~ 15.1 min
+[  2.01M / 5.0M]  3404 pasos/s | retorno medio   2472.5 | episodio medio 25.20 s | transcurrido   9.8 min | faltan ~ 14.7 min
+[  2.11M / 5.0M]  3407 pasos/s | retorno medio   2637.7 | episodio medio 26.77 s | transcurrido  10.3 min | faltan ~ 14.1 min
+[  2.23M / 5.0M]  3414 pasos/s | retorno medio   2814.9 | episodio medio 26.63 s | transcurrido  10.9 min | faltan ~ 13.5 min
+[  2.33M / 5.0M]  3419 pasos/s | retorno medio   2954.2 | episodio medio 27.13 s | transcurrido  11.4 min | faltan ~ 13.0 min
+[  2.44M / 5.0M]  3424 pasos/s | retorno medio   2743.5 | episodio medio 26.06 s | transcurrido  11.9 min | faltan ~ 12.5 min
+[  2.55M / 5.0M]  3429 pasos/s | retorno medio   2795.3 | episodio medio 26.48 s | transcurrido  12.4 min | faltan ~ 11.9 min
+[  2.65M / 5.0M]  3433 pasos/s | retorno medio   2919.3 | episodio medio 26.69 s | transcurrido  12.9 min | faltan ~ 11.4 min
+[  2.76M / 5.0M]  3436 pasos/s | retorno medio   2604.3 | episodio medio 24.66 s | transcurrido  13.4 min | faltan ~ 10.9 min
+[  2.87M / 5.0M]  3440 pasos/s | retorno medio   2936.1 | episodio medio 27.40 s | transcurrido  13.9 min | faltan ~ 10.3 min
+[  2.97M / 5.0M]  3444 pasos/s | retorno medio   2905.7 | episodio medio 27.30 s | transcurrido  14.4 min | faltan ~  9.8 min
+[  3.07M / 5.0M]  3436 pasos/s | retorno medio   2773.3 | episodio medio 27.00 s | transcurrido  14.9 min | faltan ~  9.4 min
+[  3.18M / 5.0M]  3439 pasos/s | retorno medio   2625.2 | episodio medio 25.55 s | transcurrido  15.4 min | faltan ~  8.8 min
+[  3.28M / 5.0M]  3441 pasos/s | retorno medio   2585.0 | episodio medio 25.51 s | transcurrido  15.9 min | faltan ~  8.3 min
+[  3.39M / 5.0M]  3444 pasos/s | retorno medio   2538.2 | episodio medio 25.28 s | transcurrido  16.4 min | faltan ~  7.8 min
+[  3.50M / 5.0M]  3446 pasos/s | retorno medio   2470.7 | episodio medio 25.46 s | transcurrido  16.9 min | faltan ~  7.3 min
+[  3.60M / 5.0M]  3448 pasos/s | retorno medio   2117.8 | episodio medio 23.24 s | transcurrido  17.4 min | faltan ~  6.7 min
+[  3.71M / 5.0M]  3451 pasos/s | retorno medio   2312.3 | episodio medio 24.83 s | transcurrido  17.9 min | faltan ~  6.2 min
+[  3.82M / 5.0M]  3453 pasos/s | retorno medio   2241.0 | episodio medio 24.06 s | transcurrido  18.4 min | faltan ~  5.7 min
+[  3.92M / 5.0M]  3454 pasos/s | retorno medio   1874.4 | episodio medio 23.18 s | transcurrido  18.9 min | faltan ~  5.2 min
+[  4.02M / 5.0M]  3444 pasos/s | retorno medio   2180.8 | episodio medio 23.65 s | transcurrido  19.5 min | faltan ~  4.7 min
+[  4.13M / 5.0M]  3446 pasos/s | retorno medio   2388.1 | episodio medio 25.46 s | transcurrido  20.0 min | faltan ~  4.2 min
+[  4.24M / 5.0M]  3448 pasos/s | retorno medio   2390.7 | episodio medio 25.35 s | transcurrido  20.5 min | faltan ~  3.7 min
+[  4.34M / 5.0M]  3450 pasos/s | retorno medio   2665.1 | episodio medio 25.81 s | transcurrido  21.0 min | faltan ~  3.2 min
+[  4.45M / 5.0M]  3452 pasos/s | retorno medio   2750.7 | episodio medio 26.32 s | transcurrido  21.5 min | faltan ~  2.7 min
+[  4.56M / 5.0M]  3454 pasos/s | retorno medio   2916.5 | episodio medio 27.09 s | transcurrido  22.0 min | faltan ~  2.1 min
+[  4.67M / 5.0M]  3456 pasos/s | retorno medio   2404.9 | episodio medio 23.53 s | transcurrido  22.5 min | faltan ~  1.6 min
+[  4.78M / 5.0M]  3458 pasos/s | retorno medio   2739.9 | episodio medio 25.44 s | transcurrido  23.0 min | faltan ~  1.1 min
+[  4.88M / 5.0M]  3460 pasos/s | retorno medio   2733.8 | episodio medio 25.60 s | transcurrido  23.5 min | faltan ~  0.6 min
+[  4.99M / 5.0M]  3461 pasos/s | retorno medio   2787.3 | episodio medio 25.98 s | transcurrido  24.0 min | faltan ~  0.1 min
+[  5.01M / 5.0M]  3453 pasos/s | retorno medio   2916.6 | episodio medio 26.80 s | transcurrido  24.2 min | faltan ~  0.0 min
+Listo. Modelo final: runs\barrido_ronda2_074\final_model.zip

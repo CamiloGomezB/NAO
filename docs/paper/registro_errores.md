@@ -91,6 +91,8 @@ para la visión, el trabajo de Daniel en [danielpaya/nao_linea](https://github.c
 | E50 | 2026-10-11 | 56/59b | RL | La política no se recupera si arranca torcida ≥ 8°: la IMU le pide mantener el ángulo equivocado | ⏳ 58c |
 | E51 | 2026-10-11 | 58c | Proceso | Prueba nueva de `check_contract.py` comparaba ángulos con `==` y falló por redondeo | ✅ |
 | E52 | 2026-10-11 | 59c | RL | `carrera_v03` no pasa todas las salidas malas con perturbaciones: 5 caídas en el mismo caso extremo | ℹ️ aceptado; opción 59d |
+| E53 | 2026-10-11 | 55b | RL | El peso de salida que garantiza "salirse es peor que ir lento" depende de la política | ℹ️ filtro duro |
+| E54 | 2026-10-12 | 62 | RL / Proceso | Ronda 2: 5M pasos más empeoraron al primer agente; al relanzar, un entrenamiento cortado dejó un modelo vacío | ✅ |
 
 ---
 
@@ -920,3 +922,61 @@ para la visión, el trabajo de Daniel en [danielpaya/nao_linea](https://github.c
   - se acepta el de 5M, porque una salida tan torcida (25°) no es realista con colocación a mano;
   - queda como opción un **paso 59d**: más entrenamiento enfocado en arranques muy girados con fricción baja, o
     limitar el giro inicial (rampa de `vx_cmd` en el primer segundo).
+
+### E53 — El peso de salida que garantiza "salirse es peor que ir lento" depende de la política
+- **Fecha / paso:** 2026-10-11, paso 55b.
+- **Qué pasó:** se subió `salida_carril` de −200 a −300 (en E47 hacía falta < −271, medido con `carrera_v01`). Al
+  repetir la prueba, `carrera_v01` ahora pide < −452:
+  ```
+  B lento y limpio:  retorno    367.6 (descontado   89.4), 4.0 m en 30 s, meta None, falta None
+     FALLA salirse antes de la meta siempre es peor que ir lento (sin descontar): falla para salidas en [9.0, 10.0, 10.23] s
+     (info) peso de salida_carril actual -300; para cumplir sin descontar hace falta menos de -452
+  ```
+  Con `carrera_v03` da OK:
+  ```
+  B lento y limpio:  retorno   1263.7 (descontado   98.3), 4.8 m en 30 s, meta None, falta None
+     OK    salirse antes de la meta siempre es peor que ir lento (sin descontar)
+  RESULTADO: OK
+  ```
+- **Causa:** el umbral es (lo que acumula yendo rápido hasta la meta) − (lo que acumula yendo lento 30 s). La segunda
+  parte depende de la política:
+  - `carrera_v01` ahora se evalúa con el rumbo objetivo `carril` (paso 58c, el nuevo default), y su caminata lenta
+    acumula 368 (antes, 547);
+  - `v03` acumula 1264.
+- **Conclusión:**
+  - ningún peso fijo garantiza el orden para toda política;
+  - la prueba de la recompensa se corre con la política que se va a usar (`--modelo`, default `carrera_v03`);
+  - la garantía real de "0 salidas" es el **filtro duro** de la selección (sección 11.4).
+
+### E54 — Ronda 2: 5M pasos más empeoraron al primer agente; al relanzar, un entrenamiento cortado dejó un modelo vacío
+- **Fecha / paso:** 2026-10-12, 00:07–00:15, paso 62.
+- **1. El primer agente empeoró con el entrenamiento extra.** `agente_045` era el mejor de la ronda 1 (11.43 s). Con
+  5M pasos más, en el modelo final:
+  ```
+  agente_045: descartado faltas=6 puntaje=None (1557 s)
+  ```
+  Las 6 faltas son caídas en las salidas torcidas de +25° (μ 0.4 y 1.0), y el tiempo medio subió a 13.3 s. Es el mismo
+  patrón de E48: con tasa de aprendizaje constante, la política oscila y el último modelo no es el mejor.
+  - **Solución:** `scripts/ronda_siguiente.py` ahora evalúa **cada checkpoint** (1M, 2M, …, 5M) con la batería
+    completa y se queda con el mejor según la sección 11.4. Cuesta ~40 s por checkpoint.
+  - Con eso, el mismo agente:
+    ```
+       agente_045 1M: faltas=9 puntaje=None
+       agente_045 2M: faltas=5 puntaje=None
+       agente_045 3M: faltas=4 puntaje=None
+       agente_045 4M: faltas=0 puntaje=12.354939078173288
+       agente_045 5M: faltas=7 puntaje=None
+    agente_045: PASA (checkpoint 4M) faltas=0 puntaje=12.354939078173288 (119 s)
+    ```
+- **2. Al relanzar, falló el segundo agente.** Para aplicar el cambio se detuvo la ronda con `taskkill /T /F` cuando
+  `agente_026` recién empezaba. Su `src.train` alcanzó a crear `final_model.zip` **vacío (0 bytes)** y ningún
+  checkpoint. Al relanzar, el script vio que el modelo existía, no reentrenó y no tuvo checkpoints que evaluar:
+  ```
+    File "C:\Users\camil\Documents\GitHub\NAO\scripts\ronda_siguiente.py", line 116, in main
+      pasos_el, ck_el, filas, p = min(evals, key=clave)
+                                  ^^^^^^^^^^^^^^^^^^^^^
+  ValueError: min() iterable argument is empty
+  ```
+  - **Solución:** un entrenamiento solo es válido si el modelo final no está vacío y hay checkpoints; si no, se borra y
+    se repite. Sin checkpoints se evalúa el modelo final.
+  - Se relanzó a las 00:12; los logs de los intentos quedaron en `runs/barrido_ronda2_intento{1,2}.log`.

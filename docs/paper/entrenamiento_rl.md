@@ -505,6 +505,53 @@ Entrenar más de 5M volvió a oscilar (15M y 20M peores), como en E48.
 
 Lo de E49 sigue igual, como era de esperar: no se cambió nada de eso.
 
+## 12e. Entrenamiento por población: ronda 1 de 100 agentes (paso 61)
+
+**Cómo:** `scripts/barrido.py --nombre ronda1 --agentes 100 --pasos 1000000 --eval-semillas 2`.
+- Cada agente parte de `policies/carrera_v03` con `configs/carrera_v03.yaml` y sortea, con su semilla:
+  - los 14 pesos dentro de `rangos` (`salida_carril` en [−400, −300] desde el paso 55b);
+  - fricción mínima U(0.3, 0.5) y máxima U(1.0, 1.3);
+  - `vx_max` U(0.40, 0.60);
+  - σ máximos de la cámara U(3, 6) cm y U(3, 5)°;
+  - semilla de PPO.
+- **Batería corta,** con visión, perturbaciones y `vx_cmd` 0.45:
+  - μ 0.4–1.2 × 2 semillas;
+  - 4 salidas torcidas a μ 0.6.
+- **Puntaje (sección 11.4):** filtro duro y luego tiempo medio + 1σ.
+- **Datos:** `results/barridos/ronda1/` (config, log y resultado de cada agente; `tabla.md`, `analisis.md`,
+  `mejores.json`, `base_carrera_v03.json`).
+
+| Resultado | Valor |
+|---|---|
+| Agentes | 100 (1M pasos cada uno desde `carrera_v03`), 14:36 → 23:40 (9 h 04 min, ~5.4 min por agente), 0 errores |
+| Pasan el filtro duro (0 faltas en 14 corridas) | **70/100** |
+| Superan a la base (12.41 s) | **49** |
+| Puntaje de los que pasan | mejor **11.43 s** (`agente_045`), mediana 12.26 s, peor 13.54 s |
+| Faltas de los descartados (48 corridas) | 26 caídas y 5 salidas en las salidas torcidas; 13 caídas y 5 salidas en la batería normal |
+
+**Qué parámetros se asocian a un mejor puntaje** (Spearman entre los 70 que pasan; negativo = valor más alto, menos
+tiempo):
+
+| Parámetro | Media, pasan (70) | Media, descartados (30) | Media, 20 mejores | Spearman con el puntaje |
+|---|---|---|---|---|
+| `vx_max` | 0.515 | 0.501 | **0.535** | **−0.28** |
+| peso `seguimiento_vx` | 1.26 | 1.27 | **1.37** | **−0.23** |
+| peso `inclinacion` | −2.74 | −2.63 | −2.46 | **−0.23** |
+| peso `rumbo` | 0.591 | 0.609 | 0.58 | **+0.22** |
+| `friccion_max` | 1.14 | 1.15 | 1.14 | +0.15 |
+| peso `caida` | −171 | −188 | −191 | +0.11 |
+| peso `patron_marcha` | 0.584 | 0.574 | 0.635 | −0.10 |
+| Los otros 11 | casi iguales | casi iguales | — | \|ρ\| ≤ 0.09 |
+
+**Lectura:**
+- **No hay un peso que domine.** La correlación más fuerte es de 0.28: entrenar pidiendo más velocidad (`vx_max`) y
+  premiarla más (`seguimiento_vx`) da algo más de velocidad; más peso al rumbo, algo menos.
+- Las medias de los que pasan y de los descartados son casi iguales en todos los parámetros. **Pasar o no pasar el
+  filtro no depende de los pesos** sino, sobre todo, de la variación de cada entrenamiento (semilla) y del ruido de
+  una batería de solo 14 corridas.
+- Con 1M pasos desde una base fuerte, los pesos apenas alcanzan a mover la política. La ronda 2 (5M pasos y batería
+  de 44 corridas) dirá si las diferencias se sostienen.
+
 ## 13. Fallos y callejones de este entrenamiento
 
 | ID | Qué pasó | Qué se hizo |
@@ -518,6 +565,8 @@ Lo de E49 sigue igual, como era de esperar: no se cambió nada de eso.
 | E50 | No se recupera si arranca torcida ≥ 8°: la IMU le pide mantener el ángulo con que arrancó | Paso 58c: rumbo objetivo = dirección del carril medida por la cámara al arrancar |
 | E51 | Prueba de `check_contract.py` comparaba ángulos con `==` | Tolerancia |
 | E52 | `v03`: 5 caídas en un solo caso extremo de salida mala con perturbaciones (−25°, μ 0.4) | Aceptado; opción 59d |
+| E53 | El peso de salida que garantiza "salirse es peor que ir lento" depende de la política | Filtro duro; prueba con la política que se usa |
+| E54 | Ronda 2: el modelo final de un agente empeoró con 5M pasos más (6 caídas); su checkpoint de 4M pasa | Se evalúa cada checkpoint y se elige el mejor |
 
 Detalle y salidas de consola en [`registro_errores.md`](registro_errores.md).
 

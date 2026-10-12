@@ -456,6 +456,16 @@ noviembre de 2026.
   - batería grande 100/100 en 12.8 s;
   - salidas malas 70/70 sin perturbaciones y 135/140 con ellas (5 caídas en un solo caso extremo, E52).
 
+### Paso 55b — Castigo de salida de carril −300 (2026-10-11)
+- **Qué se hizo:** `salida_carril` −300 y rango [−400, −300]; prueba de orden con `--modelo`.
+- **Verificación:** OK con `carrera_v03`; con `v01` haría falta < −452 (E53: el umbral depende de la política).
+
+### Paso 61 — Ronda 1: 100 agentes (2026-10-11)
+- **Qué se hizo:** 100 agentes de 1M pasos desde `carrera_v03`, con pesos, fricción, velocidad y ruido de cámara
+  sorteados, y batería corta (14 corridas).
+- **Resultado:** 70/100 pasan; 49 superan a la base; mejor 11.43 s contra 12.41 s. Ningún peso domina (|ρ| ≤ 0.28).
+- **Datos:** `results/barridos/ronda1/`.
+
 ## Trabajo de documentación (sin número de paso, 2026-10-10)
 
 Pedido por el usuario para el paper. Commits `441dcb0`, `a266095` y el de la revisión previa al paso 41.

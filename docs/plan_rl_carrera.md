@@ -75,7 +75,7 @@ diseño del sistema.
 
 | Falta (reglamento 3.2.6) | Sanción | En el entrenamiento (recompensa) | En la selección de agentes | En el diseño |
 |---|---|---|---|---|
-| **Salir del carril** (un pie pisa fuera de las líneas) | Retiro inmediato, carrera anulada | **Termina el episodio** con castigo grande (−200 inicial) + **barrera** que castiga acercarse a la línea a menos de 10 cm | Una salida en la batería de pruebas = agente **descartado** | La cámara mide `d` y `psi` para corregir antes de llegar a la línea |
+| **Salir del carril** (un pie pisa fuera de las líneas) | Retiro inmediato, carrera anulada | **Termina el episodio** con castigo grande (−300 desde el paso 55b; −200 al inicio) + **barrera** que castiga acercarse a la línea a menos de 10 cm | Una salida en la batería de pruebas = agente **descartado** | La cámara mide `d` y `psi` para corregir antes de llegar a la línea |
 | **Provocar un choque contra otro robot** | **Descalificación del equipo** | Solo puede pasar **saliendo del carril**, así que la misma terminación lo previene antes. El valor de referencia es el doble que salir del carril (−400) | Se prueba con **robots vecinos** en los carriles de al lado (escena de 3 carriles). Un contacto = agente **descartado**, sin importar su tiempo | — |
 | **Comunicación externa o control remoto** | Descalificación de la prueba | **No es un peso**: la política no tiene ninguna acción para comunicarse | — | **Imposible por diseño:** solo sensores propios, todo corre a bordo, sin Wi-Fi. Se verifica con la lista de chequeo del paso 76 |
 | Caerse (no es falta, pero no llega) | Sin tiempo, se mide distancia | **Termina el episodio** con castigo (−100 inicial) | Una caída en la batería = agente **descartado** | Paro de seguridad por inclinación a bordo |
@@ -299,8 +299,8 @@ tobillos hacia adentro a la vez, los pies se cruzan en el 2.2 % de las acciones 
 | | **Barrera de margen** | ((0.10 − margen)/0.10)² cuando el pie está a menos de 10 cm de la línea | **−5.0** | −1 a −20 |
 | | Velocidad lateral | vy² | −10 | −2 a −20 |
 | | Velocidad de giro | ωz² | −0.5 | −0.1 a −2 |
-| **Faltas** (terminan el episodio) | **Salida de carril** | Un pie toca la línea | **−200** | −50 a −400 |
-| | **Choque con otro robot** | Referencia: el doble de una salida. En la práctica la salida lo previene antes; se mide en la selección | **−400** | 2 × salida |
+| **Faltas** (terminan el episodio) | **Salida de carril** | Un pie toca la línea | **−300** (−200 hasta el paso 55b) | −300 a −400 (antes −50 a −400) |
+| | **Choque con otro robot** | Referencia: el doble de una salida. En la práctica la salida lo previene antes; se mide en la selección | **−600** (−400 hasta el paso 55b) | 2 × salida |
 | | **Caída** | Torso bajo, inclinado o una parte que no sea el pie toca el suelo | **−100** | −50 a −300 |
 | **Estabilidad y robot real** | Patrón de marcha | Pies que coinciden con el reloj | +0.5 | 0 – 1.0 |
 | | Vivo | Constante mientras no cae | +0.1 | fijo |
@@ -516,12 +516,32 @@ Cada agente sortea su configuración dentro de los rangos de la sección 6.4:
 
 Cada configuración se guarda con el agente.
 
+**Lo que realmente sortea `scripts/barrido.py` en la ronda 1 (paso 61, 2026-10-11).** Difiere de la lista de
+arriba, que era el plan:
+- **pesos:** uniforme dentro de `rangos` de `configs/carrera/pesos.yaml` (14 pesos; choque_robot = 2 × salida; vivo,
+  altura y torque fijos);
+- **fricción:** mínimo U(0.3, 0.5), máximo U(1.0, 1.3), con la asimetría de la base (0.1);
+- **velocidad máxima pedida:** U(0.40, 0.60) m/s (rango de `vx_cmd` [0.15, máximo]);
+- **ruido de la cámara:** σ_d máximo U(3, 6) cm y σ_psi máximo U(3, 5)°; apagones y episodios sin cámara, los de la
+  base;
+- **semilla** de PPO;
+- **no se varía el período de marcha** (se queda en 0.5 s), porque la base ya está entrenada con ese reloj.
+
+**Base:** `policies/carrera_v03` con `configs/carrera_v03.yaml` (colocación amplia y rumbo `carril`).
+
+**Batería corta, con visión y perturbaciones, `vx_cmd` 0.45:**
+- μ 0.4, 0.6, 0.8, 1.0 y 1.2 × 2 semillas, con la colocación del benchmark;
+- 4 salidas torcidas a μ 0.6: (+10 cm, +15°), (−10 cm, −15°), (0, +25°) y (0, −25°).
+
+Puntaje: sección 11.4.
+
 ### 11.2 Base común y rondas
 
 Entrenar 100 agentes desde cero es caro: cada uno tarda ~0.5M pasos solo en aprender a no caerse. Por eso:
 
 1. **Base común** `carrera_v01`: un entrenamiento largo con los pesos iniciales y fricción aleatoria.
-   Camina, cruza los 5 m y usa la cámara.
+   Camina, cruza los 5 m y usa la cámara. **En la práctica** (2026-10-11), la base de la ronda 1 es `carrera_v03`: `v01` →
+   `v02` (pérdida de visión) → `v03` (salidas torcidas).
 2. **Ronda 1:** 100 agentes parten de la base y se ajustan ~1M pasos cada uno. Se evalúan con una batería
    corta y pasan los **20 mejores**.
 3. **Ronda 2:** los 20 siguen ~5M pasos. Se evalúan con la batería completa y pasan los **5 mejores**.

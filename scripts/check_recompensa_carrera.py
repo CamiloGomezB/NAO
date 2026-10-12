@@ -1,6 +1,7 @@
 """Orden de comportamientos de la recompensa de carrera (criterio del paso 55 del PLAN).
 
-Con la recompensa REAL del entorno (configs/carrera/pesos.yaml) y una politica que camina (policies/carrera_v01),
+Con la recompensa REAL del entorno (configs/carrera/pesos.yaml) y una politica que camina (--modelo; default la
+recomendada, policies/carrera_v03),
 en un episodio de 30 s con vx_cmd = 0.5 se comparan:
   A. rapido y limpio: la politica corre a lo que se le pide;
   B. lento y limpio: la politica ve vx_cmd = 0.15 (camina a ~0.15 m/s) pero la recompensa sigue pidiendo 0.5;
@@ -9,7 +10,7 @@ en un episodio de 30 s con vx_cmd = 0.5 se comparan:
         la tumba y una d sesgada 30 cm no la saca (bitacora 2026-10-11).
 Criterio del PLAN: C(t) < B para toda salida ANTES de la meta (salirse siempre es peor que ir lento) y A > B.
 Informa tambien el retorno DESCONTADO (gamma 0.99) y el peso minimo de salida_carril que haria cumplir el orden.
-Termina con RESULTADO: OK o FALLA y escribe results/carrera/orden_recompensa.json.
+Termina con RESULTADO: OK o FALLA y escribe results/carrera/orden_recompensa_<politica>.json.
 
 Uso:
     uv run python scripts/check_recompensa_carrera.py
@@ -52,7 +53,12 @@ def episodio(model, vn, kw, semilla, vx_obs=None):
 
 
 def main() -> int:
-    model, vn, kw, _ = eval_carrera.cargar(ROOT / "policies" / "carrera_v01" / "model.zip")
+    import argparse
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--modelo", type=Path, default=ROOT / "policies" / "carrera_v03" / "model.zip",
+                    help="politica que camina (default: la recomendada). El umbral depende de la politica")
+    a = ap.parse_args()
+    model, vn, kw, _ = eval_carrera.cargar(a.modelo)
     w_salida = cargar_pesos()["salida_carril"]
     A = episodio(model, vn, kw, 1000)
     B = episodio(model, vn, kw, 1000, vx_obs=0.15)
@@ -85,8 +91,8 @@ def main() -> int:
           f"{-w_min:.0f}")
     print(f"   (info) con descuento 0.99, salirse en {malas_d} s vale mas que ir lento: lo cubre el filtro duro de la "
           "seleccion (seccion 11.4)")
-    (ROOT / "results" / "carrera" / "orden_recompensa.json").write_text(json.dumps({
-        "politica": "policies/carrera_v01/model.zip", "peso_salida_carril": w_salida, "gamma": GAMMA,
+    (ROOT / "results" / "carrera" / f"orden_recompensa_{a.modelo.parent.name}.json").write_text(json.dumps({
+        "politica": str(a.modelo), "rumbo_objetivo": kw.get("rumbo_objetivo", "carril"), "peso_salida_carril": w_salida, "gamma": GAMMA,
         "A_rapido_limpio": {k: A[k] for k in ("retorno", "retorno_descontado", "t_meta", "falta")},
         "B_lento_limpio": {k: B[k] for k in ("retorno", "retorno_descontado", "t_meta", "falta")},
         "C_salida": filas, "salidas_mejores_que_lento": malas, "salidas_mejores_que_lento_descontado": malas_d,

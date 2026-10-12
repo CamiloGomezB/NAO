@@ -15,8 +15,9 @@ pesos:
   vel_lateral: -10.0         # vy^2
   vel_giro: -0.5             # wz^2
   # Faltas (terminan el episodio; una vez)
-  salida_carril: -200.0      # una esquina de un pie toca el borde interior de la linea
-  choque_robot: -400.0       # referencia: 2 x salida. Sin robots vecinos en el entrenamiento: se mide en la seleccion
+  salida_carril: -300.0      # una esquina de un pie toca el borde interior de la linea. Paso 55b (E47): era -200;
+                             # con -200 salirse justo antes de la meta daba mas retorno que ir lento (hacia falta < -271)
+  choque_robot: -600.0       # referencia: 2 x salida (era -400 con salida -200). Sin robots vecinos en el entrenamiento: se mide en la seleccion
   caida: -100.0              # torso bajo o inclinado, o algo que no es el pie toca el suelo
   # Estabilidad y robot real
   patron_marcha: 0.5         # pies que coinciden con el reloj de marcha
@@ -35,7 +36,7 @@ rangos:                      # [min, max] del barrido (tabla de la seccion 6.4)
   barrera_margen: [-20.0, -1.0]
   vel_lateral: [-20.0, -2.0]
   vel_giro: [-2.0, -0.1]
-  salida_carril: [-400.0, -50.0]
+  salida_carril: [-400.0, -300.0]   # paso 55b: antes [-400, -50]
   choque_robot: 2x_salida_carril   # siempre el doble de salida_carril
   caida: [-300.0, -50.0]
   patron_marcha: [0.0, 1.0]

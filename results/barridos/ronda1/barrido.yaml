@@ -1,0 +1,8 @@
+nombre: ronda1
+agentes: 100
+pasos: 1000000
+base: C:\Users\camil\Documents\GitHub\NAO\policies\carrera_v03
+n_envs: 16
+semilla: 0
+eval_semillas: 2
+eval_vx: 0.45

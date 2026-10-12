@@ -8,7 +8,7 @@ Cada agente sortea, con su propia semilla:
   - la semilla de PPO.
 Luego, en cola y de a uno (este PC entrena uno a la vez con 16 entornos):
   1. escribe results/barridos/<nombre>/agente_NNN/config.yaml (config completa de src.train);
-  2. entrena con `src.train --continuar <base>` (por defecto policies/carrera_v01) en runs/barrido_<nombre>_NNN;
+  2. entrena con `src.train --continuar <base>` (por defecto policies/carrera_v03) en runs/barrido_<nombre>_NNN;
   3. evalua con la bateria de scripts/eval_carrera.py (con vision, perturbaciones, 5 fricciones x --eval-semillas);
   4. guarda resultado.json con la config sorteada, los numeros y el puntaje de seleccion (seccion 11.4).
 Es REANUDABLE: un agente con resultado.json se salta; uno entrenado sin evaluar solo se evalua.
@@ -34,7 +34,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 
-BASE_CONFIG = ROOT / "configs" / "carrera_v01.yaml"
+BASE_CONFIG = ROOT / "configs" / "carrera_v03.yaml"     # config de la base (desde la ronda 1: carrera_v03)
 PESOS = ROOT / "configs" / "carrera" / "pesos.yaml"
 PY = sys.executable
 
@@ -70,7 +70,9 @@ def config_agente(s: dict, pasos: int, n_envs: int, nombre: str) -> dict:
     env["pesos"] = s["pesos"]
     env["friction_range"] = s["friction_range"]
     env["vx_rango"] = [0.15, s["vx_max"]]
-    env["camara"] = {"sigma_d_m": [0.01, s["sigma_d_max_m"]], "sigma_psi_grados": [1.0, s["sigma_psi_max_grados"]]}
+    # Se MEZCLA con la camara de la base (apagones y perdida de vision de v02/v03): solo cambia el ruido.
+    env["camara"] = {**env.get("camara", {}), "sigma_d_m": [0.01, s["sigma_d_max_m"]],
+                     "sigma_psi_grados": [1.0, s["sigma_psi_max_grados"]]}
     return cfg
 
 
@@ -85,7 +87,13 @@ def puntaje(filas: list) -> dict:
             "t_medio": float(np.mean(ts)), "desvio_max_cm": 100 * desvio}
 
 
+SALIDAS_MALAS = ((0.10, 15.0), (-0.10, -15.0), (0.0, 25.0), (0.0, -25.0))   # (y0 [m], rumbo0 [grados]), mu 0.6
+
+
 def evaluar(modelo: Path, semillas: int, vx: float) -> list:
+    """Bateria corta, con vision y perturbaciones: 5 fricciones x semillas (colocacion del benchmark) + 4 salidas
+    torcidas (paso 58c). Todas cuentan para el filtro duro."""
+    import math
     import eval_carrera
     model, vn, env_kwargs, _ = eval_carrera.cargar(modelo)
     filas = []
@@ -93,8 +101,22 @@ def evaluar(modelo: Path, semillas: int, vx: float) -> list:
         for s in range(1000, 1000 + semillas):
             f = eval_carrera.correr(model, vn, env_kwargs, mu, s, True, vx, True)
             f.pop("traza", None)
+            f["tipo"] = "normal"
             filas.append(f)
+    for y0, r0 in SALIDAS_MALAS:
+        f = eval_carrera.correr(model, vn, env_kwargs, 0.6, 1000, True, vx, True, colocacion=(y0, math.radians(r0)))
+        f.pop("traza", None)
+        f.update(tipo="salida_mala", y0_cm=100 * y0, rumbo0_grados=r0)
+        filas.append(f)
     return filas
+
+
+def no_suspender():
+    """Pide a Windows no suspender el PC mientras corre el barrido (sin cambiar la configuracion; se libera al salir)."""
+    import os
+    if os.name == "nt":
+        import ctypes
+        ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | 0x00000001)   # ES_CONTINUOUS | ES_SYSTEM_REQUIRED
 
 
 def escribir_tabla(carpeta: Path) -> None:
@@ -123,7 +145,7 @@ def main() -> int:
     ap.add_argument("--nombre", required=True)
     ap.add_argument("--agentes", type=int, default=100)
     ap.add_argument("--pasos", type=int, default=1_000_000)
-    ap.add_argument("--base", type=Path, default=ROOT / "policies" / "carrera_v01")
+    ap.add_argument("--base", type=Path, default=ROOT / "policies" / "carrera_v03")
     ap.add_argument("--n-envs", type=int, default=16)
     ap.add_argument("--semilla", type=int, default=0, help="semilla del sorteo de los agentes")
     ap.add_argument("--eval-semillas", type=int, default=2)
@@ -132,6 +154,7 @@ def main() -> int:
 
     carpeta = ROOT / "results" / "barridos" / a.nombre
     carpeta.mkdir(parents=True, exist_ok=True)
+    no_suspender()
     (carpeta / "barrido.yaml").write_text(yaml.safe_dump(vars(a) | {"base": str(a.base)}, sort_keys=False),
                                           encoding="utf-8")
     for i in range(a.agentes):

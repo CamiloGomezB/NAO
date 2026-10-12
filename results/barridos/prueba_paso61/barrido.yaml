@@ -1,0 +1,8 @@
+nombre: prueba_paso61
+agentes: 1
+pasos: 20000
+base: C:\Users\camil\Documents\GitHub\NAO\policies\carrera_v03
+n_envs: 4
+semilla: 0
+eval_semillas: 1
+eval_vx: 0.45

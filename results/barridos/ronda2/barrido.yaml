@@ -1,0 +1,26 @@
+anterior: ronda1
+nombre: ronda2
+pasos: 5000000
+eval_vx: 0.45
+max_agentes: null
+agentes:
+- agente_045
+- agente_026
+- agente_071
+- agente_080
+- agente_062
+- agente_037
+- agente_023
+- agente_074
+- agente_050
+- agente_090
+- agente_043
+- agente_069
+- agente_011
+- agente_051
+- agente_007
+- agente_004
+- agente_031
+- agente_081
+- agente_015
+- agente_079

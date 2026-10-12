@@ -1537,3 +1537,151 @@ sin salida y cómo se resolvieron. Tiene tres usos:
   - paso 61, ronda de 100 agentes (~11–12 h), cuando el usuario decida; la base sería `policies/carrera_v03`;
   - pendientes de revisión: 49, 56, 58 y 58b;
   - silbato pospuesto (68b).
+
+### 2026-10-11 ~14:30–14:50 — Paso 55b (castigo de salida −300) y lanzamiento de la ronda 1 de 100 agentes (paso 61)
+- **Autor:** Claude Code. Camilo se ausenta 10 h; pidió terminar lo pendiente y dejar un entrenamiento pesado.
+- **Revisión previa (protocolo):**
+  - `git pull` al día; último commit `5a5c01d` (pasos 58c y 59c), del usuario;
+  - árbol limpio; 0 enlaces rotos en la última revisión.
+- **Paso 55b:**
+  - `salida_carril` −200 → −300 y rango [−400, −300]; `choque_robot` −600.
+  - `check_recompensa_carrera.py` ahora recibe `--modelo`:
+    - con `carrera_v03`, **OK** (lento 1264; la salida de mayor retorno queda por debajo);
+    - con `carrera_v01`, FALLA: haría falta < −452. El umbral depende de la política (**E53**).
+  - Se marca hecho con la política que se usa. La garantía de 0 salidas es el filtro duro.
+- **Paso 61, ronda 1 de 100 agentes:**
+  - **Lanzador:** `scripts/barrido.py`, cambiado para esta ronda:
+    - base `configs/carrera_v03.yaml` + `policies/carrera_v03` (antes, `v01`);
+    - el ruido de la cámara se **mezcla** con la de la base (antes la reemplazaba y se perdían los apagones de `v02`);
+    - batería corta con 4 salidas torcidas;
+    - pide a Windows no suspender el PC mientras corre (`SetThreadExecutionState`, sin cambiar la configuración).
+  - **Prueba de humo:** 1 agente de 20k pasos (`results/barridos/prueba_paso61/`). Config correcta: apagones de la
+    base, colocación amplia, rumbo `carril`, salida −327 sorteada. 9/9 metas.
+  - **Lanzado a las 14:36:** `--nombre ronda1 --agentes 100 --pasos 1000000 --eval-semillas 2`.
+    - ~6 min por agente (5.5 min de entrenamiento a ~3,000 pasos/s + evaluación); fin estimado hacia las 00:35.
+    - Log general en `runs/barrido_ronda1.log` (no se versiona); por agente, en
+      `results/barridos/ronda1/agente_NNN/`.
+  - **Referencia, la base con la misma batería** (`results/barridos/ronda1/base_carrera_v03.json`): pasa, 0 faltas,
+    **puntaje 12.41 s** (media 11.88 s + 1σ), desvío máximo de 14.3 cm.
+  - **Agente 000:** descartado, con 2 caídas en las salidas torcidas de −15° y −25°.
+- **Diseño:** la sección 11.1 de `plan_rl_carrera.md` ahora dice qué sortea de verdad la ronda 1. La tabla 6.4 y la
+  sección 1.2 quedan con −300.
+- **Siguiente:** revisar la ronda a medio camino; al terminar, tabla de los 100, los 20 mejores y el análisis de
+  qué pesos ganan (pasos 61–62).
+
+### 2026-10-11 16:48 — Ronda 1 (paso 61): revisión a los 25 agentes
+- **Autor:** Claude Code (Camilo ausente).
+- **Estado:** 25/100 agentes en 2 h 12 min (~5.3 min por agente); sin errores.
+- **Resultado parcial** (`scripts/analizar_barrido.py --nombre ronda1` → `results/barridos/ronda1/analisis.md`):
+  - 18/25 pasan el filtro duro;
+  - 12 superan a la base `carrera_v03` (12.41 s);
+  - el mejor, `agente_023`, saca 11.62 s (t medio 11.33 s).
+- **Descartes:** 9 de las 11 corridas con falta son caídas en las salidas torcidas; 1 caída en la batería normal y 1
+  salida.
+- **Correlaciones tempranas** (Spearman con el puntaje entre los que pasan; con 18 agentes, solo indicativas):
+  - `rumbo` +0.43: más peso al rumbo, más lento;
+  - `friccion_max` +0.53: entrenar con fricción máxima más baja, mejor;
+  - `barrera_margen` −0.29 y `vel_lateral` −0.25.
+- **Siguiente:** revisión a los 60 agentes.
+
+### 2026-10-11 19:59–20:20 — Ronda 1 a los 60 agentes; ronda 2 (paso 62) preparada y encadenada
+- **Autor:** Claude Code (Camilo ausente).
+- **Ronda 1 a los 60 agentes** (19:59, sin errores, ~5.4 min por agente; fin estimado ~23:35):
+  - **42/60 pasan** el filtro duro;
+  - **28 superan a la base** `carrera_v03` (12.41 s);
+  - mejores: `agente_045` 11.43 s, `agente_026` 11.45 s, `agente_037` 11.62 s y `agente_023` 11.62 s.
+- **Descartes** (30 corridas con falta en 18 agentes): 17 caídas en salidas torcidas, 8 caídas y 5 salidas en la
+  batería normal, y 4 salidas en salidas torcidas.
+- **Correlaciones** (Spearman, 42 agentes): se debilitaron frente a los 25 agentes. Las mayores en valor absoluto:
+  - `inclinacion` −0.35 (castigar más la inclinación, mejor);
+  - `rumbo` +0.28;
+  - `vx_max` −0.21.
+
+  Todavía no hay un peso dominante.
+- **Paso 62 preparado:** `scripts/ronda_siguiente.py`.
+  - Los mejores (`mejores.json`, que escribe `scripts/analizar_barrido.py`) siguen entrenando **con su propia config**
+    desde su modelo final de la ronda anterior.
+  - Se evalúan con la **batería completa** (44 corridas: 5 μ × 4 semillas + 12 salidas torcidas × μ 0.4 y 1.0, con
+    perturbaciones y `vx_cmd` 0.45).
+  - Mismo formato de resultados y reanudable.
+  - **Prueba:** 1 agente (`agente_045`) de 20k pasos → 44 corridas, pasa, 11.96 s
+    (`results/barridos/prueba_paso62/`).
+- **Cadena en segundo plano** (log en `runs/cadena_ronda2.log`): al terminar la ronda 1,
+  1. `analizar_barrido.py --nombre ronda1`;
+  2. evaluación de la base con la batería completa (`results/barridos/ronda2/base_carrera_v03.json`);
+  3. `ronda_siguiente.py --anterior ronda1 --nombre ronda2 --pasos 5000000` (20 agentes, ~30 min cada uno, ~10 h).
+- **Siguiente:** revisar al terminar la ronda 1 (~23:35) y documentar el paso 61.
+
+### 2026-10-11 23:40–23:55 — Paso 61 cerrado (ronda 1 de 100 agentes); ronda 2 lanzada
+- **Autor:** Claude Code (Camilo ausente).
+- **Resultado** (`results/barridos/ronda1/tabla.md`, `analisis.md`):
+
+| Resultado | Valor |
+|---|---|
+| Agentes | 100 (1M pasos cada uno desde `carrera_v03`), 14:36 → 23:40 (9 h 04 min, ~5.4 min por agente), 0 errores |
+| Pasan el filtro duro (0 faltas en 14 corridas) | **70/100** |
+| Superan a la base (12.41 s) | **49** |
+| Puntaje de los que pasan | mejor **11.43 s** (`agente_045`), mediana 12.26 s, peor 13.54 s |
+| Faltas de los descartados (48 corridas) | 26 caídas y 5 salidas en las salidas torcidas; 13 caídas y 5 salidas en la batería normal |
+
+- **Correlaciones finales** (Spearman, 70 que pasan):
+
+| Parámetro | Media, pasan (70) | Media, descartados (30) | Media, 20 mejores | Spearman con el puntaje |
+|---|---|---|---|---|
+| `vx_max` | 0.515 | 0.501 | **0.535** | **−0.28** |
+| peso `seguimiento_vx` | 1.26 | 1.27 | **1.37** | **−0.23** |
+| peso `inclinacion` | −2.74 | −2.63 | −2.46 | **−0.23** |
+| peso `rumbo` | 0.591 | 0.609 | 0.58 | **+0.22** |
+| `friccion_max` | 1.14 | 1.15 | 1.14 | +0.15 |
+| peso `caida` | −171 | −188 | −191 | +0.11 |
+| peso `patron_marcha` | 0.584 | 0.574 | 0.635 | −0.10 |
+| Los otros 11 | casi iguales | casi iguales | — | \|ρ\| ≤ 0.09 |
+
+- **Lectura:** no hay un peso dominante, y pasar o no el filtro no depende de los pesos; con 1M pasos domina la
+  variación entre entrenamientos. Detalle en el capítulo del entrenamiento, sección 12e.
+- **Los 20 mejores** (`mejores.json`): `agente_045` (11.43 s), `026` (11.45), `071` (11.46), `080` (11.53),
+  `062` (11.53), `037` (11.62), `023` (11.62), `074` (11.76), `050` (11.79), `090` (11.79), `043` (11.80) y 9 más.
+- **Cadena:** a las 23:41 la base se midió con la batería completa (**pasa, 12.54 s**) y arrancó la **ronda 2** (paso
+  62): 20 agentes × 5M pasos, ~30 min cada uno, fin estimado ~10:00 del 2026-10-12. Log en `runs/barrido_ronda2.log`.
+- **Paso 61 `[x]`:** la tabla de los 100 con su configuración y puntaje está en `results/barridos/ronda1/tabla.md`.
+
+### 2026-10-12 00:05–00:20 — Ronda 2: se elige el mejor checkpoint de cada agente (E54)
+- **Autor:** Claude Code (Camilo ausente; vuelve hacia las 00:35).
+- **Qué pasó:**
+  - el primer agente de la ronda 2 (`agente_045`, el mejor de la ronda 1) **empeoró con 5M pasos más**: 6 caídas en
+    salidas de +25° y 13.3 s de media;
+  - es E48 otra vez: entrenar más hace oscilar la política.
+- **Cambio en `scripts/ronda_siguiente.py`:**
+  - evalúa con la batería completa **cada checkpoint** (1M a 5M) de cada agente y se queda con el mejor (sección
+    11.4);
+  - el resultado guarda el puntaje de todos los checkpoints (`checkpoints`) y el elegido (`checkpoint_elegido`).
+- **Con el cambio:** `agente_045`, checkpoint de 4M, **pasa sin faltas con 12.35 s** (la base `carrera_v03`, con la
+  misma batería: 12.54 s). Los de 1M, 2M, 3M y 5M tenían 9, 5, 4 y 7 faltas.
+- **Problema al relanzar:** un modelo vacío del entrenamiento cortado; ver E54. Corregido; relanzado a las 00:12.
+- **Estimación:** ~33 min por agente (28 de entrenamiento + ~3.5 de evaluar 5 checkpoints); fin hacia las 11:30.
+- **Lección (a llevar a futuras generaciones):** guardar checkpoints frecuentes y elegir siempre con la batería
+  externa. Además, considerar una tasa de aprendizaje decreciente para que la política no oscile.
+
+### 2026-10-12 00:37 — Ronda 2: el segundo agente confirma la selección por checkpoint
+- **`agente_026`** (2.º de la ronda 1, 11.45 s), con la batería completa por checkpoint:
+
+  | Checkpoint | 1M | 2M | 3M | 4M | 5M |
+  |---|---|---|---|---|---|
+  | Faltas | 6 | 3 | 0 | **0** | **25** |
+  | Puntaje | — | — | 11.69 s | **11.51 s** | — |
+
+  - Elegido: 4M, que **pasa con 11.51 s**, contra 12.54 s de la base `carrera_v03` en la misma batería.
+  - El modelo final (5M) tenía 25 faltas: quedándose con el último modelo, se habría descartado al mejor candidato
+    hasta ahora (E54).
+- La ronda sigue con `agente_071`; fin estimado ~11:30.
+
+### 2026-10-12 07:05 — Ronda 2 pausada a pedido del usuario (16 de 20 terminados)
+- **Autor:** Claude Code, a pedido de Camilo (va a apagar el PC).
+- **Estado al pausar:**
+  - 16/20 agentes terminados y evaluados (`results/barridos/ronda2/agente_*/resultado.json`);
+  - `agente_031` interrumpido en ~4.2M de 5M pasos (se detuvo con `taskkill /T /F`);
+  - faltan `agente_031` y 3 más.
+- **Al retomar:**
+  - `agente_031` se reentrena desde cero: su `final_model.zip` no es válido y el script lo detecta (arreglo de E54);
+  - faltan 4 agentes × ~26 min ≈ 1 h 45 min.
+- **Para retomar:** `uv run python scripts/ronda_siguiente.py --anterior ronda1 --nombre ronda2 --pasos 5000000`.

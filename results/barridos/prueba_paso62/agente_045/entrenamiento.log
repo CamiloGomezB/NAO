@@ -1,0 +1,5 @@
+Continuando desde runs/barrido_ronda1_045/final_model.zip (1,007,616 pasos previos)
+Entrenando 'barrido_prueba_paso62_045': 20,000 pasos, 16 entornos, semilla 811947527
+Resultados en: runs\barrido_prueba_paso62_045
+[  0.02M / 0.0M]   591 pasos/s | retorno medio    871.4 | episodio medio 24.76 s | transcurrido   0.7 min | faltan ~  0.0 min
+Listo. Modelo final: runs\barrido_prueba_paso62_045\final_model.zip

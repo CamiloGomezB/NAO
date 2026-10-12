@@ -1,93 +1,93 @@
 {
  "politica": "policies/carrera_v01/model.zip",
- "peso_salida_carril": -200.0,
+ "peso_salida_carril": -300.0,
  "gamma": 0.99,
  "A_rapido_limpio": {
-  "retorno": 2306.99013837201,
-  "retorno_descontado": 178.68799299964982,
+  "retorno": 2299.6878327114127,
+  "retorno_descontado": 179.52323354934526,
   "t_meta": 10.251999999999926,
   "falta": null
  },
  "B_lento_limpio": {
-  "retorno": 546.8558701254221,
-  "retorno_descontado": 90.4316355751553,
+  "retorno": 367.5521173291468,
+  "retorno_descontado": 89.39736291842998,
   "t_meta": null,
   "falta": null
  },
  "C_salida": [
   {
    "t_salida": 1.0,
-   "x": 0.4305388932971105,
-   "retorno": -130.94429319867695,
-   "retorno_descontado": -75.99920061197433
+   "x": 0.4335069710909937,
+   "retorno": -230.36351126128002,
+   "retorno_descontado": -141.21148309761557
   },
   {
    "t_salida": 2.0,
-   "x": 0.9089322079920181,
-   "retorno": -54.08973982429822,
-   "retorno_descontado": 9.778408018010396
+   "x": 0.912721409733113,
+   "retorno": -152.9773853429566,
+   "retorno_descontado": -32.986810332445344
   },
   {
    "t_salida": 3.0,
-   "x": 1.3898450001459195,
-   "retorno": 24.194348980535096,
-   "retorno_descontado": 67.5549114022481
+   "x": 1.3945464079140613,
+   "retorno": -73.97747913970136,
+   "retorno_descontado": 39.98863207127222
   },
   {
    "t_salida": 4.0,
-   "x": 1.8739124094705508,
-   "retorno": 104.48770416087876,
-   "retorno_descontado": 105.89405509085204
+   "x": 1.8778993243295041,
+   "retorno": 5.94607517773926,
+   "retorno_descontado": 88.04382784226662
   },
   {
    "t_salida": 5.0,
-   "x": 2.3473663811576544,
-   "retorno": 181.33724947861208,
-   "retorno_descontado": 130.30467553155353
+   "x": 2.3504937101080747,
+   "retorno": 83.11108729382181,
+   "retorno_descontado": 118.81857131122348
   },
   {
    "t_salida": 6.0,
-   "x": 2.8367601418969657,
-   "retorno": 260.6367946141506,
-   "retorno_descontado": 146.86828364069467
+   "x": 2.8368020131610883,
+   "retorno": 162.43184176201186,
+   "retorno_descontado": 139.63414583843306
   },
   {
    "t_salida": 7.0,
-   "x": 3.324942430657026,
-   "retorno": 340.81110168329326,
-   "retorno_descontado": 157.77438849150454
+   "x": 3.3254711237504315,
+   "retorno": 242.33324908076236,
+   "retorno_descontado": 153.31238873371598
   },
   {
    "t_salida": 8.0,
-   "x": 3.8046896225456246,
-   "retorno": 418.23306496660916,
-   "retorno_descontado": 164.75319987484136
+   "x": 3.8023789880588184,
+   "retorno": 319.77631661417195,
+   "retorno_descontado": 162.0872223731363
   },
   {
    "t_salida": 9.0,
-   "x": 4.293347100560238,
-   "retorno": 498.3581128425807,
-   "retorno_descontado": 169.49201348804596
+   "x": 4.291669517535372,
+   "retorno": 400.1185898463709,
+   "retorno_descontado": 168.041770523361
   },
   {
    "t_salida": 10.0,
-   "x": 4.7815614924813055,
-   "retorno": 579.1901062944439,
-   "retorno_descontado": 172.61047937138122
+   "x": 4.780592782647723,
+   "retorno": 480.4906215149589,
+   "retorno_descontado": 171.94451730634916
   },
   {
    "t_salida": 10.227999999999927,
-   "x": 4.887768700398585,
-   "retorno": 596.8372992655735,
-   "retorno_descontado": 173.12859116205323
+   "x": 4.88671216391807,
+   "retorno": 498.1116414620809,
+   "retorno_descontado": 172.5931171665557
   }
  ],
  "salidas_mejores_que_lento": [
+  9.0,
   10.0,
   10.23
  ],
  "salidas_mejores_que_lento_descontado": [
-  4.0,
   5.0,
   6.0,
   7.0,
@@ -96,5 +96,5 @@
   10.0,
   10.23
  ],
- "peso_salida_minimo_sin_descuento": -271.4858675215505
+ "peso_salida_minimo_sin_descuento": -452.07533610040133
 }

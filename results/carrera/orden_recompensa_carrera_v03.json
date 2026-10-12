@@ -1,0 +1,89 @@
+{
+ "politica": "policies\\carrera_v03\\model.zip",
+ "rumbo_objetivo": "carril",
+ "peso_salida_carril": -300.0,
+ "gamma": 0.99,
+ "A_rapido_limpio": {
+  "retorno": 2368.097627780444,
+  "retorno_descontado": 152.11867365021305,
+  "t_meta": 9.963999999999936,
+  "falta": null
+ },
+ "B_lento_limpio": {
+  "retorno": 1263.6563237959895,
+  "retorno_descontado": 98.31535935545192,
+  "t_meta": null,
+  "falta": null
+ },
+ "C_salida": [
+  {
+   "t_salida": 1.0,
+   "x": 0.3808850192698237,
+   "retorno": -261.5961474385812,
+   "retorno_descontado": -167.39107555575086
+  },
+  {
+   "t_salida": 2.0,
+   "x": 0.8709829945895597,
+   "retorno": -188.18768601649236,
+   "retorno_descontado": -61.5850077256229
+  },
+  {
+   "t_salida": 3.0,
+   "x": 1.380064672491461,
+   "retorno": -108.12284071246035,
+   "retorno_descontado": 11.800553498001065
+  },
+  {
+   "t_salida": 4.0,
+   "x": 1.8939846913739748,
+   "retorno": -28.40746767003469,
+   "retorno_descontado": 59.80315561462618
+  },
+  {
+   "t_salida": 5.0,
+   "x": 2.3870319723338524,
+   "retorno": 50.857684993421174,
+   "retorno_descontado": 90.9199112560029
+  },
+  {
+   "t_salida": 6.0,
+   "x": 2.900805851276435,
+   "retorno": 131.83362438965986,
+   "retorno_descontado": 111.89699115135643
+  },
+  {
+   "t_salida": 7.0,
+   "x": 3.4143129866845188,
+   "retorno": 212.78354409322458,
+   "retorno_descontado": 125.65079784386336
+  },
+  {
+   "t_salida": 8.0,
+   "x": 3.908091746736684,
+   "retorno": 291.671939329632,
+   "retorno_descontado": 134.49344544174397
+  },
+  {
+   "t_salida": 9.0,
+   "x": 4.422091064077986,
+   "retorno": 372.40085783769837,
+   "retorno_descontado": 140.46076774627377
+  },
+  {
+   "t_salida": 9.939999999999937,
+   "x": 4.900849924497007,
+   "retorno": 447.47488995900744,
+   "retorno_descontado": 144.1459081602122
+  }
+ ],
+ "salidas_mejores_que_lento": [],
+ "salidas_mejores_que_lento_descontado": [
+  6.0,
+  7.0,
+  8.0,
+  9.0,
+  9.94
+ ],
+ "peso_salida_minimo_sin_descuento": 494.2625263388808
+}

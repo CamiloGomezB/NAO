@@ -1,0 +1,14 @@
+Continuando desde policies/carrera_v03/model.zip (5,000,000 pasos previos)
+Entrenando 'barrido_ronda1_061': 1,000,000 pasos, 16 entornos, semilla 1908575651
+Resultados en: runs\barrido_ronda1_061
+[  0.11M / 1.0M]  3404 pasos/s | retorno medio   1798.2 | episodio medio 25.98 s | transcurrido   0.5 min | faltan ~  4.4 min
+[  0.21M / 1.0M]  3354 pasos/s | retorno medio   1978.0 | episodio medio 27.11 s | transcurrido   1.1 min | faltan ~  3.9 min
+[  0.32M / 1.0M]  3345 pasos/s | retorno medio   1943.4 | episodio medio 26.04 s | transcurrido   1.6 min | faltan ~  3.4 min
+[  0.43M / 1.0M]  3327 pasos/s | retorno medio   1890.2 | episodio medio 26.12 s | transcurrido   2.1 min | faltan ~  2.9 min
+[  0.52M / 1.0M]  3256 pasos/s | retorno medio   1888.5 | episodio medio 26.70 s | transcurrido   2.6 min | faltan ~  2.5 min
+[  0.61M / 1.0M]  3257 pasos/s | retorno medio   1790.0 | episodio medio 25.78 s | transcurrido   3.1 min | faltan ~  2.0 min
+[  0.71M / 1.0M]  3258 pasos/s | retorno medio   1806.2 | episodio medio 25.58 s | transcurrido   3.6 min | faltan ~  1.5 min
+[  0.82M / 1.0M]  3261 pasos/s | retorno medio   1720.4 | episodio medio 24.93 s | transcurrido   4.2 min | faltan ~  0.9 min
+[  0.93M / 1.0M]  3265 pasos/s | retorno medio   1928.1 | episodio medio 26.42 s | transcurrido   4.7 min | faltan ~  0.4 min
+[  1.01M / 1.0M]  3239 pasos/s | retorno medio   1943.8 | episodio medio 26.96 s | transcurrido   5.2 min | faltan ~  0.0 min
+Listo. Modelo final: runs\barrido_ronda1_061\final_model.zip

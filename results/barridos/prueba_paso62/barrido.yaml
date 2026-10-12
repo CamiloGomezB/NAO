@@ -1,0 +1,7 @@
+anterior: ronda1
+nombre: prueba_paso62
+pasos: 20000
+eval_vx: 0.45
+max_agentes: 1
+agentes:
+- agente_045
