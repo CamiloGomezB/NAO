@@ -1,0 +1,79 @@
+experiment: barrido_ronda2
+env_id: NaoRace-v0
+seed: 856390357
+total_timesteps: 5000000
+n_envs: 16
+torch_threads: 4
+env:
+  pesos:
+    seguimiento_vx: 1.8312
+    meta: 24.5371
+    rumbo: 0.3898
+    centrado: -4.3293
+    barrera_margen: -7.1983
+    vel_lateral: -15.3125
+    vel_giro: -0.6282
+    salida_carril: -330.6932
+    caida: -242.8754
+    patron_marcha: 0.7753
+    inclinacion: -3.4589
+    choque_piernas: -2.7217
+    cambio_accion: -0.0877
+    choque_robot: -661.3864
+  vx_rango:
+  - 0.15
+  - 0.59
+  vx_cambio_prob: 0.3
+  friction_range:
+  - 0.413
+  - 1.295
+  friction_asym: 0.1
+  gait_period: 0.5
+  stance_fraction: 0.6
+  perturbaciones: true
+  rumbo_objetivo: carril
+  sin_vision_prob: 0.15
+  camara:
+    apagon_prob: 0.6
+    apagon_s:
+    - 1.0
+    - 8.0
+    apagon_inicio_s:
+    - 0.0
+    - 20.0
+    sigma_d_m:
+    - 0.01
+    - 0.0413
+    sigma_psi_grados:
+    - 1.0
+    - 3.68
+  rectitud:
+    colocacion_sigma_m: 0.06
+    colocacion_max_m: 0.15
+    colocacion_sigma_grados: 10.0
+    colocacion_max_grados: 25.0
+normalize:
+  obs: true
+  reward: true
+  clip_obs: 10.0
+ppo:
+  learning_rate: 0.0003
+  n_steps: 512
+  batch_size: 2048
+  n_epochs: 5
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  ent_coef: 0.0
+  vf_coef: 0.5
+  max_grad_norm: 1.0
+policy:
+  net_arch:
+  - 256
+  - 256
+  activation: elu
+  log_std_init: -1.0
+checkpoint_every: 1000000
+eval:
+  every: 1000000
+  n_episodes: 3

@@ -18,6 +18,8 @@ articulares programadas a mano.
 > - **`carrera_v03`** ([`policies/carrera_v03/`](policies/carrera_v03/), **recomendada**): entrenada con salidas torcidas y con el
 >   rumbo de la IMU alineado al carril (paso 58c). **Llega aunque arranque girado hasta ±25° y corrido ±15 cm** (70/70;
 >   30/30 con la cámara renderizada), y en la batería grande hace 100/100 en **12.8 s** con 0 faltas.
+> - **Ronda de 100 agentes (pasos 61–62):** el mejor, `agente_071`, hace **10.7 s** en la batería del benchmark (B-Human
+>   16.2–18.3 s; `carrera_v03` 11.2 s). Resultados en [`results/barridos/ronda2/`](results/barridos/ronda2/).
 > - Hechos: 40–48b, 51–54, 57 y 60. Revisión del usuario pendiente en 49, 56 y 58b. 50 bloqueado (faltan VS Build
 >   Tools). 55 con hallazgo (E47 → 55b).
 >
@@ -68,7 +70,7 @@ Cada archivo tiene su enlace y una línea que dice qué contiene. Se mantiene al
 | [`results/benchmark/benchmark.md`](results/benchmark/benchmark.md) | **Benchmark de los 3 carriles** (RL del sprint, B-Human, NAOqi): 150 corridas, 5 fricciones, con y sin visión; datos en `benchmark.json` y `corridas.csv` |
 | [`results/diagnostico_45.md`](results/diagnostico_45.md) | Diagnóstico de las caídas al pausar la demo y del choque entre piernas en el V6 |
 | [`results/camara/`](results/camara/) | Validación de la visión: modelo de error, matriz de colores, lazo cerrado, cámara simulada contra renderizada |
-| [`results/barridos/`](results/barridos/) | Barridos de agentes. **`ronda1/`**: los 100 agentes del paso 61 (por agente: config sorteada, log de entrenamiento y `resultado.json`; `tabla.md` ordenada por puntaje; `base_carrera_v03.json` = la base con la misma batería). **`ronda2/`**: los 20 mejores con 5M pasos más y la batería completa (paso 62). `prueba_paso60/`, `prueba_paso61/` y `prueba_paso62/`: pruebas de los lanzadores |
+| [`results/barridos/`](results/barridos/) | Barridos de agentes. **`ronda1/`**: los 100 agentes del paso 61 (por agente: config sorteada, log de entrenamiento y `resultado.json`; `tabla.md` ordenada por puntaje; `base_carrera_v03.json` = la base con la misma batería). **`ronda2/`**: los 20 mejores con 5M pasos más, la batería completa y el mejor checkpoint de cada uno (paso 62); `analisis.md` dice qué pesos ganan, y `comparacion_3_carriles/` compara a los mejores con la batería del benchmark de B-Human y NAOqi. `prueba_paso60/`, `prueba_paso61/` y `prueba_paso62/`: pruebas de los lanzadores |
 | [`results/comparison.md`](results/comparison.md), [`results/metrics.json`](results/metrics.json) | Resultados de la política del sprint inicial (septiembre) |
 
 **Políticas y configuraciones**

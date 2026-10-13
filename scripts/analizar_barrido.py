@@ -84,7 +84,7 @@ def main() -> int:
                 motivos[(c.get("tipo", "normal"), c["resultado"])] += 1
     L += ["| Prueba | Falta | Corridas |", "|---|---|---|"]
     L += [f"| {t} | {f} | {n} |" for (t, f), n in motivos.most_common()]
-    L += ["", f"## 4. Los {len(mejores)} mejores (pasan a la ronda 2)", "",
+    L += ["", f"## 4. Los {len(mejores)} mejores (pasan a la siguiente ronda)", "",
           "| # | Agente | Puntaje [s] | t medio [s] | Desvío máx. [cm] | vx_max | Fricción | salida | caída | centrado | "
           "barrera | rumbo | seguim. vx | vel_giro | cambio_acc |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for i, r in enumerate(mejores, 1):

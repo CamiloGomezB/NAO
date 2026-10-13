@@ -552,6 +552,57 @@ tiempo):
 - Con 1M pasos desde una base fuerte, los pesos apenas alcanzan a mover la política. La ronda 2 (5M pasos y batería
   de 44 corridas) dirá si las diferencias se sostienen.
 
+## 12f. Ronda 2: los 20 mejores con 5M pasos (paso 62)
+
+**Cómo:** `scripts/ronda_siguiente.py --anterior ronda1 --nombre ronda2 --pasos 5000000`.
+- Cada uno de los 20 mejores sigue **con su propia config** desde su modelo final de la ronda 1.
+- **Batería completa** (44 corridas, con visión, perturbaciones y `vx_cmd` 0.45):
+  - μ 0.4–1.2 × 4 semillas;
+  - 12 salidas torcidas (y 0/±10 cm × rumbo ±15/±25°) × μ 0.4 y 1.0.
+- **Se evalúa cada checkpoint (1M–5M) y se elige el mejor** (E54): el modelo final del primer agente había empeorado
+  (6 caídas), y su checkpoint de 4M pasaba.
+- **Tiempo:** 23:41 → 07:05, pausa a pedido del usuario, y 19:05 → 21:38.
+- **Velocidad:** ~3,400 pasos/s antes de la pausa y ~2,100–2,800 después, con el mismo número de entornos; la causa
+  probable es la temperatura del procesador.
+
+**Resultado** [`results/barridos/ronda2/tabla.md` y `analisis.md`]: 17/20 pasan; 16 superan a la base. Los 5 mejores:
+
+| # | Agente | Checkpoint elegido | Puntaje (44 corridas) | Desvío máx. |
+|---|---|---|---|---|
+| 1 | `agente_071` | 3M | **11.38 s** | 25.2 cm |
+| 2 | `agente_026` | 4M | 11.51 s | 21.0 cm |
+| 3 | `agente_062` | 5M | 11.58 s | **13.2 cm** |
+| 4 | `agente_081` | 5M | 11.64 s | 14.2 cm |
+| 5 | `agente_004` | 3M | 11.72 s | 26.3 cm |
+| — | Base `carrera_v03` | — | 12.54 s | 20.9 cm |
+
+**Qué pesos ganan** (Spearman entre los 17 que pasan; con 5M pasos la señal es mucho más clara que en la ronda 1):
+
+| Parámetro | Media, pasan (17) | Media, 5 mejores | Spearman con el puntaje | Lectura |
+|---|---|---|---|---|
+| peso `seguimiento_vx` | 1.36 | **1.84** | **−0.64** | Premiar más la velocidad da más velocidad |
+| peso `barrera_margen` | −9.7 | −7.6 | **−0.57** | Barrera más fuerte, mejor puntaje |
+| peso `cambio_accion` | −0.060 | −0.080 | **+0.54** | Castigar más los cambios bruscos, mejor puntaje |
+| peso `salida_carril` | −354 | −331 | **−0.53** | Castigo más fuerte, mejor puntaje |
+| peso `caida` | −184 | −140 | −0.38 | — |
+| peso `choque_piernas` | −2.75 | −3.36 | +0.33 | — |
+| peso `patron_marcha` | 0.63 | 0.59 | +0.32 | — |
+| `vx_max` | 0.538 | 0.561 | −0.21 | — |
+
+Descartes: 7 caídas en salidas torcidas y 1 en la batería normal.
+
+**Contra los otros carriles,** con la batería del benchmark (con visión, sin perturbaciones, μ 0.4–1.2 × 5 semillas,
+`vx_cmd` 0.45) [`results/barridos/ronda2/comparacion_3_carriles/`, `results/benchmark/`]:
+
+| Carril | Política | Metas | Tiempo en 5 m | Desvío máx. medio |
+|---|---|---|---|---|
+| **RL** | `agente_071` (ronda 2, 3M) | 25/25 | **10.68–10.78 s** | 5.5 cm (máx. 13.3) |
+| **RL** | `agente_062` (ronda 2, 5M) | 25/25 | 10.73–11.40 s | **4.0 cm** (máx. 7.6) |
+| RL | `carrera_v03` | 25/25 | 11.16–11.26 s | 4.9 cm (máx. 10.2) |
+| RL | Sprint inicial (`v2_brazos`) | 25/25 | 24.2–24.3 s | ~7 cm |
+| Baseline 2 | B-Human (réplica) | 25/25 | 16.2–18.3 s | ~3 cm |
+| Baseline 1 | NAOqi (réplica) | 25/25 | 45.3–49.9 s | ~2.4 cm |
+
 ## 13. Fallos y callejones de este entrenamiento
 
 | ID | Qué pasó | Qué se hizo |

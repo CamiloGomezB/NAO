@@ -573,6 +573,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--video", default=None, help="archivo .mp4 de salida (graba las dos corridas)")
     ap.add_argument("--live", action="store_true", help="visor 3D en vivo: los 3 carriles (B-Human, RL, NAOqi)")
+    ap.add_argument("--rl", default=None, help="con --live: modelo .zip de la politica de carrera del carril central "
+                    "(por defecto la mas nueva de policies/)")
+    ap.add_argument("--rl-vx", type=float, default=None, help="con --live: vx_cmd de la politica de carrera [m/s]")
     ap.add_argument("--solo-rl", action="store_true", help="con --live: solo el RL, con el panel de controles")
     ap.add_argument("--sin-vision", action="store_true", help="con --live: solo la politica RL")
     ap.add_argument("--seed", type=int, default=1000)
@@ -597,6 +600,10 @@ def main():
                 argv += ["--" + opcion, getattr(a, opcion)]
         if a.sin_veta:
             argv.append("--sin-veta")
+        if a.rl:
+            argv += ["--rl", a.rl]
+        if a.rl_vx is not None:
+            argv += ["--rl-vx", str(a.rl_vx)]
         return carrera_vivo.main(argv)
     pista_cfg = build_scene.config_from_args(a)
     PISTA.update(build_scene.build(pista_cfg))   # regenera la pista con esos colores

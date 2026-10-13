@@ -1685,3 +1685,64 @@ sin salida y cómo se resolvieron. Tiene tres usos:
   - `agente_031` se reentrena desde cero: su `final_model.zip` no es válido y el script lo detecta (arreglo de E54);
   - faltan 4 agentes × ~26 min ≈ 1 h 45 min.
 - **Para retomar:** `uv run python scripts/ronda_siguiente.py --anterior ronda1 --nombre ronda2 --pasos 5000000`.
+
+### 2026-10-12 19:05 — Ronda 2 reanudada
+- **Autor:** Claude Code, a pedido de Camilo.
+- **Revisión previa:**
+  - `git pull` al día; último commit `fe45c71` (pasos 55b, 61 y 62 en pausa), del usuario; árbol limpio;
+  - 16/20 resultados guardados en `results/barridos/ronda2/`;
+  - `scripts/ronda_siguiente.py` conserva la evaluación por checkpoint, la detección de entrenamientos cortados (E54)
+    y el pedido de no suspender.
+- **Anomalía (sin efecto):** la carpeta `runs/barrido_ronda2_031/checkpoints/` estaba vacía, aunque al pausar tenía
+  los checkpoints de 1M a 4M. No se sabe qué los borró; `runs/` no se versiona. Igual se reentrena desde cero, como
+  estaba previsto.
+- **Relanzado a las 19:05:** mismo comando; se saltan los 16 terminados. Faltan `agente_031`, `081`, `015` y `079`
+  (~1 h 45 min). Logs de los intentos anteriores en `runs/barrido_ronda2_intento{1,2,3}.log`.
+
+### 2026-10-12 21:38–22:00 — Paso 62 cerrado (ronda 2): el mejor agente hace 10.7 s
+- **Autor:** Claude Code, con Camilo.
+- **Ronda 2 terminada a las 21:38.** El último agente, `agente_079`, pasó en su checkpoint de 2M (12.11 s); los de
+  3M a 5M tenían faltas.
+- **Resultado** (`results/barridos/ronda2/`): 17/20 pasan la batería completa; 16 superan a la base (12.54 s).
+
+| # | Agente | Checkpoint elegido | Puntaje (44 corridas) | Desvío máx. |
+|---|---|---|---|---|
+| 1 | `agente_071` | 3M | **11.38 s** | 25.2 cm |
+| 2 | `agente_026` | 4M | 11.51 s | 21.0 cm |
+| 3 | `agente_062` | 5M | 11.58 s | **13.2 cm** |
+| 4 | `agente_081` | 5M | 11.64 s | 14.2 cm |
+| 5 | `agente_004` | 3M | 11.72 s | 26.3 cm |
+| — | Base `carrera_v03` | — | 12.54 s | 20.9 cm |
+
+- **Qué pesos ganan** (`analisis.md`):
+
+| Parámetro | Media, pasan (17) | Media, 5 mejores | Spearman con el puntaje | Lectura |
+|---|---|---|---|---|
+| peso `seguimiento_vx` | 1.36 | **1.84** | **−0.64** | Premiar más la velocidad da más velocidad |
+| peso `barrera_margen` | −9.7 | −7.6 | **−0.57** | Barrera más fuerte, mejor puntaje |
+| peso `cambio_accion` | −0.060 | −0.080 | **+0.54** | Castigar más los cambios bruscos, mejor puntaje |
+| peso `salida_carril` | −354 | −331 | **−0.53** | Castigo más fuerte, mejor puntaje |
+| peso `caida` | −184 | −140 | −0.38 | — |
+| peso `choque_piernas` | −2.75 | −3.36 | +0.33 | — |
+| peso `patron_marcha` | 0.63 | 0.59 | +0.32 | — |
+| `vx_max` | 0.538 | 0.561 | −0.21 | — |
+
+- **Comparación con los otros carriles** (batería del benchmark, `results/barridos/ronda2/comparacion_3_carriles/`):
+
+| Carril | Política | Metas | Tiempo en 5 m | Desvío máx. medio |
+|---|---|---|---|---|
+| **RL** | `agente_071` (ronda 2, 3M) | 25/25 | **10.68–10.78 s** | 5.5 cm (máx. 13.3) |
+| **RL** | `agente_062` (ronda 2, 5M) | 25/25 | 10.73–11.40 s | **4.0 cm** (máx. 7.6) |
+| RL | `carrera_v03` | 25/25 | 11.16–11.26 s | 4.9 cm (máx. 10.2) |
+| RL | Sprint inicial (`v2_brazos`) | 25/25 | 24.2–24.3 s | ~7 cm |
+| Baseline 2 | B-Human (réplica) | 25/25 | 16.2–18.3 s | ~3 cm |
+| Baseline 1 | NAOqi (réplica) | 25/25 | 45.3–49.9 s | ~2.4 cm |
+
+- **`agente_071` contra `agente_062`:**
+  - el `071` es el más rápido, pero con perturbaciones y salidas torcidas llegó a 25 cm del centro, cerca de la línea;
+  - el `062` es ~0.3 s más lento y bastante más recto (13 cm en la batería completa);
+  - la ronda 3 (paso 63) decidirá con la cámara renderizada y la escena de 3 carriles.
+- **Cambios menores:**
+  - `demo/run_demo.py --live` ahora acepta `--rl` y `--rl-vx` (antes no los pasaba al visor);
+  - el título de la sección 4 de `analizar_barrido.py` dice "siguiente ronda".
+- **Siguiente:** paso 63 (ronda 3 con los 5 mejores). Antes, medir si 20 o 24 entornos rinden más en este PC.

@@ -466,6 +466,14 @@ noviembre de 2026.
 - **Resultado:** 70/100 pasan; 49 superan a la base; mejor 11.43 s contra 12.41 s. Ningún peso domina (|ρ| ≤ 0.28).
 - **Datos:** `results/barridos/ronda1/`.
 
+### Paso 62 — Ronda 2: 20 agentes con 5M pasos (2026-10-12)
+- **Qué se hizo:** los 20 mejores siguieron 5M pasos con su config; batería completa (44 corridas) en cada checkpoint
+  y se eligió el mejor (E54).
+- **Resultado:**
+  - 17/20 pasan; mejor `agente_071` 11.38 s (base 12.54 s);
+  - en la batería del benchmark, 10.7 s contra 16.2–18.3 s de B-Human;
+  - ganan los pesos `seguimiento_vx`, `barrera_margen`, `cambio_accion` y `salida_carril`.
+
 ## Trabajo de documentación (sin número de paso, 2026-10-10)
 
 Pedido por el usuario para el paper. Commits `441dcb0`, `a266095` y el de la revisión previa al paso 41.
