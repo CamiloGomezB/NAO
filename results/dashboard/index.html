@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carrera NAO: avance del RL</title>
+<style>
+:root { color-scheme: light;
+  --font-anthropic-sans: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-anthropic-serif: Georgia, "Times New Roman", serif;
+  --cds-font-size-caption: 12px; --cds-font-size-body: 14px; --cds-font-size-heading: 16px; --cds-font-size-title: 30px;
+  --cds-font-weight-medium: 600; --cds-gap-xs: 4px; --cds-gap-sm: 8px; --cds-gap-md: 16px; --cds-gap-lg: 24px; --cds-gap-xl: 32px;
+  --cds-pad-xs: 4px; --cds-pad-sm: 8px; --cds-pad-md: 12px; --cds-pad-lg: 16px; --cds-radius: 8px; --cds-dur-slow: 300ms;
+  --color-bg: #f7f7f5; --color-panel: #ffffff; --color-fg: #1b1b19; --color-fg-muted: #5f5e59; --color-border-line: #e3e2dc;
+  --color-ok: #087a08; --color-warn: #a26800; --color-bad: #c22f2f;
+  --cds-surface-popover: #ffffff; --cds-border: #d9d8d1; --cds-shadow-popover: 0 4px 16px rgba(0,0,0,.12); --cds-text-secondary: #5f5e59;
+  --cds-chart-axis: #b9b8b0; --cds-chart-grid: #ecebe6; --cds-chart-muted: #c4c3bb; --cds-chart-reference: #8a8983; --cds-chart-status-critical: #d03b3b; }
+@media (prefers-color-scheme: dark) { :root { color-scheme: dark;
+  --color-bg: #151514; --color-panel: #1e1e1d; --color-fg: #f2f1ec; --color-fg-muted: #b3b2aa; --color-border-line: #33332f;
+  --color-ok: #4cc34c; --color-warn: #f0b440; --color-bad: #ee6a6a;
+  --cds-surface-popover: #262624; --cds-border: #3d3d39; --cds-shadow-popover: 0 4px 16px rgba(0,0,0,.5); --cds-text-secondary: #b3b2aa;
+  --cds-chart-axis: #55554f; --cds-chart-grid: #2b2b28; --cds-chart-muted: #5c5b55; --cds-chart-reference: #8f8e87; --cds-chart-status-critical: #e66767; } }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--color-bg); color: var(--color-fg); font-family: var(--font-anthropic-sans); }
+#dash-root { max-width: 1280px; margin-inline: auto; padding: 24px clamp(16px, 4vw, 40px); }
+.nx-pie { margin-top: 24px; font-size: 12px; color: var(--color-fg-muted); }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+</head>
+<body>
+<div id="dash-root">
+<script>
+window.dash = (() => {
+  const DATOS = {"benchmark": [{"caminata": "B-Human", "vision": "no", "mu": 0.4, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 18.31, "desvio_cm": 6.5, "clave": "B-Human|no|0.4"}, {"caminata": "B-Human", "vision": "no", "mu": 0.6, "metas": 0, "n": 5, "caidas": 0, "salidas": 5, "t_meta_s": null, "desvio_cm": 25.5, "clave": "B-Human|no|0.6"}, {"caminata": "B-Human", "vision": "no", "mu": 0.8, "metas": 2, "n": 5, "caidas": 0, "salidas": 3, "t_meta_s": 16.41, "desvio_cm": 22.1, "clave": "B-Human|no|0.8"}, {"caminata": "B-Human", "vision": "no", "mu": 1.0, "metas": 4, "n": 5, "caidas": 0, "salidas": 1, "t_meta_s": 16.19, "desvio_cm": 18.1, "clave": "B-Human|no|1.0"}, {"caminata": "B-Human", "vision": "no", "mu": 1.2, "metas": 3, "n": 5, "caidas": 0, "salidas": 2, "t_meta_s": 16.4, "desvio_cm": 20.9, "clave": "B-Human|no|1.2"}, {"caminata": "B-Human", "vision": "sí", "mu": 0.4, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 18.26, "desvio_cm": 2.7, "clave": "B-Human|sí|0.4"}, {"caminata": "B-Human", "vision": "sí", "mu": 0.6, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 16.81, "desvio_cm": 4.0, "clave": "B-Human|sí|0.6"}, {"caminata": "B-Human", "vision": "sí", "mu": 0.8, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 16.41, "desvio_cm": 2.8, "clave": "B-Human|sí|0.8"}, {"caminata": "B-Human", "vision": "sí", "mu": 1.0, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 16.19, "desvio_cm": 2.8, "clave": "B-Human|sí|1.0"}, {"caminata": "B-Human", "vision": "sí", "mu": 1.2, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 16.41, "desvio_cm": 2.8, "clave": "B-Human|sí|1.2"}, {"caminata": "NAOqi", "vision": "no", "mu": 0.4, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 45.36, "desvio_cm": 7.2, "clave": "NAOqi|no|0.4"}, {"caminata": "NAOqi", "vision": "no", "mu": 0.6, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 47.83, "desvio_cm": 7.0, "clave": "NAOqi|no|0.6"}, {"caminata": "NAOqi", "vision": "no", "mu": 0.8, "metas": 0, "n": 5, "caidas": 0, "salidas": 5, "t_meta_s": null, "desvio_cm": 25.7, "clave": "NAOqi|no|0.8"}, {"caminata": "NAOqi", "vision": "no", "mu": 1.0, "metas": 2, "n": 5, "caidas": 0, "salidas": 3, "t_meta_s": 49.85, "desvio_cm": 24.3, "clave": "NAOqi|no|1.0"}, {"caminata": "NAOqi", "vision": "no", "mu": 1.2, "metas": 2, "n": 5, "caidas": 0, "salidas": 3, "t_meta_s": 49.87, "desvio_cm": 19.3, "clave": "NAOqi|no|1.2"}, {"caminata": "NAOqi", "vision": "sí", "mu": 0.4, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 45.35, "desvio_cm": 2.5, "clave": "NAOqi|sí|0.4"}, {"caminata": "NAOqi", "vision": "sí", "mu": 0.6, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 47.82, "desvio_cm": 2.5, "clave": "NAOqi|sí|0.6"}, {"caminata": "NAOqi", "vision": "sí", "mu": 0.8, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 48.82, "desvio_cm": 2.4, "clave": "NAOqi|sí|0.8"}, {"caminata": "NAOqi", "vision": "sí", "mu": 1.0, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 49.84, "desvio_cm": 2.4, "clave": "NAOqi|sí|1.0"}, {"caminata": "NAOqi", "vision": "sí", "mu": 1.2, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 49.86, "desvio_cm": 2.3, "clave": "NAOqi|sí|1.2"}, {"caminata": "RL sprint (sep.)", "vision": "no", "mu": 0.4, "metas": 0, "n": 5, "caidas": 0, "salidas": 5, "t_meta_s": null, "desvio_cm": 26.6, "clave": "RL sprint (sep.)|no|0.4"}, {"caminata": "RL sprint (sep.)", "vision": "no", "mu": 0.6, "metas": 4, "n": 5, "caidas": 0, "salidas": 1, "t_meta_s": 24.77, "desvio_cm": 18.2, "clave": "RL sprint (sep.)|no|0.6"}, {"caminata": "RL sprint (sep.)", "vision": "no", "mu": 0.8, "metas": 2, "n": 5, "caidas": 0, "salidas": 3, "t_meta_s": 24.76, "desvio_cm": 24.7, "clave": "RL sprint (sep.)|no|0.8"}, {"caminata": "RL sprint (sep.)", "vision": "no", "mu": 1.0, "metas": 4, "n": 5, "caidas": 0, "salidas": 1, "t_meta_s": 24.78, "desvio_cm": 19.4, "clave": "RL sprint (sep.)|no|1.0"}, {"caminata": "RL sprint (sep.)", "vision": "no", "mu": 1.2, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 24.78, "desvio_cm": 15.3, "clave": "RL sprint (sep.)|no|1.2"}, {"caminata": "RL sprint (sep.)", "vision": "sí", "mu": 0.4, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 24.22, "desvio_cm": 6.5, "clave": "RL sprint (sep.)|sí|0.4"}, {"caminata": "RL sprint (sep.)", "vision": "sí", "mu": 0.6, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 24.21, "desvio_cm": 7.0, "clave": "RL sprint (sep.)|sí|0.6"}, {"caminata": "RL sprint (sep.)", "vision": "sí", "mu": 0.8, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 24.26, "desvio_cm": 7.1, "clave": "RL sprint (sep.)|sí|0.8"}, {"caminata": "RL sprint (sep.)", "vision": "sí", "mu": 1.0, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 24.28, "desvio_cm": 7.5, "clave": "RL sprint (sep.)|sí|1.0"}, {"caminata": "RL sprint (sep.)", "vision": "sí", "mu": 1.2, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 24.29, "desvio_cm": 7.3, "clave": "RL sprint (sep.)|sí|1.2"}, {"caminata": "RL v1.0", "vision": "sí", "mu": 0.4, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 11.18, "desvio_cm": 3.1, "clave": "RL v1.0|sí|0.4"}, {"caminata": "RL v1.0", "vision": "sí", "mu": 0.6, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 11.19, "desvio_cm": 4.2, "clave": "RL v1.0|sí|0.6"}, {"caminata": "RL v1.0", "vision": "sí", "mu": 0.8, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 11.2, "desvio_cm": 4.9, "clave": "RL v1.0|sí|0.8"}, {"caminata": "RL v1.0", "vision": "sí", "mu": 1.0, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 11.18, "desvio_cm": 5.4, "clave": "RL v1.0|sí|1.0"}, {"caminata": "RL v1.0", "vision": "sí", "mu": 1.2, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 11.2, "desvio_cm": 6.9, "clave": "RL v1.0|sí|1.2"}, {"caminata": "RL v1.1", "vision": "sí", "mu": 0.4, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 10.71, "desvio_cm": 5.1, "clave": "RL v1.1|sí|0.4"}, {"caminata": "RL v1.1", "vision": "sí", "mu": 0.6, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 10.71, "desvio_cm": 4.5, "clave": "RL v1.1|sí|0.6"}, {"caminata": "RL v1.1", "vision": "sí", "mu": 0.8, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 10.7, "desvio_cm": 5.5, "clave": "RL v1.1|sí|0.8"}, {"caminata": "RL v1.1", "vision": "sí", "mu": 1.0, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 10.69, "desvio_cm": 5.8, "clave": "RL v1.1|sí|1.0"}, {"caminata": "RL v1.1", "vision": "sí", "mu": 1.2, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 10.7, "desvio_cm": 6.9, "clave": "RL v1.1|sí|1.2"}, {"caminata": "carrera_v01", "vision": "sí", "mu": 0.4, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 11.51, "desvio_cm": 6.0, "clave": "carrera_v01|sí|0.4"}, {"caminata": "carrera_v01", "vision": "sí", "mu": 0.6, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 11.52, "desvio_cm": 6.3, "clave": "carrera_v01|sí|0.6"}, {"caminata": "carrera_v01", "vision": "sí", "mu": 0.8, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 11.49, "desvio_cm": 6.7, "clave": "carrera_v01|sí|0.8"}, {"caminata": "carrera_v01", "vision": "sí", "mu": 1.0, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 11.52, "desvio_cm": 6.9, "clave": "carrera_v01|sí|1.0"}, {"caminata": "carrera_v01", "vision": "sí", "mu": 1.2, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 11.54, "desvio_cm": 7.1, "clave": "carrera_v01|sí|1.2"}, {"caminata": "carrera_v02", "vision": "sí", "mu": 0.4, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 11.5, "desvio_cm": 7.8, "clave": "carrera_v02|sí|0.4"}, {"caminata": "carrera_v02", "vision": "sí", "mu": 0.6, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 11.51, "desvio_cm": 8.2, "clave": "carrera_v02|sí|0.6"}, {"caminata": "carrera_v02", "vision": "sí", "mu": 0.8, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 11.52, "desvio_cm": 8.6, "clave": "carrera_v02|sí|0.8"}, {"caminata": "carrera_v02", "vision": "sí", "mu": 1.0, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 11.52, "desvio_cm": 8.9, "clave": "carrera_v02|sí|1.0"}, {"caminata": "carrera_v02", "vision": "sí", "mu": 1.2, "metas": 5, "n": 5, "caidas": 0, "salidas": 0, "t_meta_s": 11.51, "desvio_cm": 9.3, "clave": "carrera_v02|sí|1.2"}], "versiones": [{"orden": 0, "version": "Sprint", "politica": "RL sprint (sep.)", "fecha": "2026-09", "pasos_M": 5, "t_benchmark_s": 24.25, "metas": "25/25", "que_cambio": "Primera caminata por RL (modelo V5 aproximado, sin cámara)", "por_que": "Punto de partida: aprender a caminar", "resultado": "Camina a 0.2 m/s; no usa cámara (truco del giroscopio)"}, {"orden": 1, "version": "v01", "politica": "carrera_v01", "fecha": "2026-10-11", "pasos_M": 15.3, "t_benchmark_s": 11.52, "metas": "25/25", "que_cambio": "Entorno de carrera nuevo: modelo V6 oficial, cámara simulada, faltas del reglamento, fricción aleatoria y perturbaciones", "por_que": "Entrenar la tarea real de la carrera desde cero", "resultado": "Gana a B-Human con visión; se cae si pierde la cámara"}, {"orden": 2, "version": "v02", "politica": "carrera_v02", "fecha": "2026-10-11", "pasos_M": 40, "t_benchmark_s": 11.51, "metas": "25/25", "que_cambio": "Más pérdida de visión en el entrenamiento: 15 % de episodios sin cámara y apagones de 1–8 s", "por_que": "La v01 se caía sin cámara (válido = 0 quedaba fuera de lo que conocía)", "resultado": "Sin cámara llega 89/100 y no se cae"}, {"orden": 3, "version": "1.0", "politica": "RL v1.0", "fecha": "2026-10-11", "pasos_M": 20, "t_benchmark_s": 11.19, "metas": "25/25", "que_cambio": "Rumbo de la IMU alineado al carril con la cámara + salidas torcidas de hasta ±25° en el entrenamiento", "por_que": "Si arrancaba torcida ≥ 8°, la IMU la empujaba a seguir torcida", "resultado": "Llega desde salidas de ±15 cm y ±25°"}, {"orden": 4, "version": "1.1", "politica": "RL v1.1", "fecha": "2026-10-12", "pasos_M": 6, "t_benchmark_s": 10.7, "metas": "25/25", "que_cambio": "Ronda de 100 agentes con pesos sorteados y luego los 20 mejores con 5M pasos más; se elige el mejor checkpoint", "por_que": "Buscar qué pesos de la recompensa hacen la caminata más rápida sin faltas", "resultado": "La más rápida: premiar la velocidad y castigar cambios bruscos ayuda"}, {"orden": null, "version": "B-Human", "politica": "B-Human", "fecha": null, "pasos_M": null, "t_benchmark_s": 16.82, "metas": "25/25", "que_cambio": "Línea base", "por_que": "Comparación (réplica en simulación)", "resultado": null}, {"orden": null, "version": "NAOqi", "politica": "NAOqi", "fecha": null, "pasos_M": null, "t_benchmark_s": 48.34, "metas": "25/25", "que_cambio": "Línea base", "por_que": "Comparación (réplica en simulación)", "resultado": null}], "ronda1": [{"agente": "agente_000", "pasa": "no", "faltas": 2, "puntaje_s": null, "vx_max": 0.435, "friccion_min": 0.307, "friccion_max": 1.219, "seguimiento_vx": 1.455, "meta": 13.489, "rumbo": 0.233, "centrado": -4.926, "barrera_margen": -4.548, "vel_lateral": -3.57, "vel_giro": -0.847, "salida_carril": -327.05, "caida": -164.094, "patron_marcha": 0.935, "inclinacion": -1.329, "choque_piernas": -4.988, "cambio_accion": -0.018}, {"agente": "agente_001", "pasa": "sí", "faltas": 0, "puntaje_s": 13.01, "vx_max": 0.426, "friccion_min": 0.452, "friccion_max": 1.288, "seguimiento_vx": 1.835, "meta": 27.857, "rumbo": 0.841, "centrado": -0.696, "barrera_margen": -18.886, "vel_lateral": -15.745, "vel_giro": -0.503, "salida_carril": -399.969, "caida": -118.569, "patron_marcha": 0.619, "inclinacion": -4.982, "choque_piernas": -4.513, "cambio_accion": -0.088}, {"agente": "agente_002", "pasa": "sí", "faltas": 0, "puntaje_s": 12.36, "vx_max": 0.575, "friccion_min": 0.435, "friccion_max": 1.022, "seguimiento_vx": 0.621, "meta": 20.122, "rumbo": 0.681, "centrado": -4.347, "barrera_margen": -17.809, "vel_lateral": -14.115, "vel_giro": -1.775, "salida_carril": -362.318, "caida": -180.119, "patron_marcha": 0.261, "inclinacion": -2.833, "choque_piernas": -1.083, "cambio_accion": -0.038}, {"agente": "agente_003", "pasa": "no", "faltas": 1, "puntaje_s": null, "vx_max": 0.49, "friccion_min": 0.343, "friccion_max": 1.268, "seguimiento_vx": 1.843, "meta": 43.021, "rumbo": 0.457, "centrado": -3.574, "barrera_margen": -14.316, "vel_lateral": -7.607, "vel_giro": -1.391, "salida_carril": -327.71, "caida": -283.978, "patron_marcha": 0.165, "inclinacion": -0.913, "choque_piernas": -2.564, "cambio_accion": -0.042}, {"agente": "agente_004", "pasa": "sí", "faltas": 0, "puntaje_s": 11.9, "vx_max": 0.574, "friccion_min": 0.388, "friccion_max": 1.135, "seguimiento_vx": 1.825, "meta": 11.43, "rumbo": 0.528, "centrado": -2.99, "barrera_margen": -5.346, "vel_lateral": -16.047, "vel_giro": -0.69, "salida_carril": -317.346, "caida": -100.327, "patron_marcha": 0.658, "inclinacion": -2.259, "choque_piernas": -3.422, "cambio_accion": -0.099}, {"agente": "agente_005", "pasa": "sí", "faltas": 0, "puntaje_s": 12.27, "vx_max": 0.549, "friccion_min": 0.384, "friccion_max": 1.291, "seguimiento_vx": 1.073, "meta": 27.387, "rumbo": 0.529, "centrado": -3.34, "barrera_margen": -17.372, "vel_lateral": -8.983, "vel_giro": -1.813, "salida_carril": -336.316, "caida": -280.801, "patron_marcha": 0.458, "inclinacion": -3.107, "choque_piernas": -4.254, "cambio_accion": -0.028}, {"agente": "agente_006", "pasa": "sí", "faltas": 0, "puntaje_s": 12.55, "vx_max": 0.576, "friccion_min": 0.307, "friccion_max": 1.238, "seguimiento_vx": 1.118, "meta": 10.665, "rumbo": 0.783, "centrado": -2.543, "barrera_margen": -9.871, "vel_lateral": -8.721, "vel_giro": -0.434, "salida_carril": -392.904, "caida": -267.197, "patron_marcha": 0.085, "inclinacion": -4.919, "choque_piernas": -2.41, "cambio_accion": -0.051}, {"agente": "agente_007", "pasa": "sí", "faltas": 0, "puntaje_s": 11.88, "vx_max": 0.489, "friccion_min": 0.453, "friccion_max": 1.032, "seguimiento_vx": 0.558, "meta": 38.856, "rumbo": 0.839, "centrado": -2.856, "barrera_margen": -4.021, "vel_lateral": -2.929, "vel_giro": -1.765, "salida_carril": -346.524, "caida": -186.445, "patron_marcha": 0.909, "inclinacion": -1.256, "choque_piernas": -4.64, "cambio_accion": -0.072}, {"agente": "agente_008", "pasa": "no", "faltas": 2, "puntaje_s": null, "vx_max": 0.489, "friccion_min": 0.465, "friccion_max": 1.191, "seguimiento_vx": 1.639, "meta": 38.795, "rumbo": 0.321, "centrado": -4.651, "barrera_margen": -10.876, "vel_lateral": -10.373, "vel_giro": -0.755, "salida_carril": -340.002, "caida": -121.508, "patron_marcha": 0.241, "inclinacion": -1.006, "choque_piernas": -3.149, "cambio_accion": -0.02}, {"agente": "agente_009", "pasa": "sí", "faltas": 0, "puntaje_s": 12.67, "vx_max": 0.408, "friccion_min": 0.469, "friccion_max": 1.298, "seguimiento_vx": 1.351, "meta": 49.253, "rumbo": 0.388, "centrado": -1.988, "barrera_margen": -2.457, "vel_lateral": -17.146, "vel_giro": -1.244, "salida_carril": -362.172, "caida": -160.653, "patron_marcha": 0.797, "inclinacion": -0.559, "choque_piernas": -4.545, "cambio_accion": -0.037}, {"agente": "agente_010", "pasa": "sí", "faltas": 0, "puntaje_s": 12.47, "vx_max": 0.442, "friccion_min": 0.379, "friccion_max": 1.006, "seguimiento_vx": 1.248, "meta": 10.267, "rumbo": 0.694, "centrado": -3.549, "barrera_margen": -8.351, "vel_lateral": -19.6, "vel_giro": -1.63, "salida_carril": -300.305, "caida": -265.329, "patron_marcha": 0.257, "inclinacion": -4.485, "choque_piernas": -1.494, "cambio_accion": -0.007}, {"agente": "agente_011", "pasa": "sí", "faltas": 0, "puntaje_s": 11.86, "vx_max": 0.491, "friccion_min": 0.371, "friccion_max": 1.007, "seguimiento_vx": 1.28, "meta": 8.848, "rumbo": 0.498, "centrado": -4.373, "barrera_margen": -1.63, "vel_lateral": -7.401, "vel_giro": -0.92, "salida_carril": -394.668, "caida": -294.367, "patron_marcha": 0.352, "inclinacion": -2.533, "choque_piernas": -3.235, "cambio_accion": -0.047}, {"agente": "agente_012", "pasa": "no", "faltas": 1, "puntaje_s": null, "vx_max": 0.427, "friccion_min": 0.462, "friccion_max": 1.023, "seguimiento_vx": 1.135, "meta": 31.53, "rumbo": 0.431, "centrado": -4.053, "barrera_margen": -11.794, "vel_lateral": -2.689, "vel_giro": -0.262, "salida_carril": -392.038, "caida": -130.196, "patron_marcha": 0.822, "inclinacion": -3.88, "choque_piernas": -4.499, "cambio_accion": -0.058}, {"agente": "agente_013", "pasa": "no", "faltas": 1, "puntaje_s": null, "vx_max": 0.487, "friccion_min": 0.417, "friccion_max": 1.131, "seguimiento_vx": 1.366, "meta": 5.635, "rumbo": 0.54, "centrado": -3.196, "barrera_margen": -8.88, "vel_lateral": -12.786, "vel_giro": -0.648, "salida_carril": -335.232, "caida": -150.68, "patron_marcha": 0.959, "inclinacion": -4.09, "choque_piernas": -1.209, "cambio_accion": -0.053}, {"agente": "agente_014", "pasa": "sí", "faltas": 0, "puntaje_s": 13.4, "vx_max": 0.542, "friccion_min": 0.314, "friccion_max": 1.137, "seguimiento_vx": 1.332, "meta": 8.019, "rumbo": 0.878, "centrado": -3.621, "barrera_margen": -6.113, "vel_lateral": -9.756, "vel_giro": -0.473, "salida_carril": -375.784, "caida": -235.817, "patron_marcha": 0.763, "inclinacion": -0.755, "choque_piernas": -3.767, "cambio_accion": -0.066}, {"agente": "agente_015", "pasa": "sí", "faltas": 0, "puntaje_s": 11.95, "vx_max": 0.486, "friccion_min": 0.463, "friccion_max": 1.172, "seguimiento_vx": 1.433, "meta": 14.55, "rumbo": 0.821, "centrado": -4.169, "barrera_margen": -5.796, "vel_lateral": -2.305, "vel_giro": -0.594, "salida_carril": -347.212, "caida": -276.381, "patron_marcha": 0.942, "inclinacion": -4.023, "choque_piernas": -2.013, "cambio_accion": -0.02}, {"agente": "agente_016", "pasa": "no", "faltas": 2, "puntaje_s": null, "vx_max": 0.598, "friccion_min": 0.312, "friccion_max": 1.202, "seguimiento_vx": 1.669, "meta": 28.593, "rumbo": 0.776, "centrado": -0.807, "barrera_margen": -16.514, "vel_lateral": -16.727, "vel_giro": -1.927, "salida_carril": -308.996, "caida": -299.67, "patron_marcha": 0.338, "inclinacion": -3.288, "choque_piernas": -3.67, "cambio_accion": -0.014}, {"agente": "agente_017", "pasa": "sí", "faltas": 0, "puntaje_s": 12.49, "vx_max": 0.503, "friccion_min": 0.386, "friccion_max": 1.194, "seguimiento_vx": 1.041, "meta": 43.833, "rumbo": 0.846, "centrado": -4.259, "barrera_margen": -5.677, "vel_lateral": -11.976, "vel_giro": -1.393, "salida_carril": -316.422, "caida": -283.531, "patron_marcha": 0.682, "inclinacion": -3.713, "choque_piernas": -1.753, "cambio_accion": -0.044}, {"agente": "agente_018", "pasa": "sí", "faltas": 0, "puntaje_s": 11.98, "vx_max": 0.502, "friccion_min": 0.443, "friccion_max": 1.007, "seguimiento_vx": 1.851, "meta": 9.957, "rumbo": 0.555, "centrado": -3.756, "barrera_margen": -12.286, "vel_lateral": -12.401, "vel_giro": -0.912, "salida_carril": -391.708, "caida": -275.512, "patron_marcha": 0.204, "inclinacion": -1.499, "choque_piernas": -4.605, "cambio_accion": -0.059}, {"agente": "agente_019", "pasa": "sí", "faltas": 0, "puntaje_s": 12.15, "vx_max": 0.509, "friccion_min": 0.395, "friccion_max": 1.161, "seguimiento_vx": 0.714, "meta": 29.625, "rumbo": 0.342, "centrado": -3.705, "barrera_margen": -17.543, "vel_lateral": -18.634, "vel_giro": -1.51, "salida_carril": -331.838, "caida": -50.029, "patron_marcha": 0.792, "inclinacion": -2.494, "choque_piernas": -3.603, "cambio_accion": -0.06}, {"agente": "agente_020", "pasa": "no", "faltas": 2, "puntaje_s": null, "vx_max": 0.558, "friccion_min": 0.381, "friccion_max": 1.156, "seguimiento_vx": 1.667, "meta": 7.436, "rumbo": 0.316, "centrado": -2.076, "barrera_margen": -12.079, "vel_lateral": -4.636, "vel_giro": -1.624, "salida_carril": -331.881, "caida": -72.654, "patron_marcha": 0.299, "inclinacion": -4.107, "choque_piernas": -2.418, "cambio_accion": -0.056}, {"agente": "agente_021", "pasa": "sí", "faltas": 0, "puntaje_s": 12.03, "vx_max": 0.586, "friccion_min": 0.37, "friccion_max": 1.064, "seguimiento_vx": 1.112, "meta": 47.255, "rumbo": 0.313, "centrado": -2.095, "barrera_margen": -8.142, "vel_lateral": -8.218, "vel_giro": -1.608, "salida_carril": -373.228, "caida": -143.145, "patron_marcha": 0.366, "inclinacion": -4.466, "choque_piernas": -0.903, "cambio_accion": -0.04}, {"agente": "agente_022", "pasa": "sí", "faltas": 0, "puntaje_s": 12.38, "vx_max": 0.424, "friccion_min": 0.416, "friccion_max": 1.212, "seguimiento_vx": 1.078, "meta": 4.957, "rumbo": 0.435, "centrado": -2.558, "barrera_margen": -16.941, "vel_lateral": -18.141, "vel_giro": -0.775, "salida_carril": -365.097, "caida": -237.031, "patron_marcha": 0.43, "inclinacion": -1.398, "choque_piernas": -3.986, "cambio_accion": -0.078}, {"agente": "agente_023", "pasa": "sí", "faltas": 0, "puntaje_s": 11.62, "vx_max": 0.566, "friccion_min": 0.421, "friccion_max": 1.092, "seguimiento_vx": 1.266, "meta": 16.415, "rumbo": 0.25, "centrado": -2.013, "barrera_margen": -10.011, "vel_lateral": -19.267, "vel_giro": -0.461, "salida_carril": -350.704, "caida": -180.88, "patron_marcha": 0.263, "inclinacion": -0.728, "choque_piernas": -1.699, "cambio_accion": -0.056}, {"agente": "agente_024", "pasa": "sí", "faltas": 0, "puntaje_s": 11.99, "vx_max": 0.524, "friccion_min": 0.395, "friccion_max": 1.022, "seguimiento_vx": 1.097, "meta": 7.631, "rumbo": 0.516, "centrado": -4.441, "barrera_margen": -1.55, "vel_lateral": -5.356, "vel_giro": -1.638, "salida_carril": -324.356, "caida": -56.202, "patron_marcha": 0.834, "inclinacion": -2.918, "choque_piernas": -2.56, "cambio_accion": -0.076}, {"agente": "agente_025", "pasa": "sí", "faltas": 0, "puntaje_s": 12.29, "vx_max": 0.416, "friccion_min": 0.477, "friccion_max": 1.118, "seguimiento_vx": 1.005, "meta": 17.104, "rumbo": 0.909, "centrado": -4.979, "barrera_margen": -17.169, "vel_lateral": -3.729, "vel_giro": -0.349, "salida_carril": -340.98, "caida": -198.98, "patron_marcha": 0.512, "inclinacion": -4.547, "choque_piernas": -2.42, "cambio_accion": -0.007}, {"agente": "agente_026", "pasa": "sí", "faltas": 0, "puntaje_s": 11.45, "vx_max": 0.583, "friccion_min": 0.439, "friccion_max": 1.19, "seguimiento_vx": 1.967, "meta": 42.02, "rumbo": 0.81, "centrado": -2.76, "barrera_margen": -2.93, "vel_lateral": -6.087, "vel_giro": -0.129, "salida_carril": -309.954, "caida": -73.231, "patron_marcha": 0.262, "inclinacion": -1.664, "choque_piernas": -4.109, "cambio_accion": -0.071}, {"agente": "agente_027", "pasa": "no", "faltas": 1, "puntaje_s": null, "vx_max": 0.417, "friccion_min": 0.327, "friccion_max": 1.175, "seguimiento_vx": 1.658, "meta": 26.662, "rumbo": 0.361, "centrado": -0.927, "barrera_margen": -6.931, "vel_lateral": -9.423, "vel_giro": -0.401, "salida_carril": -307.409, "caida": -223.998, "patron_marcha": 0.991, "inclinacion": -2.325, "choque_piernas": -0.618, "cambio_accion": -0.018}, {"agente": "agente_028", "pasa": "sí", "faltas": 0, "puntaje_s": 12.22, "vx_max": 0.56, "friccion_min": 0.376, "friccion_max": 1.154, "seguimiento_vx": 1.989, "meta": 49.337, "rumbo": 0.323, "centrado": -1.693, "barrera_margen": -2.188, "vel_lateral": -14.114, "vel_giro": -0.412, "salida_carril": -374.227, "caida": -64.058, "patron_marcha": 0.948, "inclinacion": -2.717, "choque_piernas": -1.426, "cambio_accion": -0.023}, {"agente": "agente_029", "pasa": "sí", "faltas": 0, "puntaje_s": 12.56, "vx_max": 0.524, "friccion_min": 0.302, "friccion_max": 1.073, "seguimiento_vx": 0.505, "meta": 24.068, "rumbo": 0.345, "centrado": -1.497, "barrera_margen": -12.431, "vel_lateral": -13.843, "vel_giro": -1.955, "salida_carril": -307.111, "caida": -61.19, "patron_marcha": 0.49, "inclinacion": -3.825, "choque_piernas": -3.64, "cambio_accion": -0.09}, {"agente": "agente_030", "pasa": "no", "faltas": 1, "puntaje_s": null, "vx_max": 0.548, "friccion_min": 0.485, "friccion_max": 1.192, "seguimiento_vx": 0.698, "meta": 38.966, "rumbo": 0.476, "centrado": -1.77, "barrera_margen": -4.949, "vel_lateral": -13.03, "vel_giro": -1.181, "salida_carril": -323.729, "caida": -199.772, "patron_marcha": 0.82, "inclinacion": -1.384, "choque_piernas": -2.13, "cambio_accion": -0.046}, {"agente": "agente_031", "pasa": "sí", "faltas": 0, "puntaje_s": 11.91, "vx_max": 0.491, "friccion_min": 0.375, "friccion_max": 1.022, "seguimiento_vx": 0.698, "meta": 16.255, "rumbo": 0.739, "centrado": -4.264, "barrera_margen": -13.981, "vel_lateral": -15.882, "vel_giro": -0.925, "salida_carril": -388.529, "caida": -207.074, "patron_marcha": 0.783, "inclinacion": -4.88, "choque_piernas": -3.321, "cambio_accion": -0.066}, {"agente": "agente_032", "pasa": "no", "faltas": 1, "puntaje_s": null, "vx_max": 0.509, "friccion_min": 0.375, "friccion_max": 1.189, "seguimiento_vx": 0.705, "meta": 47.569, "rumbo": 0.979, "centrado": -0.693, "barrera_margen": -3.412, "vel_lateral": -10.435, "vel_giro": -1.991, "salida_carril": -398.544, "caida": -248.552, "patron_marcha": 0.446, "inclinacion": -2.479, "choque_piernas": -0.606, "cambio_accion": -0.054}, {"agente": "agente_033", "pasa": "no", "faltas": 5, "puntaje_s": null, "vx_max": 0.459, "friccion_min": 0.382, "friccion_max": 1.143, "seguimiento_vx": 1.159, "meta": 28.78, "rumbo": 0.607, "centrado": -2.386, "barrera_margen": -8.274, "vel_lateral": -3.494, "vel_giro": -0.806, "salida_carril": -315.018, "caida": -55.78, "patron_marcha": 0.667, "inclinacion": -1.798, "choque_piernas": -0.884, "cambio_accion": -0.088}, {"agente": "agente_034", "pasa": "sí", "faltas": 0, "puntaje_s": 12.22, "vx_max": 0.591, "friccion_min": 0.384, "friccion_max": 1.066, "seguimiento_vx": 1.478, "meta": 18.393, "rumbo": 0.458, "centrado": -4.769, "barrera_margen": -16.341, "vel_lateral": -3.8, "vel_giro": -1.304, "salida_carril": -311.557, "caida": -62.748, "patron_marcha": 0.458, "inclinacion": -2.037, "choque_piernas": -1.764, "cambio_accion": -0.025}, {"agente": "agente_035", "pasa": "sí", "faltas": 0, "puntaje_s": 13.54, "vx_max": 0.47, "friccion_min": 0.457, "friccion_max": 1.277, "seguimiento_vx": 0.702, "meta": 28.787, "rumbo": 0.694, "centrado": -4.147, "barrera_margen": -8.006, "vel_lateral": -11.579, "vel_giro": -1.169, "salida_carril": -313.862, "caida": -116.945, "patron_marcha": 0.111, "inclinacion": -3.913, "choque_piernas": -3.755, "cambio_accion": -0.063}, {"agente": "agente_036", "pasa": "no", "faltas": 1, "puntaje_s": null, "vx_max": 0.526, "friccion_min": 0.301, "friccion_max": 1.273, "seguimiento_vx": 1.485, "meta": 26.637, "rumbo": 0.27, "centrado": -1.08, "barrera_margen": -17.401, "vel_lateral": -11.081, "vel_giro": -0.575, "salida_carril": -312.51, "caida": -215.379, "patron_marcha": 0.991, "inclinacion": -3.278, "choque_piernas": -3.134, "cambio_accion": -0.074}, {"agente": "agente_037", "pasa": "sí", "faltas": 0, "puntaje_s": 11.62, "vx_max": 0.541, "friccion_min": 0.319, "friccion_max": 1.155, "seguimiento_vx": 1.172, "meta": 8.231, "rumbo": 0.548, "centrado": -3.371, "barrera_margen": -10.767, "vel_lateral": -9.838, "vel_giro": -0.295, "salida_carril": -356.399, "caida": -168.622, "patron_marcha": 0.94, "inclinacion": -1.283, "choque_piernas": -1.134, "cambio_accion": -0.039}, {"agente": "agente_038", "pasa": "sí", "faltas": 0, "puntaje_s": 12.1, "vx_max": 0.582, "friccion_min": 0.426, "friccion_max": 1.0, "seguimiento_vx": 0.529, "meta": 1.666, "rumbo": 0.626, "centrado": -1.66, "barrera_margen": -2.787, "vel_lateral": -6.83, "vel_giro": -0.763, "salida_carril": -375.096, "caida": -101.646, "patron_marcha": 0.956, "inclinacion": -0.638, "choque_piernas": -2.253, "cambio_accion": -0.093}, {"agente": "agente_039", "pasa": "no", "faltas": 1, "puntaje_s": null, "vx_max": 0.509, "friccion_min": 0.482, "friccion_max": 1.034, "seguimiento_vx": 1.625, "meta": 16.054, "rumbo": 0.729, "centrado": -1.796, "barrera_margen": -2.061, "vel_lateral": -5.988, "vel_giro": -1.755, "salida_carril": -377.21, "caida": -110.987, "patron_marcha": 0.838, "inclinacion": -3.242, "choque_piernas": -3.636, "cambio_accion": -0.05}, {"agente": "agente_040", "pasa": "sí", "faltas": 0, "puntaje_s": 12.37, "vx_max": 0.562, "friccion_min": 0.36, "friccion_max": 1.02, "seguimiento_vx": 1.457, "meta": 29.527, "rumbo": 0.24, "centrado": -3.44, "barrera_margen": -6.542, "vel_lateral": -3.454, "vel_giro": -0.721, "salida_carril": -369.895, "caida": -116.914, "patron_marcha": 0.199, "inclinacion": -3.873, "choque_piernas": -1.464, "cambio_accion": -0.06}, {"agente": "agente_041", "pasa": "sí", "faltas": 0, "puntaje_s": 12.32, "vx_max": 0.52, "friccion_min": 0.482, "friccion_max": 1.007, "seguimiento_vx": 0.883, "meta": 41.056, "rumbo": 0.749, "centrado": -4.369, "barrera_margen": -9.456, "vel_lateral": -15.837, "vel_giro": -1.051, "salida_carril": -319.936, "caida": -145.717, "patron_marcha": 0.81, "inclinacion": -4.782, "choque_piernas": -1.905, "cambio_accion": -0.068}, {"agente": "agente_042", "pasa": "sí", "faltas": 0, "puntaje_s": 12.65, "vx_max": 0.459, "friccion_min": 0.459, "friccion_max": 1.022, "seguimiento_vx": 1.89, "meta": 3.482, "rumbo": 0.902, "centrado": -0.803, "barrera_margen": -17.32, "vel_lateral": -9.739, "vel_giro": -0.363, "salida_carril": -331.065, "caida": -148.402, "patron_marcha": 0.509, "inclinacion": -4.161, "choque_piernas": -3.072, "cambio_accion": -0.015}, {"agente": "agente_043", "pasa": "sí", "faltas": 0, "puntaje_s": 11.8, "vx_max": 0.479, "friccion_min": 0.43, "friccion_max": 1.113, "seguimiento_vx": 1.427, "meta": 44.311, "rumbo": 0.602, "centrado": -1.362, "barrera_margen": -17.033, "vel_lateral": -4.253, "vel_giro": -0.787, "salida_carril": -396.74, "caida": -239.411, "patron_marcha": 0.619, "inclinacion": -1.472, "choque_piernas": -1.637, "cambio_accion": -0.054}, {"agente": "agente_044", "pasa": "no", "faltas": 8, "puntaje_s": null, "vx_max": 0.501, "friccion_min": 0.305, "friccion_max": 1.023, "seguimiento_vx": 1.71, "meta": 34.301, "rumbo": 0.569, "centrado": -3.003, "barrera_margen": -19.361, "vel_lateral": -19.366, "vel_giro": -0.674, "salida_carril": -395.428, "caida": -286.404, "patron_marcha": 0.958, "inclinacion": -1.857, "choque_piernas": -3.95, "cambio_accion": -0.071}, {"agente": "agente_045", "pasa": "sí", "faltas": 0, "puntaje_s": 11.43, "vx_max": 0.45, "friccion_min": 0.38, "friccion_max": 1.142, "seguimiento_vx": 0.91, "meta": 5.333, "rumbo": 0.243, "centrado": -2.992, "barrera_margen": -18.759, "vel_lateral": -2.972, "vel_giro": -1.156, "salida_carril": -349.565, "caida": -155.497, "patron_marcha": 0.773, "inclinacion": -0.692, "choque_piernas": -2.808, "cambio_accion": -0.061}, {"agente": "agente_046", "pasa": "no", "faltas": 1, "puntaje_s": null, "vx_max": 0.574, "friccion_min": 0.435, "friccion_max": 1.081, "seguimiento_vx": 1.899, "meta": 26.367, "rumbo": 0.772, "centrado": -3.791, "barrera_margen": -9.018, "vel_lateral": -15.786, "vel_giro": -1.988, "salida_carril": -325.606, "caida": -189.481, "patron_marcha": 0.03, "inclinacion": -1.689, "choque_piernas": -4.377, "cambio_accion": -0.016}, {"agente": "agente_047", "pasa": "sí", "faltas": 0, "puntaje_s": 12.75, "vx_max": 0.567, "friccion_min": 0.328, "friccion_max": 1.133, "seguimiento_vx": 1.376, "meta": 21.56, "rumbo": 0.979, "centrado": -3.773, "barrera_margen": -18.851, "vel_lateral": -2.903, "vel_giro": -1.775, "salida_carril": -323.991, "caida": -167.871, "patron_marcha": 0.601, "inclinacion": -2.018, "choque_piernas": -1.839, "cambio_accion": -0.052}, {"agente": "agente_048", "pasa": "sí", "faltas": 0, "puntaje_s": 12.61, "vx_max": 0.531, "friccion_min": 0.415, "friccion_max": 1.12, "seguimiento_vx": 1.858, "meta": 22.395, "rumbo": 0.317, "centrado": -4.913, "barrera_margen": -9.899, "vel_lateral": -5.067, "vel_giro": -0.393, "salida_carril": -369.461, "caida": -148.803, "patron_marcha": 0.793, "inclinacion": -4.61, "choque_piernas": -1.179, "cambio_accion": -0.048}, {"agente": "agente_049", "pasa": "sí", "faltas": 0, "puntaje_s": 12.93, "vx_max": 0.5, "friccion_min": 0.386, "friccion_max": 1.175, "seguimiento_vx": 1.207, "meta": 30.794, "rumbo": 0.942, "centrado": -3.343, "barrera_margen": -3.054, "vel_lateral": -13.835, "vel_giro": -1.596, "salida_carril": -399.161, "caida": -58.554, "patron_marcha": 0.918, "inclinacion": -2.783, "choque_piernas": -1.358, "cambio_accion": -0.06}, {"agente": "agente_050", "pasa": "sí", "faltas": 0, "puntaje_s": 11.79, "vx_max": 0.59, "friccion_min": 0.463, "friccion_max": 1.239, "seguimiento_vx": 1.669, "meta": 42.075, "rumbo": 0.793, "centrado": -2.796, "barrera_margen": -15.834, "vel_lateral": -9.695, "vel_giro": -1.391, "salida_carril": -361.928, "caida": -213.256, "patron_marcha": 0.785, "inclinacion": -2.94, "choque_piernas": -3.522, "cambio_accion": -0.055}, {"agente": "agente_051", "pasa": "sí", "faltas": 0, "puntaje_s": 11.88, "vx_max": 0.521, "friccion_min": 0.321, "friccion_max": 1.287, "seguimiento_vx": 1.207, "meta": 42.138, "rumbo": 0.563, "centrado": -4.57, "barrera_margen": -5.66, "vel_lateral": -14.691, "vel_giro": -1.709, "salida_carril": -375.615, "caida": -50.653, "patron_marcha": 0.145, "inclinacion": -3.344, "choque_piernas": -1.792, "cambio_accion": -0.056}, {"agente": "agente_052", "pasa": "no", "faltas": 1, "puntaje_s": null, "vx_max": 0.421, "friccion_min": 0.307, "friccion_max": 1.081, "seguimiento_vx": 1.419, "meta": 9.962, "rumbo": 0.476, "centrado": -1.63, "barrera_margen": -16.647, "vel_lateral": -17.376, "vel_giro": -1.483, "salida_carril": -320.679, "caida": -292.21, "patron_marcha": 0.264, "inclinacion": -2.029, "choque_piernas": -4.865, "cambio_accion": -0.094}, {"agente": "agente_053", "pasa": "sí", "faltas": 0, "puntaje_s": 12.44, "vx_max": 0.538, "friccion_min": 0.33, "friccion_max": 1.037, "seguimiento_vx": 0.526, "meta": 10.453, "rumbo": 0.927, "centrado": -1.996, "barrera_margen": -10.778, "vel_lateral": -13.44, "vel_giro": -1.707, "salida_carril": -305.975, "caida": -108.99, "patron_marcha": 0.58, "inclinacion": -3.054, "choque_piernas": -1.151, "cambio_accion": -0.079}, {"agente": "agente_054", "pasa": "sí", "faltas": 0, "puntaje_s": 12.04, "vx_max": 0.43, "friccion_min": 0.457, "friccion_max": 1.096, "seguimiento_vx": 1.7, "meta": 8.807, "rumbo": 0.263, "centrado": -3.141, "barrera_margen": -11.025, "vel_lateral": -2.955, "vel_giro": -1.724, "salida_carril": -344.604, "caida": -71.964, "patron_marcha": 0.719, "inclinacion": -1.883, "choque_piernas": -2.898, "cambio_accion": -0.06}, {"agente": "agente_055", "pasa": "no", "faltas": 1, "puntaje_s": null, "vx_max": 0.568, "friccion_min": 0.426, "friccion_max": 1.106, "seguimiento_vx": 1.452, "meta": 1.7, "rumbo": 0.803, "centrado": -2.315, "barrera_margen": -13.437, "vel_lateral": -19.392, "vel_giro": -0.549, "salida_carril": -362.639, "caida": -191.91, "patron_marcha": 0.065, "inclinacion": -0.758, "choque_piernas": -1.338, "cambio_accion": -0.01}, {"agente": "agente_056", "pasa": "sí", "faltas": 0, "puntaje_s": 12.02, "vx_max": 0.541, "friccion_min": 0.394, "friccion_max": 1.094, "seguimiento_vx": 1.398, "meta": 25.13, "rumbo": 0.2, "centrado": -2.381, "barrera_margen": -14.745, "vel_lateral": -16.951, "vel_giro": -1.577, "salida_carril": -387.455, "caida": -199.945, "patron_marcha": 0.752, "inclinacion": -0.798, "choque_piernas": -2.054, "cambio_accion": -0.095}, {"agente": "agente_057", "pasa": "sí", "faltas": 0, "puntaje_s": 12.08, "vx_max": 0.468, "friccion_min": 0.486, "friccion_max": 1.294, "seguimiento_vx": 1.326, "meta": 44.15, "rumbo": 0.569, "centrado": -1.899, "barrera_margen": -3.272, "vel_lateral": -7.925, "vel_giro": -0.929, "salida_carril": -362.154, "caida": -295.031, "patron_marcha": 0.769, "inclinacion": -4.913, "choque_piernas": -2.898, "cambio_accion": -0.079}, {"agente": "agente_058", "pasa": "sí", "faltas": 0, "puntaje_s": 12.95, "vx_max": 0.467, "friccion_min": 0.373, "friccion_max": 1.1, "seguimiento_vx": 1.318, "meta": 30.278, "rumbo": 0.346, "centrado": -0.8, "barrera_margen": -7.718, "vel_lateral": -9.047, "vel_giro": -0.927, "salida_carril": -376.771, "caida": -103.963, "patron_marcha": 0.93, "inclinacion": -3.212, "choque_piernas": -4.974, "cambio_accion": -0.07}, {"agente": "agente_059", "pasa": "no", "faltas": 2, "puntaje_s": null, "vx_max": 0.556, "friccion_min": 0.436, "friccion_max": 1.065, "seguimiento_vx": 0.848, "meta": 41.963, "rumbo": 0.823, "centrado": -4.095, "barrera_margen": -6.635, "vel_lateral": -19.638, "vel_giro": -0.958, "salida_carril": -389.435, "caida": -299.788, "patron_marcha": 0.627, "inclinacion": -1.029, "choque_piernas": -4.834, "cambio_accion": -0.097}, {"agente": "agente_060", "pasa": "sí", "faltas": 0, "puntaje_s": 12.37, "vx_max": 0.436, "friccion_min": 0.413, "friccion_max": 1.098, "seguimiento_vx": 1.999, "meta": 47.251, "rumbo": 0.734, "centrado": -4.882, "barrera_margen": -6.277, "vel_lateral": -10.607, "vel_giro": -1.935, "salida_carril": -332.347, "caida": -217.96, "patron_marcha": 0.292, "inclinacion": -2.148, "choque_piernas": -1.046, "cambio_accion": -0.012}, {"agente": "agente_061", "pasa": "sí", "faltas": 0, "puntaje_s": 12.83, "vx_max": 0.473, "friccion_min": 0.321, "friccion_max": 1.02, "seguimiento_vx": 1.098, "meta": 26.769, "rumbo": 0.662, "centrado": -4.684, "barrera_margen": -8.971, "vel_lateral": -8.079, "vel_giro": -1.807, "salida_carril": -384.147, "caida": -110.205, "patron_marcha": 0.567, "inclinacion": -1.967, "choque_piernas": -1.82, "cambio_accion": -0.039}, {"agente": "agente_062", "pasa": "sí", "faltas": 0, "puntaje_s": 11.53, "vx_max": 0.496, "friccion_min": 0.439, "friccion_max": 1.093, "seguimiento_vx": 1.939, "meta": 4.726, "rumbo": 0.526, "centrado": -4.193, "barrera_margen": -17.081, "vel_lateral": -6.903, "vel_giro": -1.478, "salida_carril": -394.429, "caida": -108.395, "patron_marcha": 0.992, "inclinacion": -1.453, "choque_piernas": -2.789, "cambio_accion": -0.066}, {"agente": "agente_063", "pasa": "sí", "faltas": 0, "puntaje_s": 12.31, "vx_max": 0.445, "friccion_min": 0.339, "friccion_max": 1.246, "seguimiento_vx": 1.381, "meta": 45.82, "rumbo": 0.282, "centrado": -1.526, "barrera_margen": -3.096, "vel_lateral": -9.511, "vel_giro": -0.468, "salida_carril": -339.464, "caida": -155.53, "patron_marcha": 0.394, "inclinacion": -3.131, "choque_piernas": -4.309, "cambio_accion": -0.075}, {"agente": "agente_064", "pasa": "no", "faltas": 1, "puntaje_s": null, "vx_max": 0.546, "friccion_min": 0.335, "friccion_max": 1.148, "seguimiento_vx": 1.65, "meta": 2.974, "rumbo": 0.489, "centrado": -3.493, "barrera_margen": -11.512, "vel_lateral": -2.716, "vel_giro": -1.032, "salida_carril": -375.901, "caida": -131.06, "patron_marcha": 0.28, "inclinacion": -4.149, "choque_piernas": -4.42, "cambio_accion": -0.067}, {"agente": "agente_065", "pasa": "no", "faltas": 1, "puntaje_s": null, "vx_max": 0.42, "friccion_min": 0.499, "friccion_max": 1.225, "seguimiento_vx": 0.791, "meta": 3.491, "rumbo": 0.733, "centrado": -2.636, "barrera_margen": -3.275, "vel_lateral": -14.383, "vel_giro": -1.152, "salida_carril": -376.707, "caida": -120.26, "patron_marcha": 0.929, "inclinacion": -3.623, "choque_piernas": -0.852, "cambio_accion": -0.078}, {"agente": "agente_066", "pasa": "sí", "faltas": 0, "puntaje_s": 12.83, "vx_max": 0.494, "friccion_min": 0.451, "friccion_max": 1.296, "seguimiento_vx": 0.519, "meta": 29.828, "rumbo": 0.537, "centrado": -2.799, "barrera_margen": -3.068, "vel_lateral": -16.8, "vel_giro": -1.681, "salida_carril": -310.388, "caida": -201.686, "patron_marcha": 0.383, "inclinacion": -3.413, "choque_piernas": -3.664, "cambio_accion": -0.041}, {"agente": "agente_067", "pasa": "no", "faltas": 1, "puntaje_s": null, "vx_max": 0.447, "friccion_min": 0.465, "friccion_max": 1.103, "seguimiento_vx": 1.137, "meta": 41.589, "rumbo": 0.556, "centrado": -1.508, "barrera_margen": -5.52, "vel_lateral": -7.033, "vel_giro": -0.959, "salida_carril": -355.718, "caida": -290.041, "patron_marcha": 0.597, "inclinacion": -0.976, "choque_piernas": -4.455, "cambio_accion": -0.089}, {"agente": "agente_068", "pasa": "sí", "faltas": 0, "puntaje_s": 12.92, "vx_max": 0.515, "friccion_min": 0.45, "friccion_max": 1.134, "seguimiento_vx": 0.814, "meta": 46.871, "rumbo": 0.605, "centrado": -3.49, "barrera_margen": -14.228, "vel_lateral": -13.592, "vel_giro": -1.04, "salida_carril": -377.754, "caida": -266.91, "patron_marcha": 0.938, "inclinacion": -1.106, "choque_piernas": -2.304, "cambio_accion": -0.061}, {"agente": "agente_069", "pasa": "sí", "faltas": 0, "puntaje_s": 11.85, "vx_max": 0.559, "friccion_min": 0.322, "friccion_max": 1.187, "seguimiento_vx": 1.26, "meta": 41.733, "rumbo": 0.433, "centrado": -0.896, "barrera_margen": -3.857, "vel_lateral": -3.225, "vel_giro": -1.796, "salida_carril": -372.06, "caida": -242.921, "patron_marcha": 0.642, "inclinacion": -4.481, "choque_piernas": -1.546, "cambio_accion": -0.038}, {"agente": "agente_070", "pasa": "no", "faltas": 1, "puntaje_s": null, "vx_max": 0.423, "friccion_min": 0.36, "friccion_max": 1.087, "seguimiento_vx": 1.689, "meta": 9.091, "rumbo": 0.966, "centrado": -3.009, "barrera_margen": -19.496, "vel_lateral": -19.829, "vel_giro": -0.183, "salida_carril": -398.557, "caida": -206.15, "patron_marcha": 0.506, "inclinacion": -4.946, "choque_piernas": -4.263, "cambio_accion": -0.066}, {"agente": "agente_071", "pasa": "sí", "faltas": 0, "puntaje_s": 11.46, "vx_max": 0.564, "friccion_min": 0.362, "friccion_max": 1.064, "seguimiento_vx": 1.616, "meta": 35.49, "rumbo": 0.369, "centrado": -0.886, "barrera_margen": -5.623, "vel_lateral": -8.829, "vel_giro": -1.396, "salida_carril": -302.853, "caida": -176.907, "patron_marcha": 0.284, "inclinacion": -2.943, "choque_piernas": -3.734, "cambio_accion": -0.076}, {"agente": "agente_072", "pasa": "sí", "faltas": 0, "puntaje_s": 12.1, "vx_max": 0.513, "friccion_min": 0.446, "friccion_max": 1.183, "seguimiento_vx": 0.774, "meta": 49.178, "rumbo": 0.697, "centrado": -2.396, "barrera_margen": -12.979, "vel_lateral": -14.639, "vel_giro": -0.549, "salida_carril": -355.458, "caida": -185.661, "patron_marcha": 0.696, "inclinacion": -1.927, "choque_piernas": -4.856, "cambio_accion": -0.071}, {"agente": "agente_073", "pasa": "sí", "faltas": 0, "puntaje_s": 12.24, "vx_max": 0.583, "friccion_min": 0.348, "friccion_max": 1.062, "seguimiento_vx": 0.86, "meta": 15.608, "rumbo": 0.478, "centrado": -0.545, "barrera_margen": -10.301, "vel_lateral": -2.747, "vel_giro": -1.822, "salida_carril": -396.385, "caida": -231.27, "patron_marcha": 0.72, "inclinacion": -2.866, "choque_piernas": -4.34, "cambio_accion": -0.092}, {"agente": "agente_074", "pasa": "sí", "faltas": 0, "puntaje_s": 11.76, "vx_max": 0.585, "friccion_min": 0.445, "friccion_max": 1.065, "seguimiento_vx": 1.928, "meta": 1.193, "rumbo": 0.618, "centrado": -0.664, "barrera_margen": -7.968, "vel_lateral": -17.55, "vel_giro": -1.17, "salida_carril": -356.569, "caida": -246.051, "patron_marcha": 0.759, "inclinacion": -3.403, "choque_piernas": -3.893, "cambio_accion": -0.055}, {"agente": "agente_075", "pasa": "sí", "faltas": 0, "puntaje_s": 13.16, "vx_max": 0.539, "friccion_min": 0.302, "friccion_max": 1.231, "seguimiento_vx": 0.806, "meta": 43.661, "rumbo": 0.374, "centrado": -5.0, "barrera_margen": -11.708, "vel_lateral": -12.517, "vel_giro": -1.443, "salida_carril": -343.406, "caida": -216.345, "patron_marcha": 0.129, "inclinacion": -1.664, "choque_piernas": -0.756, "cambio_accion": -0.028}, {"agente": "agente_076", "pasa": "sí", "faltas": 0, "puntaje_s": 13.07, "vx_max": 0.509, "friccion_min": 0.361, "friccion_max": 1.228, "seguimiento_vx": 0.866, "meta": 4.583, "rumbo": 0.794, "centrado": -3.935, "barrera_margen": -11.144, "vel_lateral": -16.04, "vel_giro": -1.376, "salida_carril": -396.123, "caida": -84.113, "patron_marcha": 0.753, "inclinacion": -3.942, "choque_piernas": -2.972, "cambio_accion": -0.043}, {"agente": "agente_077", "pasa": "no", "faltas": 1, "puntaje_s": null, "vx_max": 0.596, "friccion_min": 0.345, "friccion_max": 1.144, "seguimiento_vx": 0.953, "meta": 1.714, "rumbo": 0.466, "centrado": -2.466, "barrera_margen": -4.839, "vel_lateral": -8.611, "vel_giro": -0.603, "salida_carril": -381.99, "caida": -66.174, "patron_marcha": 0.269, "inclinacion": -2.123, "choque_piernas": -3.792, "cambio_accion": -0.044}, {"agente": "agente_078", "pasa": "no", "faltas": 2, "puntaje_s": null, "vx_max": 0.488, "friccion_min": 0.471, "friccion_max": 1.062, "seguimiento_vx": 0.865, "meta": 45.718, "rumbo": 0.965, "centrado": -4.152, "barrera_margen": -12.962, "vel_lateral": -15.354, "vel_giro": -1.921, "salida_carril": -351.508, "caida": -250.146, "patron_marcha": 0.739, "inclinacion": -0.642, "choque_piernas": -2.695, "cambio_accion": -0.061}, {"agente": "agente_079", "pasa": "sí", "faltas": 0, "puntaje_s": 11.97, "vx_max": 0.56, "friccion_min": 0.399, "friccion_max": 1.084, "seguimiento_vx": 0.732, "meta": 44.62, "rumbo": 0.691, "centrado": -4.429, "barrera_margen": -12.562, "vel_lateral": -18.686, "vel_giro": -1.014, "salida_carril": -345.19, "caida": -226.728, "patron_marcha": 0.201, "inclinacion": -2.15, "choque_piernas": -1.202, "cambio_accion": -0.029}, {"agente": "agente_080", "pasa": "sí", "faltas": 0, "puntaje_s": 11.53, "vx_max": 0.506, "friccion_min": 0.434, "friccion_max": 1.145, "seguimiento_vx": 1.569, "meta": 5.439, "rumbo": 0.969, "centrado": -4.026, "barrera_margen": -15.5, "vel_lateral": -12.857, "vel_giro": -0.773, "salida_carril": -333.419, "caida": -211.543, "patron_marcha": 0.697, "inclinacion": -0.649, "choque_piernas": -3.645, "cambio_accion": -0.018}, {"agente": "agente_081", "pasa": "sí", "faltas": 0, "puntaje_s": 11.94, "vx_max": 0.59, "friccion_min": 0.413, "friccion_max": 1.295, "seguimiento_vx": 1.831, "meta": 24.537, "rumbo": 0.39, "centrado": -4.329, "barrera_margen": -7.198, "vel_lateral": -15.312, "vel_giro": -0.628, "salida_carril": -330.693, "caida": -242.875, "patron_marcha": 0.775, "inclinacion": -3.459, "choque_piernas": -2.722, "cambio_accion": -0.088}, {"agente": "agente_082", "pasa": "sí", "faltas": 0, "puntaje_s": 12.76, "vx_max": 0.582, "friccion_min": 0.4, "friccion_max": 1.165, "seguimiento_vx": 0.89, "meta": 4.398, "rumbo": 0.482, "centrado": -0.514, "barrera_margen": -16.543, "vel_lateral": -3.036, "vel_giro": -1.022, "salida_carril": -323.306, "caida": -134.636, "patron_marcha": 0.977, "inclinacion": -2.489, "choque_piernas": -2.133, "cambio_accion": -0.074}, {"agente": "agente_083", "pasa": "sí", "faltas": 0, "puntaje_s": 12.19, "vx_max": 0.594, "friccion_min": 0.407, "friccion_max": 1.193, "seguimiento_vx": 1.248, "meta": 11.441, "rumbo": 0.596, "centrado": -3.174, "barrera_margen": -9.68, "vel_lateral": -12.283, "vel_giro": -1.823, "salida_carril": -359.932, "caida": -167.833, "patron_marcha": 0.353, "inclinacion": -1.943, "choque_piernas": -1.298, "cambio_accion": -0.059}, {"agente": "agente_084", "pasa": "no", "faltas": 1, "puntaje_s": null, "vx_max": 0.525, "friccion_min": 0.496, "friccion_max": 1.203, "seguimiento_vx": 0.717, "meta": 20.814, "rumbo": 0.914, "centrado": -1.383, "barrera_margen": -6.044, "vel_lateral": -15.086, "vel_giro": -1.353, "salida_carril": -392.115, "caida": -280.849, "patron_marcha": 0.601, "inclinacion": -2.358, "choque_piernas": -3.206, "cambio_accion": -0.034}, {"agente": "agente_085", "pasa": "no", "faltas": 1, "puntaje_s": null, "vx_max": 0.579, "friccion_min": 0.444, "friccion_max": 1.27, "seguimiento_vx": 1.222, "meta": 5.016, "rumbo": 0.975, "centrado": -2.069, "barrera_margen": -7.888, "vel_lateral": -16.179, "vel_giro": -1.361, "salida_carril": -342.898, "caida": -79.017, "patron_marcha": 0.757, "inclinacion": -4.465, "choque_piernas": -2.19, "cambio_accion": -0.011}, {"agente": "agente_086", "pasa": "no", "faltas": 1, "puntaje_s": null, "vx_max": 0.516, "friccion_min": 0.336, "friccion_max": 1.295, "seguimiento_vx": 0.567, "meta": 31.432, "rumbo": 0.959, "centrado": -3.717, "barrera_margen": -5.572, "vel_lateral": -18.721, "vel_giro": -1.177, "salida_carril": -336.283, "caida": -245.64, "patron_marcha": 0.451, "inclinacion": -4.37, "choque_piernas": -0.635, "cambio_accion": -0.032}, {"agente": "agente_087", "pasa": "no", "faltas": 1, "puntaje_s": null, "vx_max": 0.547, "friccion_min": 0.368, "friccion_max": 1.202, "seguimiento_vx": 1.36, "meta": 13.033, "rumbo": 0.28, "centrado": -1.33, "barrera_margen": -3.171, "vel_lateral": -5.424, "vel_giro": -0.774, "salida_carril": -381.979, "caida": -68.366, "patron_marcha": 0.58, "inclinacion": -3.925, "choque_piernas": -4.152, "cambio_accion": -0.034}, {"agente": "agente_088", "pasa": "sí", "faltas": 0, "puntaje_s": 12.29, "vx_max": 0.534, "friccion_min": 0.461, "friccion_max": 1.085, "seguimiento_vx": 0.848, "meta": 47.087, "rumbo": 0.905, "centrado": -0.506, "barrera_margen": -14.837, "vel_lateral": -7.663, "vel_giro": -1.355, "salida_carril": -347.672, "caida": -103.362, "patron_marcha": 0.402, "inclinacion": -1.096, "choque_piernas": -4.777, "cambio_accion": -0.018}, {"agente": "agente_089", "pasa": "sí", "faltas": 0, "puntaje_s": 12.25, "vx_max": 0.488, "friccion_min": 0.307, "friccion_max": 1.023, "seguimiento_vx": 1.655, "meta": 21.004, "rumbo": 0.909, "centrado": -1.31, "barrera_margen": -1.192, "vel_lateral": -4.436, "vel_giro": -1.622, "salida_carril": -351.2, "caida": -122.912, "patron_marcha": 0.188, "inclinacion": -0.79, "choque_piernas": -0.504, "cambio_accion": -0.057}, {"agente": "agente_090", "pasa": "sí", "faltas": 0, "puntaje_s": 11.79, "vx_max": 0.574, "friccion_min": 0.3, "friccion_max": 1.247, "seguimiento_vx": 1.119, "meta": 17.031, "rumbo": 0.372, "centrado": -2.743, "barrera_margen": -19.436, "vel_lateral": -16.746, "vel_giro": -1.634, "salida_carril": -390.81, "caida": -217.461, "patron_marcha": 0.911, "inclinacion": -3.59, "choque_piernas": -0.774, "cambio_accion": -0.064}, {"agente": "agente_091", "pasa": "no", "faltas": 1, "puntaje_s": null, "vx_max": 0.481, "friccion_min": 0.327, "friccion_max": 1.233, "seguimiento_vx": 0.581, "meta": 6.073, "rumbo": 0.514, "centrado": -2.526, "barrera_margen": -16.457, "vel_lateral": -5.035, "vel_giro": -0.525, "salida_carril": -366.849, "caida": -254.506, "patron_marcha": 0.117, "inclinacion": -2.401, "choque_piernas": -3.226, "cambio_accion": -0.017}, {"agente": "agente_092", "pasa": "sí", "faltas": 0, "puntaje_s": 12.56, "vx_max": 0.45, "friccion_min": 0.357, "friccion_max": 1.137, "seguimiento_vx": 1.379, "meta": 30.123, "rumbo": 0.703, "centrado": -3.385, "barrera_margen": -10.106, "vel_lateral": -10.742, "vel_giro": -0.152, "salida_carril": -331.852, "caida": -71.894, "patron_marcha": 0.533, "inclinacion": -3.411, "choque_piernas": -3.363, "cambio_accion": -0.076}, {"agente": "agente_093", "pasa": "sí", "faltas": 0, "puntaje_s": 12.3, "vx_max": 0.51, "friccion_min": 0.332, "friccion_max": 1.107, "seguimiento_vx": 1.969, "meta": 34.447, "rumbo": 0.883, "centrado": -1.522, "barrera_margen": -15.927, "vel_lateral": -18.959, "vel_giro": -1.407, "salida_carril": -391.27, "caida": -276.056, "patron_marcha": 0.5, "inclinacion": -2.077, "choque_piernas": -2.577, "cambio_accion": -0.085}, {"agente": "agente_094", "pasa": "no", "faltas": 3, "puntaje_s": null, "vx_max": 0.402, "friccion_min": 0.314, "friccion_max": 1.075, "seguimiento_vx": 0.999, "meta": 14.593, "rumbo": 0.502, "centrado": -0.961, "barrera_margen": -18.318, "vel_lateral": -12.638, "vel_giro": -1.303, "salida_carril": -349.87, "caida": -118.318, "patron_marcha": 0.934, "inclinacion": -4.447, "choque_piernas": -2.922, "cambio_accion": -0.096}, {"agente": "agente_095", "pasa": "sí", "faltas": 0, "puntaje_s": 12.3, "vx_max": 0.421, "friccion_min": 0.435, "friccion_max": 1.201, "seguimiento_vx": 1.814, "meta": 20.099, "rumbo": 0.379, "centrado": -1.975, "barrera_margen": -12.658, "vel_lateral": -14.719, "vel_giro": -1.321, "salida_carril": -310.447, "caida": -205.048, "patron_marcha": 0.518, "inclinacion": -1.243, "choque_piernas": -2.262, "cambio_accion": -0.016}, {"agente": "agente_096", "pasa": "sí", "faltas": 0, "puntaje_s": 12.41, "vx_max": 0.415, "friccion_min": 0.476, "friccion_max": 1.184, "seguimiento_vx": 1.965, "meta": 17.904, "rumbo": 0.597, "centrado": -1.52, "barrera_margen": -17.65, "vel_lateral": -3.345, "vel_giro": -0.762, "salida_carril": -304.062, "caida": -229.406, "patron_marcha": 0.768, "inclinacion": -3.183, "choque_piernas": -4.587, "cambio_accion": -0.072}, {"agente": "agente_097", "pasa": "sí", "faltas": 0, "puntaje_s": 12.17, "vx_max": 0.479, "friccion_min": 0.326, "friccion_max": 1.169, "seguimiento_vx": 1.52, "meta": 12.249, "rumbo": 0.237, "centrado": -2.002, "barrera_margen": -11.006, "vel_lateral": -17.514, "vel_giro": -1.666, "salida_carril": -384.107, "caida": -61.662, "patron_marcha": 0.659, "inclinacion": -3.46, "choque_piernas": -4.671, "cambio_accion": -0.095}, {"agente": "agente_098", "pasa": "sí", "faltas": 0, "puntaje_s": 12.29, "vx_max": 0.53, "friccion_min": 0.406, "friccion_max": 1.298, "seguimiento_vx": 0.903, "meta": 1.77, "rumbo": 0.334, "centrado": -3.726, "barrera_margen": -1.651, "vel_lateral": -11.246, "vel_giro": -1.657, "salida_carril": -335.697, "caida": -264.427, "patron_marcha": 0.383, "inclinacion": -4.609, "choque_piernas": -2.856, "cambio_accion": -0.006}, {"agente": "agente_099", "pasa": "sí", "faltas": 0, "puntaje_s": 12.4, "vx_max": 0.52, "friccion_min": 0.442, "friccion_max": 1.164, "seguimiento_vx": 0.888, "meta": 3.547, "rumbo": 0.998, "centrado": -2.711, "barrera_margen": -4.379, "vel_lateral": -9.913, "vel_giro": -0.291, "salida_carril": -364.173, "caida": -111.695, "patron_marcha": 0.407, "inclinacion": -4.244, "choque_piernas": -4.564, "cambio_accion": -0.089}], "ronda2": [{"agente": "agente_004", "pasa": "sí", "faltas": 0, "puntaje_s": 11.72, "checkpoint_M": 3, "puntaje_ronda1_s": 11.9, "desvio_cm": 26.3}, {"agente": "agente_007", "pasa": "sí", "faltas": 0, "puntaje_s": 11.87, "checkpoint_M": 2, "puntaje_ronda1_s": 11.88, "desvio_cm": 16.3}, {"agente": "agente_011", "pasa": "sí", "faltas": 0, "puntaje_s": 12.0, "checkpoint_M": 3, "puntaje_ronda1_s": 11.86, "desvio_cm": 20.2}, {"agente": "agente_015", "pasa": "sí", "faltas": 0, "puntaje_s": 11.97, "checkpoint_M": 4, "puntaje_ronda1_s": 11.95, "desvio_cm": 19.6}, {"agente": "agente_023", "pasa": "sí", "faltas": 0, "puntaje_s": 11.73, "checkpoint_M": 5, "puntaje_ronda1_s": 11.62, "desvio_cm": 18.6}, {"agente": "agente_026", "pasa": "sí", "faltas": 0, "puntaje_s": 11.51, "checkpoint_M": 4, "puntaje_ronda1_s": 11.45, "desvio_cm": 21.0}, {"agente": "agente_031", "pasa": "sí", "faltas": 0, "puntaje_s": 13.4, "checkpoint_M": 5, "puntaje_ronda1_s": 11.91, "desvio_cm": 14.4}, {"agente": "agente_037", "pasa": "sí", "faltas": 0, "puntaje_s": 12.12, "checkpoint_M": 2, "puntaje_ronda1_s": 11.62, "desvio_cm": 14.5}, {"agente": "agente_043", "pasa": "no", "faltas": 1, "puntaje_s": null, "checkpoint_M": 2, "puntaje_ronda1_s": 11.8, "desvio_cm": 13.6}, {"agente": "agente_045", "pasa": "sí", "faltas": 0, "puntaje_s": 12.35, "checkpoint_M": 4, "puntaje_ronda1_s": 11.43, "desvio_cm": 23.3}, {"agente": "agente_050", "pasa": "sí", "faltas": 0, "puntaje_s": 12.42, "checkpoint_M": 4, "puntaje_ronda1_s": 11.79, "desvio_cm": 19.7}, {"agente": "agente_051", "pasa": "sí", "faltas": 0, "puntaje_s": 11.74, "checkpoint_M": 1, "puntaje_ronda1_s": 11.88, "desvio_cm": 19.9}, {"agente": "agente_062", "pasa": "sí", "faltas": 0, "puntaje_s": 11.58, "checkpoint_M": 5, "puntaje_ronda1_s": 11.53, "desvio_cm": 13.2}, {"agente": "agente_069", "pasa": "no", "faltas": 1, "puntaje_s": null, "checkpoint_M": 1, "puntaje_ronda1_s": 11.85, "desvio_cm": 16.3}, {"agente": "agente_071", "pasa": "sí", "faltas": 0, "puntaje_s": 11.38, "checkpoint_M": 3, "puntaje_ronda1_s": 11.46, "desvio_cm": 25.2}, {"agente": "agente_074", "pasa": "sí", "faltas": 0, "puntaje_s": 11.92, "checkpoint_M": 5, "puntaje_ronda1_s": 11.76, "desvio_cm": 24.8}, {"agente": "agente_079", "pasa": "sí", "faltas": 0, "puntaje_s": 12.11, "checkpoint_M": 2, "puntaje_ronda1_s": 11.97, "desvio_cm": 13.5}, {"agente": "agente_080", "pasa": "no", "faltas": 6, "puntaje_s": null, "checkpoint_M": 4, "puntaje_ronda1_s": 11.53, "desvio_cm": 20.7}, {"agente": "agente_081", "pasa": "sí", "faltas": 0, "puntaje_s": 11.64, "checkpoint_M": 5, "puntaje_ronda1_s": 11.94, "desvio_cm": 14.2}, {"agente": "agente_090", "pasa": "sí", "faltas": 0, "puntaje_s": 12.48, "checkpoint_M": 3, "puntaje_ronda1_s": 11.79, "desvio_cm": 20.5}], "base_rondas": [{"ronda": "ronda1", "puntaje_base_s": 12.41}, {"ronda": "ronda2", "puntaje_base_s": 12.54}], "pesos": [{"parametro": "seguimiento_vx", "que_es": "Premio por ir a la velocidad pedida", "rho_ronda1": -0.23, "rho_ronda2": -0.64}, {"parametro": "meta", "que_es": "Bono por llegar a la meta", "rho_ronda1": 0.08, "rho_ronda2": -0.08}, {"parametro": "rumbo", "que_es": "Premio por ir derecho", "rho_ronda1": 0.22, "rho_ronda2": 0.12}, {"parametro": "centrado", "que_es": "Castigo por alejarse del centro", "rho_ronda1": -0.02, "rho_ronda2": -0.16}, {"parametro": "barrera_margen", "que_es": "Castigo por acercarse a la línea (< 10 cm)", "rho_ronda1": -0.03, "rho_ronda2": -0.57}, {"parametro": "vel_lateral", "que_es": "Castigo por moverse de lado", "rho_ronda1": -0.09, "rho_ronda2": -0.15}, {"parametro": "vel_giro", "que_es": "Castigo por girar", "rho_ronda1": -0.03, "rho_ronda2": -0.1}, {"parametro": "salida_carril", "que_es": "Castigo por salirse del carril", "rho_ronda1": 0.04, "rho_ronda2": -0.53}, {"parametro": "caida", "que_es": "Castigo por caerse", "rho_ronda1": 0.11, "rho_ronda2": -0.38}, {"parametro": "patron_marcha", "que_es": "Premio por pisar al ritmo del reloj", "rho_ronda1": -0.1, "rho_ronda2": 0.32}, {"parametro": "inclinacion", "que_es": "Castigo por inclinar el torso", "rho_ronda1": -0.23, "rho_ronda2": -0.2}, {"parametro": "choque_piernas", "que_es": "Castigo por chocar una pierna con la otra", "rho_ronda1": -0.02, "rho_ronda2": 0.33}, {"parametro": "cambio_accion", "que_es": "Castigo por cambios bruscos de los motores", "rho_ronda1": 0.05, "rho_ronda2": 0.54}, {"parametro": "vx_max", "que_es": "Velocidad máxima pedida en el entrenamiento", "rho_ronda1": -0.28, "rho_ronda2": -0.24}], "riesgo": [{"caminata": "RL v1.0", "articulacion": "LHipYawPitch", "par_rms_Nm": 0.46, "rms_sobre_continuo_pct": 19, "pct_tiempo_sobre_continuo": 0.1, "vel_p99_rad_s": 1.01, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "RL v1.0|LHipYawPitch"}, {"caminata": "RL v1.0", "articulacion": "LHipRoll", "par_rms_Nm": 1.14, "rms_sobre_continuo_pct": 46, "pct_tiempo_sobre_continuo": 0.3, "vel_p99_rad_s": 1.11, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "RL v1.0|LHipRoll"}, {"caminata": "RL v1.0", "articulacion": "LHipPitch", "par_rms_Nm": 1.66, "rms_sobre_continuo_pct": 71, "pct_tiempo_sobre_continuo": 15.4, "vel_p99_rad_s": 5.91, "pct_fuera_curva": 5.7, "pct_cerca_tope": 0.0, "clave": "RL v1.0|LHipPitch"}, {"caminata": "RL v1.0", "articulacion": "LKneePitch", "par_rms_Nm": 2.36, "rms_sobre_continuo_pct": 102, "pct_tiempo_sobre_continuo": 34.2, "vel_p99_rad_s": 8.58, "pct_fuera_curva": 17.3, "pct_cerca_tope": 0.0, "clave": "RL v1.0|LKneePitch"}, {"caminata": "RL v1.0", "articulacion": "LAnklePitch", "par_rms_Nm": 2.44, "rms_sobre_continuo_pct": 105, "pct_tiempo_sobre_continuo": 30.2, "vel_p99_rad_s": 4.85, "pct_fuera_curva": 0.8, "pct_cerca_tope": 0.0, "clave": "RL v1.0|LAnklePitch"}, {"caminata": "RL v1.0", "articulacion": "LAnkleRoll", "par_rms_Nm": 0.9, "rms_sobre_continuo_pct": 37, "pct_tiempo_sobre_continuo": 1.5, "vel_p99_rad_s": 1.57, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "RL v1.0|LAnkleRoll"}, {"caminata": "RL v1.0", "articulacion": "RHipRoll", "par_rms_Nm": 1.16, "rms_sobre_continuo_pct": 47, "pct_tiempo_sobre_continuo": 0.1, "vel_p99_rad_s": 1.32, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "RL v1.0|RHipRoll"}, {"caminata": "RL v1.0", "articulacion": "RHipPitch", "par_rms_Nm": 1.62, "rms_sobre_continuo_pct": 70, "pct_tiempo_sobre_continuo": 14.6, "vel_p99_rad_s": 5.57, "pct_fuera_curva": 3.7, "pct_cerca_tope": 0.0, "clave": "RL v1.0|RHipPitch"}, {"caminata": "RL v1.0", "articulacion": "RKneePitch", "par_rms_Nm": 2.24, "rms_sobre_continuo_pct": 96, "pct_tiempo_sobre_continuo": 29.3, "vel_p99_rad_s": 7.14, "pct_fuera_curva": 11.5, "pct_cerca_tope": 0.0, "clave": "RL v1.0|RKneePitch"}, {"caminata": "RL v1.0", "articulacion": "RAnklePitch", "par_rms_Nm": 2.5, "rms_sobre_continuo_pct": 107, "pct_tiempo_sobre_continuo": 29.6, "vel_p99_rad_s": 4.55, "pct_fuera_curva": 2.1, "pct_cerca_tope": 0.0, "clave": "RL v1.0|RAnklePitch"}, {"caminata": "RL v1.0", "articulacion": "RAnkleRoll", "par_rms_Nm": 0.64, "rms_sobre_continuo_pct": 26, "pct_tiempo_sobre_continuo": 0.3, "vel_p99_rad_s": 1.79, "pct_fuera_curva": 0.2, "pct_cerca_tope": 0.0, "clave": "RL v1.0|RAnkleRoll"}, {"caminata": "RL v1.0", "articulacion": "LShoulderPitch", "par_rms_Nm": 0.38, "rms_sobre_continuo_pct": null, "pct_tiempo_sobre_continuo": null, "vel_p99_rad_s": 1.56, "pct_fuera_curva": null, "pct_cerca_tope": 94.1, "clave": "RL v1.0|LShoulderPitch"}, {"caminata": "RL v1.0", "articulacion": "RShoulderPitch", "par_rms_Nm": 0.41, "rms_sobre_continuo_pct": null, "pct_tiempo_sobre_continuo": null, "vel_p99_rad_s": 1.35, "pct_fuera_curva": null, "pct_cerca_tope": 0.0, "clave": "RL v1.0|RShoulderPitch"}, {"caminata": "RL v1.1", "articulacion": "LHipYawPitch", "par_rms_Nm": 0.44, "rms_sobre_continuo_pct": 18, "pct_tiempo_sobre_continuo": 0.1, "vel_p99_rad_s": 0.78, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "RL v1.1|LHipYawPitch"}, {"caminata": "RL v1.1", "articulacion": "LHipRoll", "par_rms_Nm": 0.92, "rms_sobre_continuo_pct": 37, "pct_tiempo_sobre_continuo": 0.1, "vel_p99_rad_s": 0.82, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "RL v1.1|LHipRoll"}, {"caminata": "RL v1.1", "articulacion": "LHipPitch", "par_rms_Nm": 1.54, "rms_sobre_continuo_pct": 66, "pct_tiempo_sobre_continuo": 13.3, "vel_p99_rad_s": 5.19, "pct_fuera_curva": 0.4, "pct_cerca_tope": 0.0, "clave": "RL v1.1|LHipPitch"}, {"caminata": "RL v1.1", "articulacion": "LKneePitch", "par_rms_Nm": 2.36, "rms_sobre_continuo_pct": 101, "pct_tiempo_sobre_continuo": 33.0, "vel_p99_rad_s": 7.4, "pct_fuera_curva": 10.7, "pct_cerca_tope": 0.0, "clave": "RL v1.1|LKneePitch"}, {"caminata": "RL v1.1", "articulacion": "LAnklePitch", "par_rms_Nm": 2.32, "rms_sobre_continuo_pct": 100, "pct_tiempo_sobre_continuo": 33.9, "vel_p99_rad_s": 3.71, "pct_fuera_curva": 0.1, "pct_cerca_tope": 0.0, "clave": "RL v1.1|LAnklePitch"}, {"caminata": "RL v1.1", "articulacion": "LAnkleRoll", "par_rms_Nm": 0.59, "rms_sobre_continuo_pct": 24, "pct_tiempo_sobre_continuo": 0.4, "vel_p99_rad_s": 1.11, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "RL v1.1|LAnkleRoll"}, {"caminata": "RL v1.1", "articulacion": "RHipRoll", "par_rms_Nm": 0.96, "rms_sobre_continuo_pct": 39, "pct_tiempo_sobre_continuo": 0.0, "vel_p99_rad_s": 0.6, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "RL v1.1|RHipRoll"}, {"caminata": "RL v1.1", "articulacion": "RHipPitch", "par_rms_Nm": 1.46, "rms_sobre_continuo_pct": 63, "pct_tiempo_sobre_continuo": 9.1, "vel_p99_rad_s": 5.89, "pct_fuera_curva": 3.9, "pct_cerca_tope": 0.0, "clave": "RL v1.1|RHipPitch"}, {"caminata": "RL v1.1", "articulacion": "RKneePitch", "par_rms_Nm": 2.25, "rms_sobre_continuo_pct": 97, "pct_tiempo_sobre_continuo": 29.6, "vel_p99_rad_s": 7.94, "pct_fuera_curva": 16.4, "pct_cerca_tope": 0.0, "clave": "RL v1.1|RKneePitch"}, {"caminata": "RL v1.1", "articulacion": "RAnklePitch", "par_rms_Nm": 2.45, "rms_sobre_continuo_pct": 105, "pct_tiempo_sobre_continuo": 28.9, "vel_p99_rad_s": 4.3, "pct_fuera_curva": 1.0, "pct_cerca_tope": 0.0, "clave": "RL v1.1|RAnklePitch"}, {"caminata": "RL v1.1", "articulacion": "RAnkleRoll", "par_rms_Nm": 0.66, "rms_sobre_continuo_pct": 27, "pct_tiempo_sobre_continuo": 0.4, "vel_p99_rad_s": 2.46, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "RL v1.1|RAnkleRoll"}, {"caminata": "RL v1.1", "articulacion": "LShoulderPitch", "par_rms_Nm": 0.39, "rms_sobre_continuo_pct": null, "pct_tiempo_sobre_continuo": null, "vel_p99_rad_s": 1.35, "pct_fuera_curva": null, "pct_cerca_tope": 94.1, "clave": "RL v1.1|LShoulderPitch"}, {"caminata": "RL v1.1", "articulacion": "RShoulderPitch", "par_rms_Nm": 0.41, "rms_sobre_continuo_pct": null, "pct_tiempo_sobre_continuo": null, "vel_p99_rad_s": 1.67, "pct_fuera_curva": null, "pct_cerca_tope": 0.0, "clave": "RL v1.1|RShoulderPitch"}, {"caminata": "B-Human", "articulacion": "LHipYawPitch", "par_rms_Nm": 0.92, "rms_sobre_continuo_pct": 37, "pct_tiempo_sobre_continuo": 0.0, "vel_p99_rad_s": 1.12, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "B-Human|LHipYawPitch"}, {"caminata": "B-Human", "articulacion": "LHipRoll", "par_rms_Nm": 0.73, "rms_sobre_continuo_pct": 30, "pct_tiempo_sobre_continuo": 0.1, "vel_p99_rad_s": 0.91, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "B-Human|LHipRoll"}, {"caminata": "B-Human", "articulacion": "LHipPitch", "par_rms_Nm": 1.23, "rms_sobre_continuo_pct": 53, "pct_tiempo_sobre_continuo": 6.7, "vel_p99_rad_s": 4.44, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "B-Human|LHipPitch"}, {"caminata": "B-Human", "articulacion": "LKneePitch", "par_rms_Nm": 1.64, "rms_sobre_continuo_pct": 70, "pct_tiempo_sobre_continuo": 16.4, "vel_p99_rad_s": 4.92, "pct_fuera_curva": 0.1, "pct_cerca_tope": 0.0, "clave": "B-Human|LKneePitch"}, {"caminata": "B-Human", "articulacion": "LAnklePitch", "par_rms_Nm": 1.03, "rms_sobre_continuo_pct": 44, "pct_tiempo_sobre_continuo": 5.3, "vel_p99_rad_s": 4.05, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "B-Human|LAnklePitch"}, {"caminata": "B-Human", "articulacion": "LAnkleRoll", "par_rms_Nm": 1.01, "rms_sobre_continuo_pct": 41, "pct_tiempo_sobre_continuo": 3.0, "vel_p99_rad_s": 0.87, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "B-Human|LAnkleRoll"}, {"caminata": "B-Human", "articulacion": "RHipRoll", "par_rms_Nm": 0.75, "rms_sobre_continuo_pct": 31, "pct_tiempo_sobre_continuo": 0.4, "vel_p99_rad_s": 0.92, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "B-Human|RHipRoll"}, {"caminata": "B-Human", "articulacion": "RHipPitch", "par_rms_Nm": 1.29, "rms_sobre_continuo_pct": 55, "pct_tiempo_sobre_continuo": 7.4, "vel_p99_rad_s": 4.57, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "B-Human|RHipPitch"}, {"caminata": "B-Human", "articulacion": "RKneePitch", "par_rms_Nm": 1.57, "rms_sobre_continuo_pct": 67, "pct_tiempo_sobre_continuo": 14.9, "vel_p99_rad_s": 4.66, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "B-Human|RKneePitch"}, {"caminata": "B-Human", "articulacion": "RAnklePitch", "par_rms_Nm": 0.94, "rms_sobre_continuo_pct": 40, "pct_tiempo_sobre_continuo": 4.0, "vel_p99_rad_s": 4.0, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "B-Human|RAnklePitch"}, {"caminata": "B-Human", "articulacion": "RAnkleRoll", "par_rms_Nm": 0.99, "rms_sobre_continuo_pct": 40, "pct_tiempo_sobre_continuo": 3.2, "vel_p99_rad_s": 0.91, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "B-Human|RAnkleRoll"}, {"caminata": "B-Human", "articulacion": "LShoulderPitch", "par_rms_Nm": 0.17, "rms_sobre_continuo_pct": null, "pct_tiempo_sobre_continuo": null, "vel_p99_rad_s": 0.17, "pct_fuera_curva": null, "pct_cerca_tope": 0.0, "clave": "B-Human|LShoulderPitch"}, {"caminata": "B-Human", "articulacion": "RShoulderPitch", "par_rms_Nm": 0.17, "rms_sobre_continuo_pct": null, "pct_tiempo_sobre_continuo": null, "vel_p99_rad_s": 0.16, "pct_fuera_curva": null, "pct_cerca_tope": 0.0, "clave": "B-Human|RShoulderPitch"}, {"caminata": "NAOqi", "articulacion": "LHipYawPitch", "par_rms_Nm": 0.84, "rms_sobre_continuo_pct": 34, "pct_tiempo_sobre_continuo": 0.0, "vel_p99_rad_s": 1.15, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "NAOqi|LHipYawPitch"}, {"caminata": "NAOqi", "articulacion": "LHipRoll", "par_rms_Nm": 1.38, "rms_sobre_continuo_pct": 56, "pct_tiempo_sobre_continuo": 11.0, "vel_p99_rad_s": 1.96, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "NAOqi|LHipRoll"}, {"caminata": "NAOqi", "articulacion": "LHipPitch", "par_rms_Nm": 0.81, "rms_sobre_continuo_pct": 35, "pct_tiempo_sobre_continuo": 0.0, "vel_p99_rad_s": 3.45, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "NAOqi|LHipPitch"}, {"caminata": "NAOqi", "articulacion": "LKneePitch", "par_rms_Nm": 1.41, "rms_sobre_continuo_pct": 60, "pct_tiempo_sobre_continuo": 8.9, "vel_p99_rad_s": 3.29, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "NAOqi|LKneePitch"}, {"caminata": "NAOqi", "articulacion": "LAnklePitch", "par_rms_Nm": 0.9, "rms_sobre_continuo_pct": 39, "pct_tiempo_sobre_continuo": 0.0, "vel_p99_rad_s": 3.29, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "NAOqi|LAnklePitch"}, {"caminata": "NAOqi", "articulacion": "LAnkleRoll", "par_rms_Nm": 0.59, "rms_sobre_continuo_pct": 24, "pct_tiempo_sobre_continuo": 0.0, "vel_p99_rad_s": 2.06, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "NAOqi|LAnkleRoll"}, {"caminata": "NAOqi", "articulacion": "RHipRoll", "par_rms_Nm": 1.39, "rms_sobre_continuo_pct": 56, "pct_tiempo_sobre_continuo": 11.6, "vel_p99_rad_s": 1.97, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "NAOqi|RHipRoll"}, {"caminata": "NAOqi", "articulacion": "RHipPitch", "par_rms_Nm": 0.81, "rms_sobre_continuo_pct": 35, "pct_tiempo_sobre_continuo": 0.0, "vel_p99_rad_s": 3.5, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "NAOqi|RHipPitch"}, {"caminata": "NAOqi", "articulacion": "RKneePitch", "par_rms_Nm": 1.41, "rms_sobre_continuo_pct": 61, "pct_tiempo_sobre_continuo": 8.6, "vel_p99_rad_s": 3.3, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "NAOqi|RKneePitch"}, {"caminata": "NAOqi", "articulacion": "RAnklePitch", "par_rms_Nm": 0.89, "rms_sobre_continuo_pct": 38, "pct_tiempo_sobre_continuo": 0.0, "vel_p99_rad_s": 3.33, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "NAOqi|RAnklePitch"}, {"caminata": "NAOqi", "articulacion": "RAnkleRoll", "par_rms_Nm": 0.59, "rms_sobre_continuo_pct": 24, "pct_tiempo_sobre_continuo": 0.0, "vel_p99_rad_s": 2.05, "pct_fuera_curva": 0.0, "pct_cerca_tope": 0.0, "clave": "NAOqi|RAnkleRoll"}, {"caminata": "NAOqi", "articulacion": "LShoulderPitch", "par_rms_Nm": 0.14, "rms_sobre_continuo_pct": null, "pct_tiempo_sobre_continuo": null, "vel_p99_rad_s": 0.13, "pct_fuera_curva": null, "pct_cerca_tope": 0.0, "clave": "NAOqi|LShoulderPitch"}, {"caminata": "NAOqi", "articulacion": "RShoulderPitch", "par_rms_Nm": 0.15, "rms_sobre_continuo_pct": null, "pct_tiempo_sobre_continuo": null, "vel_p99_rad_s": 0.13, "pct_fuera_curva": null, "pct_cerca_tope": 0.0, "clave": "NAOqi|RShoulderPitch"}], "riesgo_resumen": [{"caminata": "RL v1.0", "t_s": 11.2, "impacto_pico_x_peso": 2.83, "energia_J_m": 68.7, "choque_piernas_pct": 0.0}, {"caminata": "RL v1.1", "t_s": 10.7, "impacto_pico_x_peso": 2.32, "energia_J_m": 57.4, "choque_piernas_pct": 0.0}, {"caminata": "B-Human", "t_s": 16.4, "impacto_pico_x_peso": 2.05, "energia_J_m": 36.0, "choque_piernas_pct": 0.0}, {"caminata": "NAOqi", "t_s": 48.8, "impacto_pico_x_peso": 1.13, "energia_J_m": 69.0, "choque_piernas_pct": 0.0}], "motores_reales": [{"articulaciones": "HipPitch, KneePitch, AnklePitch", "motor": "Tipo 5 (22NT Z20)", "reductora": 130.85, "par_parada_Nm": 8.51, "par_continuo_Nm": 2.33, "vel_max_rad_s": 6.96}, {"articulaciones": "HipYawPitch, HipRoll, AnkleRoll", "motor": "Tipo 1", "reductora": 201.3, "par_parada_Nm": 11.97, "par_continuo_Nm": 2.47, "vel_max_rad_s": 4.16}], "simulacion": [{"grupo": "Física", "parametro": "Gravedad", "valor": "9.81 m/s², inclinada hasta ±1° por episodio", "por_que": "Piso no perfectamente nivelado"}, {"grupo": "Física", "parametro": "Paso de simulación", "valor": "2 ms (500 Hz)", "por_que": "Estable con servos rígidos"}, {"grupo": "Física", "parametro": "Masa del robot", "valor": "5.36 kg en 25 piezas", "por_que": "Modelo oficial NAO V6 (B-Human = URDF de Aldebaran)"}, {"grupo": "Física", "parametro": "Aire / viento", "valor": "No se simula", "por_que": "Interior y < 0.5 m/s; los empujones cubren fuerzas externas"}, {"grupo": "Piso", "parametro": "Fricción pie–suelo", "valor": "Aleatoria 0.4–1.2 por episodio, ±0.05 por pie", "por_que": "La duela real no está medida (se espera 0.5–0.8)"}, {"grupo": "Piso", "parametro": "Contacto", "valor": "Blando, constante de tiempo 20 ms", "por_que": "Estándar de MuJoCo; el pie penetra 0.4 mm"}, {"grupo": "Motores", "parametro": "Servo", "valor": "PD: kp 40, kv 0.5, par máx. 5 N·m", "por_que": "Parámetros de B-Human"}, {"grupo": "Motores", "parametro": "Fuerza de los servos", "valor": "±15 % por pierna", "por_que": "Motores gastados o distintos"}, {"grupo": "Motores", "parametro": "Calibración", "valor": "±1.5° por articulación", "por_que": "Sensores de ángulo imperfectos"}, {"grupo": "Control", "parametro": "Ciclo de la política", "valor": "24 ms", "por_que": "Ciclo de 12 ms de PenaltyStack × 2"}, {"grupo": "Cámara", "parametro": "Fotos", "valor": "10 por segundo", "por_que": "Cámara del NAO a la resolución usada"}, {"grupo": "Cámara", "parametro": "Error", "valor": "1–5 cm y 1–4°", "por_que": "La cámara real se equivoca ~1 cm: margen"}, {"grupo": "Cámara", "parametro": "Retardo y pérdidas", "valor": "50–250 ms; hasta 30 % de fotos perdidas", "por_que": "Procesamiento y reflejos"}, {"grupo": "Cámara", "parametro": "Apagones", "valor": "1–8 s; 15 % de episodios sin cámara", "por_que": "Que no se caiga si la visión falla (desde v02)"}, {"grupo": "Perturbaciones", "parametro": "Empujones", "valor": "Hasta 6 N y 0.4 N·m, cada 2–6 s", "por_que": "Golpes y desequilibrios"}, {"grupo": "Perturbaciones", "parametro": "Salida", "valor": "Hasta ±15 cm y ±25°", "por_que": "Colocación a mano imprecisa (desde v1.0)"}, {"grupo": "Perturbaciones", "parametro": "Sensores", "valor": "Ruido en giroscopio y ángulos; deriva de la brújula", "por_que": "IMU real"}]};
+  const oscuro = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const calcs = {}, subs = [];
+  const api = {
+    colors: oscuro ? ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767']
+                   : ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'],
+    data(id) {
+      if (id in DATOS) return { status: 'ok', data: DATOS[id], columns: Object.keys(DATOS[id][0] || {}), meta: [], refreshing: false };
+      if (id in calcs) return { status: 'ok', data: calcs[id](), meta: [], refreshing: false };
+      return { status: 'missing', data: [], meta: [], refreshing: false };
+    },
+    calc(id, cfg) { calcs[id] = () => cfg.fn(...cfg.inputs.map((i) => api.data(i).data)); },
+    onData(fn) { subs.push(fn); fn(); },
+    setLink(nombre) { try { history.replaceState(null, '', '#' + nombre); } catch (e) {} },
+    params() { return {}; }, setParams() {}, resetParams() {}, refresh() {}, loader() {},
+  };
+  let t = null;
+  window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => subs.forEach((f) => f()), 150); });
+  return api;
+})();
+</script>
+<style>
+  .nx [hidden] { display: none !important; }   /* las pestanas ocultan secciones con hidden: que ningun display le gane */
+  .nx { font-family: var(--font-anthropic-sans); display: grid; gap: var(--cds-gap-lg); }
+  .nx-head { display: grid; gap: var(--cds-gap-xs); }
+  .nx-head h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; text-wrap: balance; }
+  .nx-take { color: var(--color-fg-muted); font-size: var(--cds-font-size-body); margin: 0; max-width: 70ch; }
+  .nx-tabs { display: flex; flex-wrap: wrap; gap: var(--cds-gap-xs); border-bottom: 1px solid var(--color-border-line); }
+  .nx-tab { font: inherit; font-size: var(--cds-font-size-body); background: none; border: 0; border-bottom: 2px solid transparent;
+    padding: var(--cds-pad-xs) var(--cds-pad-sm); color: var(--color-fg-muted); cursor: pointer; }
+  .nx-tab[aria-selected="true"] { color: var(--color-fg); border-bottom-color: var(--color-fg); }
+  .nx-tab:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 2px; }
+  .nx-page { display: grid; gap: var(--cds-gap-md); }
+  .nx-tiles { display: grid; gap: var(--cds-gap-md); grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); }
+  .nx-tile, .nx-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius);
+    padding: var(--cds-pad-lg); min-width: 0; }
+  .nx-tile .lb { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .nx-tile .big { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; }
+  .nx-tile .sub { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .nx-grid { display: grid; gap: var(--cds-gap-md); grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); }
+  .nx-card h2 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0 0 var(--cds-gap-xs); text-wrap: balance; }
+  .nx-card p.note { margin: 0 0 var(--cds-gap-sm); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .nx-chart { position: relative; min-height: 260px; }
+  .nx-tip { position: absolute; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border);
+    border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm);
+    font-size: var(--cds-font-size-caption); white-space: nowrap; z-index: 2; }
+  .nx-tip .t { color: var(--cds-text-secondary); }
+  .nx-wrap { overflow: auto; max-height: 30rem; }
+  .nx-table { border-collapse: collapse; width: 100%; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+  .nx-table th { text-align: left; font-weight: var(--cds-font-weight-medium); color: var(--color-fg-muted); position: sticky; top: 0;
+    background: var(--color-panel); padding: var(--cds-pad-xs); border-bottom: 1px solid var(--color-border-line); }
+  .nx-table td { padding: var(--cds-pad-xs); border-bottom: 1px solid var(--color-border-line); vertical-align: top; }
+  .nx-table td.num, .nx-table th.num { text-align: right; }
+  .nx-pill { display: inline-block; padding: 0 var(--cds-pad-xs); border-radius: var(--cds-radius); font-size: var(--cds-font-size-caption); border: 1px solid currentColor; }
+  .nx-pill.ok { color: var(--color-ok); } .nx-pill.warn { color: var(--color-warn); } .nx-pill.bad { color: var(--color-bad); }
+  .nx-legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin-bottom: var(--cds-gap-xs); }
+  .nx-legend span::before { content: ""; display: inline-block; width: .7rem; height: .7rem; border-radius: 2px; margin-right: .3rem; vertical-align: -1px; background: var(--sw); }
+  .nx-risk { display: grid; gap: var(--cds-gap-xs); }
+  .nx-risk div { display: grid; grid-template-columns: 5.5rem 1fr; gap: var(--cds-gap-sm); font-size: var(--cds-font-size-body); align-items: start; }
+  [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+  [data-dash-source-state=empty] { color: transparent; }
+  .nx svg text { fill: var(--color-fg-muted); font-size: 11px; font-family: var(--font-anthropic-sans); }
+  .nx svg text.vl { fill: var(--color-fg); }
+</style>
+
+<div class="nx">
+  <header class="nx-head">
+    <h1>Carrera NAO: avance del RL</h1>
+    <p class="nx-take" id="takeaway">—</p>
+  </header>
+
+  <nav class="nx-tabs" role="tablist" aria-label="Secciones">
+    <button class="nx-tab" role="tab" data-tab="resumen" id="tab-resumen">Resumen</button>
+    <button class="nx-tab" role="tab" data-tab="benchmark" id="tab-benchmark">Benchmark</button>
+    <button class="nx-tab" role="tab" data-tab="versiones" id="tab-versiones">Versiones</button>
+    <button class="nx-tab" role="tab" data-tab="agentes" id="tab-agentes">100 agentes</button>
+    <button class="nx-tab" role="tab" data-tab="motores" id="tab-motores">Motores</button>
+    <button class="nx-tab" role="tab" data-tab="simulacion" id="tab-simulacion">Simulación</button>
+  </nav>
+
+  <!-- RESUMEN -->
+  <section class="nx-page" id="resumen" data-page="resumen">
+    <div class="nx-tiles">
+      <div class="nx-tile"><div class="lb">RL v1.1 · 5 m con visión</div>
+        <div class="big"><span data-source="versiones" data-field="t_benchmark_s" data-where="version=1.1" class="js-v11">—</span> s</div>
+        <div class="sub">metas <span data-source="versiones" data-field="metas" data-where="version=1.1" class="js-v11m">—</span></div></div>
+      <div class="nx-tile"><div class="lb">B-Human (baseline 2)</div>
+        <div class="big"><span data-source="versiones" data-field="t_benchmark_s" data-where="version=B-Human" class="js-bh">—</span> s</div>
+        <div class="sub">metas <span data-source="versiones" data-field="metas" data-where="version=B-Human" class="js-bhm">—</span></div></div>
+      <div class="nx-tile"><div class="lb">NAOqi (baseline 1)</div>
+        <div class="big"><span data-source="versiones" data-field="t_benchmark_s" data-where="version=NAOqi" class="js-nq">—</span> s</div>
+        <div class="sub">metas <span data-source="versiones" data-field="metas" data-where="version=NAOqi" class="js-nqm">—</span></div></div>
+      <div class="nx-tile"><div class="lb">RL v1.1: menos tiempo que B-Human</div>
+        <div class="big"><span data-source="ventaja" data-field="pct" data-row="0" class="js-pct">—</span> %</div>
+        <div class="sub"><span data-source="ventaja" data-field="delta_s" data-row="0" class="js-delta">—</span> s menos en 5 m</div></div>
+    </div>
+    <div class="nx-grid">
+      <div class="nx-card" id="card-progreso">
+        <h2>Tiempo en 5 m por versión</h2>
+        <p class="note">Misma prueba para todas: con visión, fricción 0.4–1.2 × 5 semillas, meta en 5 m. Líneas: B-Human y NAOqi.</p>
+        <div class="nx-chart" id="ch-progreso" data-source="versiones"></div>
+      </div>
+      <div class="nx-card" id="card-riesgo-res">
+        <h2>Riesgo para los motores del robot real</h2>
+        <p class="note">De la pestaña Motores. Rodillas y tobillos trabajan en el límite del motor real.</p>
+        <div class="nx-risk">
+          <div><span class="nx-pill bad">Alto</span><span>Rodillas: velocidad por encima de la máxima del motor y par medio ≈ par continuo (calor).</span></div>
+          <div><span class="nx-pill warn">Medio</span><span>Impactos del pie, energía por metro y hombro izquierdo apoyado contra su tope.</span></div>
+          <div><span class="nx-pill ok">Bajo</span><span>Caderas roll/yaw y tobillos roll; choques entre piernas.</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BENCHMARK -->
+  <section class="nx-page" id="benchmark" data-page="benchmark" hidden>
+    <div class="nx-grid">
+      <div class="nx-card" id="card-friccion">
+        <h2>Tiempo en 5 m según la fricción del piso</h2>
+        <p class="note">Con visión. NAOqi (45–50 s) queda fuera de escala: ver la tabla.</p>
+        <div class="nx-legend" id="lg-friccion" data-source="benchmark"></div>
+        <div class="nx-chart" id="ch-friccion" data-source="benchmark"></div>
+      </div>
+      <div class="nx-card" id="card-vision">
+        <h2>Con y sin visión</h2>
+        <p class="note">Metas de 25 corridas (5 fricciones × 5 semillas). Sin visión todas se desvían; el RL desde v02 no se cae.</p>
+        <div class="nx-chart" id="ch-vision" data-source="benchmark"></div>
+      </div>
+    </div>
+    <div class="nx-card" id="card-bench-tabla">
+      <h2>Todas las corridas del benchmark</h2>
+      <p class="note">Una fila por caminata, visión y fricción. Desvío: máximo lateral medio.</p>
+      <div class="nx-wrap">
+        <table class="nx-table" id="tb-bench" data-source="benchmark" data-row-key="clave">
+          <thead><tr><th data-field="caminata">Caminata</th><th data-field="vision">Visión</th><th class="num" data-field="mu">Fricción</th>
+            <th class="num" data-field="metas">Metas</th><th class="num" data-field="caidas">Caídas</th><th class="num" data-field="salidas">Salidas</th>
+            <th class="num" data-field="t_meta_s">Tiempo [s]</th><th class="num" data-field="desvio_cm">Desvío [cm]</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- VERSIONES -->
+  <section class="nx-page" id="versiones" data-page="versiones" hidden>
+    <div class="nx-card" id="card-versiones">
+      <h2>Qué cambió en cada versión y por qué</h2>
+      <p class="note">Cada generación cambia una sola cosa, con una hipótesis. Tiempo: prueba del benchmark con visión.</p>
+      <div class="nx-wrap">
+        <table class="nx-table" id="tb-versiones" data-source="versiones" data-row-key="version">
+          <thead><tr><th data-field="version">Versión</th><th data-field="politica">Política</th><th data-field="fecha">Fecha</th>
+            <th class="num" data-field="pasos_M">Entrenamiento [M pasos]</th><th data-field="que_cambio">Qué cambió</th>
+            <th data-field="por_que">Por qué</th><th data-field="resultado">Resultado</th><th class="num" data-field="t_benchmark_s">Tiempo [s]</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- AGENTES -->
+  <section class="nx-page" id="agentes" data-page="agentes" hidden>
+    <div class="nx-grid">
+      <div class="nx-card" id="card-ronda1">
+        <h2>Ronda 1: 100 agentes con pesos sorteados</h2>
+        <p class="note">Puntaje = tiempo medio + 1 desviación (menos es mejor). Gris: descartados por alguna falta. Línea: la base (RL v1.0).</p>
+        <div class="nx-chart" id="ch-ronda1" data-source="ronda1 base_rondas"></div>
+      </div>
+      <div class="nx-card" id="card-ronda2">
+        <h2>Ronda 2: los 20 mejores con 5M pasos más</h2>
+        <p class="note">Puntaje en la ronda 1 (○) y en la ronda 2 (●), batería completa con empujones y salidas torcidas.</p>
+        <div class="nx-chart" id="ch-ronda2" data-source="ronda2 base_rondas"></div>
+      </div>
+    </div>
+    <div class="nx-card" id="card-pesos">
+      <h2>Qué pesos de la recompensa ganan</h2>
+      <p class="note">Correlación de cada parámetro con el puntaje entre los agentes que pasan. Hacia la izquierda: más alto, más rápido. ○ ronda 1 · ● ronda 2.</p>
+      <div class="nx-chart" id="ch-pesos" data-source="pesos"></div>
+    </div>
+  </section>
+
+  <!-- MOTORES -->
+  <section class="nx-page" id="motores" data-page="motores" hidden>
+    <div class="nx-tiles" id="tiles-motores"></div>
+    <div class="nx-card" id="card-calor">
+      <h2>Calor: par medio frente al par continuo del motor real</h2>
+      <p class="note">100 % = el motor trabaja todo el tiempo en su límite térmico. Mismo modelo y servos para las cuatro caminatas.</p>
+      <div class="nx-legend" id="lg-calor" data-source="riesgo"></div>
+      <div class="nx-chart" id="ch-calor" data-source="riesgo"></div>
+    </div>
+    <div class="nx-grid">
+      <div class="nx-card" id="card-vel">
+        <h2>Velocidad de las articulaciones pitch</h2>
+        <p class="note">Velocidad que se supera solo el 1 % del tiempo. Línea: máxima del motor real sin carga.</p>
+        <div class="nx-chart" id="ch-vel" data-source="riesgo motores_reales"></div>
+      </div>
+      <div class="nx-card" id="card-motores-reales">
+        <h2>Motores reales del NAO V6</h2>
+        <p class="note">Par en la articulación sin la pérdida del engranaje: el real es algo menor.</p>
+        <table class="nx-table" data-source="motores_reales" data-row-key="articulaciones" id="tb-motores">
+          <thead><tr><th data-field="articulaciones">Articulaciones</th><th data-field="motor">Motor</th><th class="num" data-field="reductora">Reductora</th>
+            <th class="num" data-field="par_parada_Nm">Parada [N·m]</th><th class="num" data-field="par_continuo_Nm">Continuo [N·m]</th>
+            <th class="num" data-field="vel_max_rad_s">Vel. máx. [rad/s]</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="nx-card" id="card-riesgo-tabla">
+      <h2>Detalle por articulación</h2>
+      <p class="note">Promedio de 3 corridas con fricción 0.8 y visión.</p>
+      <div class="nx-wrap">
+        <table class="nx-table" id="tb-riesgo" data-source="riesgo" data-row-key="clave">
+          <thead><tr><th data-field="caminata">Caminata</th><th data-field="articulacion">Articulación</th><th class="num" data-field="par_rms_Nm">Par RMS [N·m]</th>
+            <th class="num" data-field="rms_sobre_continuo_pct">RMS / continuo [%]</th><th class="num" data-field="pct_tiempo_sobre_continuo">% tiempo sobre continuo</th>
+            <th class="num" data-field="vel_p99_rad_s">Vel. p99 [rad/s]</th><th class="num" data-field="pct_fuera_curva">% fuera curva par-vel.</th>
+            <th class="num" data-field="pct_cerca_tope">% cerca del tope</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- SIMULACION -->
+  <section class="nx-page" id="simulacion" data-page="simulacion" hidden>
+    <div class="nx-card" id="card-sim">
+      <h2>Qué se simula y con qué valores</h2>
+      <p class="note">Lo que no se sabe del mundo real (piso, motores, cámara, empujones) se sortea en cada episodio, con margen.</p>
+      <div class="nx-wrap">
+        <table class="nx-table" id="tb-sim" data-source="simulacion" data-row-key="parametro">
+          <thead><tr><th data-field="grupo">Grupo</th><th data-field="parametro">Parámetro</th><th data-field="valor">Valor</th><th data-field="por_que">Por qué</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  // ---------- calculo: ventaja de la v1.1 sobre B-Human
+  dash.calc('ventaja', {
+    inputs: ['versiones'],
+    title: 'RL v1.1 frente a B-Human',
+    description: 'Diferencia de tiempo en 5 m entre B-Human y RL v1.1, y en porcentaje del tiempo de B-Human.',
+    fn: (versiones) => {
+      const t = (v) => versiones.find((r) => r.version === v).t_benchmark_s;
+      const delta_s = Math.round((t('B-Human') - t('1.1')) * 100) / 100;
+      return [{ delta_s, pct: Math.round((delta_s / t('B-Human')) * 1000) / 10 }];
+    },
+  });
+
+  // ---------- utilidades
+  window.nx = {};
+  nx.fmt1 = d3.format('.1f');
+  nx.fmt2 = d3.format('.2f');
+  nx.tip = (box) => {
+    let el = box.querySelector('.nx-tip');
+    if (!el) { el = document.createElement('div'); el.className = 'nx-tip'; el.hidden = true; box.appendChild(el); }
+    return {
+      show(ev, lines) {
+        el.replaceChildren(...lines.map((l, i) => { const d = document.createElement('div'); if (i === 0) d.className = 't'; d.textContent = l; return d; }));
+        el.hidden = false;
+        const b = box.getBoundingClientRect();
+        let x = ev.clientX - b.left + 12, y = ev.clientY - b.top + 12;
+        x = Math.min(x, box.clientWidth - el.offsetWidth - 4);
+        el.style.left = Math.max(0, x) + 'px'; el.style.top = y + 'px';
+      },
+      hide() { el.hidden = true; },
+    };
+  };
+  nx.textW = (svg, texts) => {
+    const g = svg.append('g');
+    let w = 0;
+    texts.forEach((t) => { const n = g.append('text').text(t).node(); w = Math.max(w, n.getComputedTextLength()); });
+    g.remove();
+    return w;
+  };
+  nx.svg = (box, h) => {
+    box.querySelectorAll('svg').forEach((s) => s.remove());
+    const w = box.clientWidth;
+    return d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${w} ${h}`).attr('height', h);
+  };
+  nx.fail = (box, st) => {
+    box.querySelectorAll('svg, .nx-fail').forEach((s) => s.remove());
+    if (st === 'error') {
+      const d = document.createElement('div'); d.className = 'nx-fail';
+      d.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:.4rem;min-height:inherit;color:var(--color-fg-muted);font-size:var(--cds-font-size-caption)';
+      const dot = document.createElement('span'); dot.style.cssText = 'width:.375rem;height:.375rem;border-radius:50%;background:var(--color-bad)';
+      d.append(dot, 'Failed to load'); box.appendChild(d);
+    }
+  };
+  nx.ok = (...ids) => ids.every((i) => dash.data(i).status === 'ok');
+  nx.st = (...ids) => (ids.some((i) => dash.data(i).status === 'error') ? 'error' : 'loading');
+  nx.fill = (tbody, rows, cols) => {
+    tbody.replaceChildren(...rows.map((r) => {
+      const tr = document.createElement('tr');
+      cols.forEach(([k, num, f]) => { const td = document.createElement('td'); if (num) td.className = 'num'; const v = r[k];
+        td.textContent = v === null || v === undefined ? '—' : f ? f(v) : String(v); tr.appendChild(td); });
+      return tr;
+    }));
+  };
+</script>
+
+<script>
+  // ---------- pestanas
+  const tabs = [...document.querySelectorAll('.nx-tab')];
+  const pages = [...document.querySelectorAll('[data-page]')];
+  window.nxShow = (name) => {
+    tabs.forEach((t) => t.setAttribute('aria-selected', String(t.dataset.tab === name)));
+    pages.forEach((p) => { p.hidden = p.dataset.page !== name; });
+    dash.setLink(name);
+    window.nxDraw && window.nxDraw();
+  };
+  tabs.forEach((t) => t.addEventListener('click', () => nxShow(t.dataset.tab)));
+  const inicial = pages.some((p) => p.id === location.hash.slice(1)) ? location.hash.slice(1) : 'resumen';
+  nxShow(inicial);
+</script>
+
+<script>
+  // ---------- dibujo
+  const C = dash.colors;
+  const COL = { 'RL v1.1': C[0], 'B-Human': C[1], 'NAOqi': C[2], 'RL v1.0': C[3], 'RL sprint (sep.)': C[4] };
+  const visible = (id) => !document.getElementById(id).closest('[data-page]').hidden;
+
+  function resumen() {
+    const v = dash.data('versiones'), k = dash.data('ventaja');
+    const take = document.getElementById('takeaway');
+    if (v.status === 'ok' && k.status === 'ok') {
+      const t = (x) => v.data.find((r) => r.version === x).t_benchmark_s;
+      take.textContent = `La versión 1.1 del RL recorre los 5 m en ${nx.fmt1(t('1.1'))} s con visión y sin faltas: ${nx.fmt1(k.data[0].delta_s)} s menos que B-Human (${nx.fmt1(t('B-Human'))} s) y casi 5 veces más rápido que NAOqi (${nx.fmt1(t('NAOqi'))} s). El costo es más exigencia para rodillas y tobillos.`;
+      const set = (cls, x, f) => { document.querySelector(cls).textContent = f(x); };
+      set('.js-v11', t('1.1'), nx.fmt2); set('.js-bh', t('B-Human'), nx.fmt2); set('.js-nq', t('NAOqi'), nx.fmt2);
+      const m = (x) => v.data.find((r) => r.version === x).metas;
+      set('.js-v11m', m('1.1'), String); set('.js-bhm', m('B-Human'), String); set('.js-nqm', m('NAOqi'), String);
+      set('.js-pct', k.data[0].pct, nx.fmt1); set('.js-delta', k.data[0].delta_s, nx.fmt2);
+    }
+    const box = document.getElementById('ch-progreso');
+    if (!visible('ch-progreso')) return;
+    if (v.status !== 'ok') return nx.fail(box, nx.st('versiones'));
+    nx.fail(box, '');
+    const rl = v.data.filter((r) => r.orden !== null).sort((a, b) => a.orden - b.orden);
+    const refs = v.data.filter((r) => r.orden === null);
+    const h = 40 + rl.length * 40;
+    const svg = nx.svg(box, h);
+    const W = box.clientWidth;
+    const lab = (r) => (r.version.match(/^\d/) ? `RL v${r.version}` : r.version === 'Sprint' ? 'RL sprint' : `carrera_${r.version}`);
+    const ml = nx.textW(svg, rl.map(lab)) + 10;
+    const x = d3.scaleLinear([0, d3.max(v.data, (r) => r.t_benchmark_s) * 1.08], [ml, W - 16]);
+    const y = d3.scaleBand(rl.map(lab), [24, h - 20]).padding(0.3);
+    svg.append('g').attr('transform', `translate(0,${h - 20})`).call(d3.axisBottom(x).ticks(5).tickFormat((d) => `${d} s`))
+      .attr('font-size', null).attr('font-family', null).call((g) => g.select('.domain').attr('stroke', 'var(--cds-chart-axis)'))
+      .call((g) => g.selectAll('line').attr('stroke', 'var(--cds-chart-grid)'));
+    const tip = nx.tip(box);
+    svg.append('g').selectAll('rect').data(rl).join('rect')
+      .attr('x', ml).attr('y', (r) => y(lab(r))).attr('height', y.bandwidth()).attr('rx', 4)
+      .attr('width', (r) => x(r.t_benchmark_s) - ml)
+      .attr('fill', (r) => (r.version === '1.1' ? C[0] : 'var(--cds-chart-muted)'))
+      .on('mousemove', (ev, r) => tip.show(ev, [lab(r), `${nx.fmt2(r.t_benchmark_s)} s · metas ${r.metas}`, r.que_cambio]))
+      .on('mouseleave', () => tip.hide());
+    svg.append('g').selectAll('text').data(rl).join('text').attr('class', 'vl')
+      .attr('x', (r) => x(r.t_benchmark_s) + 4).attr('y', (r) => y(lab(r)) + y.bandwidth() / 2).attr('dy', '0.35em')
+      .text((r) => `${nx.fmt1(r.t_benchmark_s)} s`);
+    svg.append('g').selectAll('text').data(rl).join('text').attr('x', ml - 6).attr('text-anchor', 'end')
+      .attr('y', (r) => y(lab(r)) + y.bandwidth() / 2).attr('dy', '0.35em').text(lab);
+    refs.forEach((r, i) => {
+      svg.append('line').attr('x1', x(r.t_benchmark_s)).attr('x2', x(r.t_benchmark_s)).attr('y1', 18).attr('y2', h - 20)
+        .attr('stroke', COL[r.version]).attr('stroke-dasharray', '4 3').attr('stroke-width', 1.5);
+      svg.append('text').attr('x', x(r.t_benchmark_s)).attr('y', 12).attr('text-anchor', i ? 'end' : 'middle')
+        .text(`${r.version} ${nx.fmt1(r.t_benchmark_s)} s`);
+    });
+  }
+
+  function benchmark() {
+    const b = dash.data('benchmark');
+    const tb = document.querySelector('#tb-bench tbody');
+    if (b.status === 'ok') {
+      const orden = ['RL v1.1', 'RL v1.0', 'carrera_v02', 'carrera_v01', 'RL sprint (sep.)', 'B-Human', 'NAOqi'];
+      const rows = [...b.data].sort((p, q) => orden.indexOf(p.caminata) - orden.indexOf(q.caminata) || (p.vision < q.vision ? 1 : -1) || p.mu - q.mu);
+      nx.fill(tb, rows, [['caminata'], ['vision'], ['mu', 1, nx.fmt1], ['metas', 1, (v) => String(v)], ['caidas', 1, String], ['salidas', 1, String],
+        ['t_meta_s', 1, nx.fmt2], ['desvio_cm', 1, nx.fmt1]]);
+      [...tb.rows].forEach((tr, i) => { tr.dataset.key = rows[i].clave; });
+    }
+    if (!visible('ch-friccion')) return;
+    const box = document.getElementById('ch-friccion'), lg = document.getElementById('lg-friccion');
+    if (b.status !== 'ok') { nx.fail(box, nx.st('benchmark')); nx.fail(document.getElementById('ch-vision'), nx.st('benchmark')); return; }
+    nx.fail(box, '');
+    const series = ['RL v1.1', 'RL v1.0', 'RL sprint (sep.)', 'B-Human'];
+    lg.replaceChildren(...series.map((s) => { const e = document.createElement('span'); e.style.setProperty('--sw', COL[s]); e.textContent = s; return e; }));
+    const pts = b.data.filter((r) => r.vision === 'sí' && series.includes(r.caminata) && r.t_meta_s !== null);
+    const h = 260, W = box.clientWidth;
+    const svg = nx.svg(box, h);
+    const x = d3.scaleLinear([0.4, 1.2], [44, W - 70]);
+    const y = d3.scaleLinear([0, d3.max(pts, (r) => r.t_meta_s) * 1.1], [h - 26, 10]);
+    svg.append('g').attr('transform', `translate(0,${h - 26})`).call(d3.axisBottom(x).ticks(5).tickFormat((d) => `μ ${d}`))
+      .attr('font-size', null).attr('font-family', null).call((g) => g.select('.domain').attr('stroke', 'var(--cds-chart-axis)'));
+    svg.append('g').attr('transform', 'translate(44,0)').call(d3.axisLeft(y).ticks(5).tickSize(-(W - 114)).tickFormat((d) => `${d} s`))
+      .attr('font-size', null).attr('font-family', null).call((g) => g.select('.domain').remove())
+      .call((g) => g.selectAll('line').attr('stroke', 'var(--cds-chart-grid)'));
+    const tip = nx.tip(box);
+    series.forEach((s) => {
+      const d = pts.filter((r) => r.caminata === s).sort((p, q) => p.mu - q.mu);
+      svg.append('path').datum(d).attr('fill', 'none').attr('stroke', COL[s]).attr('stroke-width', 2).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round')
+        .attr('d', d3.line((r) => x(r.mu), (r) => y(r.t_meta_s)));
+      svg.append('g').selectAll('circle').data(d).join('circle').attr('cx', (r) => x(r.mu)).attr('cy', (r) => y(r.t_meta_s)).attr('r', 4)
+        .attr('fill', COL[s]).attr('stroke', 'var(--color-panel)').attr('stroke-width', 2)
+        .on('mousemove', (ev, r) => tip.show(ev, [`${s} · fricción ${r.mu}`, `${nx.fmt2(r.t_meta_s)} s · metas ${r.metas}/${r.n}`])).on('mouseleave', () => tip.hide());
+      const last = d[d.length - 1];
+      if (last) svg.append('text').attr('class', 'vl').attr('x', x(last.mu) + 8).attr('y', y(last.t_meta_s)).attr('dy', '0.35em').text(`${nx.fmt1(last.t_meta_s)} s`);
+    });
+
+    // con y sin vision: metas por caminata
+    const box2 = document.getElementById('ch-vision');
+    nx.fail(box2, '');
+    const cams = ['RL v1.1', 'RL v1.0', 'carrera_v02', 'carrera_v01', 'RL sprint (sep.)', 'B-Human', 'NAOqi'];
+    const agg = cams.map((c) => ['sí', 'no'].map((vi) => { const rs = b.data.filter((r) => r.caminata === c && r.vision === vi);
+      return rs.length ? { c, vi, metas: d3.sum(rs, (r) => r.metas), n: d3.sum(rs, (r) => r.n), caidas: d3.sum(rs, (r) => r.caidas), salidas: d3.sum(rs, (r) => r.salidas) } : null; }))
+      .flat().filter(Boolean);
+    const camsCon = cams.filter((c) => agg.some((a) => a.c === c));
+    const h2 = 30 + camsCon.length * 34, W2 = box2.clientWidth;
+    const svg2 = nx.svg(box2, h2);
+    const ml = nx.textW(svg2, camsCon) + 10;
+    const xx = d3.scaleLinear([0, 25], [ml, W2 - 70]);
+    const yy = d3.scaleBand(camsCon, [8, h2 - 22]).padding(0.25);
+    svg2.append('g').attr('transform', `translate(0,${h2 - 22})`).call(d3.axisBottom(xx).ticks(5)).attr('font-size', null).attr('font-family', null)
+      .call((g) => g.select('.domain').attr('stroke', 'var(--cds-chart-axis)'));
+    const tip2 = nx.tip(box2);
+    agg.forEach((a) => {
+      const yb = yy(a.c) + (a.vi === 'sí' ? 0 : yy.bandwidth() / 2);
+      svg2.append('rect').attr('x', ml).attr('y', yb).attr('height', yy.bandwidth() / 2 - 2).attr('rx', 3)
+        .attr('width', xx(a.metas) - ml).attr('fill', a.vi === 'sí' ? COL[a.c] || 'var(--cds-chart-muted)' : 'var(--cds-chart-muted)')
+        .on('mousemove', (ev) => tip2.show(ev, [`${a.c} · ${a.vi === 'sí' ? 'con' : 'sin'} visión`, `metas ${a.metas}/${a.n} · caídas ${a.caidas} · salidas ${a.salidas}`])).on('mouseleave', () => tip2.hide());
+      svg2.append('text').attr('class', 'vl').attr('x', xx(a.metas) + 4).attr('y', yb + yy.bandwidth() / 4).attr('dy', '0.35em')
+        .text(`${a.metas}/${a.n} ${a.vi === 'sí' ? 'con' : 'sin'}`);
+    });
+    svg2.append('g').selectAll('text.lb').data(camsCon).join('text').attr('x', ml - 6).attr('text-anchor', 'end')
+      .attr('y', (c) => yy(c) + yy.bandwidth() / 2).attr('dy', '0.35em').text((c) => c);
+  }
+
+  function versiones() {
+    const v = dash.data('versiones');
+    if (v.status !== 'ok') return;
+    const rows = [...v.data].sort((a, b) => (a.orden ?? 99) - (b.orden ?? 99));
+    const tb = document.querySelector('#tb-versiones tbody');
+    nx.fill(tb, rows, [['version'], ['politica'], ['fecha'], ['pasos_M', 1, (x) => String(x)], ['que_cambio'], ['por_que'], ['resultado'], ['t_benchmark_s', 1, nx.fmt2]]);
+  }
+
+  function agentes() {
+    if (!visible('ch-ronda1')) return;
+    const r1 = dash.data('ronda1'), r2 = dash.data('ronda2'), bs = dash.data('base_rondas'), pe = dash.data('pesos');
+    const b1 = document.getElementById('ch-ronda1'), b2 = document.getElementById('ch-ronda2'), b3 = document.getElementById('ch-pesos');
+    if (nx.ok('ronda1', 'base_rondas')) {
+      nx.fail(b1, '');
+      const base = bs.data.find((r) => r.ronda === 'ronda1').puntaje_base_s;
+      const pas = r1.data.filter((r) => r.pasa === 'sí'), no = r1.data.filter((r) => r.pasa === 'no');
+      const h = 230, W = b1.clientWidth, svg = nx.svg(b1, h);
+      const x = d3.scaleLinear(d3.extent(pas, (r) => r.puntaje_s).map((v, i) => v + (i ? 0.2 : -0.2)), [20, W - 20]);
+      const bins = d3.bin().domain(x.domain()).thresholds(18)(pas.map((r) => r.puntaje_s));
+      const y = d3.scaleLinear([0, d3.max(bins, (b) => b.length)], [h - 50, 20]);
+      svg.append('g').attr('transform', `translate(0,${h - 50})`).call(d3.axisBottom(x).ticks(6).tickFormat((d) => `${d} s`))
+        .attr('font-size', null).attr('font-family', null).call((g) => g.select('.domain').attr('stroke', 'var(--cds-chart-axis)'));
+      const tip = nx.tip(b1);
+      svg.append('g').selectAll('rect').data(bins).join('rect').attr('x', (b) => x(b.x0) + 1).attr('width', (b) => Math.max(0, x(b.x1) - x(b.x0) - 2))
+        .attr('y', (b) => y(b.length)).attr('height', (b) => y(0) - y(b.length)).attr('rx', 3)
+        .attr('fill', (b) => (b.x1 <= base ? C[0] : 'var(--cds-chart-muted)'))
+        .on('mousemove', (ev, b) => tip.show(ev, [`${nx.fmt2(b.x0)}–${nx.fmt2(b.x1)} s`, `${b.length} agentes`])).on('mouseleave', () => tip.hide());
+      svg.append('line').attr('x1', x(base)).attr('x2', x(base)).attr('y1', 14).attr('y2', h - 50).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-dasharray', '4 3');
+      svg.append('text').attr('x', x(base)).attr('y', 10).attr('text-anchor', 'middle').text(`base ${nx.fmt2(base)} s`);
+      const mejor = d3.min(pas, (r) => r.puntaje_s), bate = pas.filter((r) => r.puntaje_s < base).length;
+      svg.append('text').attr('class', 'vl').attr('x', 20).attr('y', h - 14)
+        .text(`${pas.length} pasan · ${no.length} descartados · ${bate} superan a la base · mejor ${nx.fmt2(mejor)} s`);
+    } else nx.fail(b1, nx.st('ronda1', 'base_rondas'));
+
+    if (nx.ok('ronda2', 'base_rondas')) {
+      nx.fail(b2, '');
+      const base = bs.data.find((r) => r.ronda === 'ronda2').puntaje_base_s;
+      const rows = [...r2.data].sort((a, b) => (a.puntaje_s ?? 99) - (b.puntaje_s ?? 99));
+      const h = 24 + rows.length * 16, W = b2.clientWidth, svg = nx.svg(b2, h);
+      const ml = nx.textW(svg, rows.map((r) => r.agente)) + 10;
+      const vals = rows.flatMap((r) => [r.puntaje_s, r.puntaje_ronda1_s]).filter((v) => v !== null);
+      const x = d3.scaleLinear([d3.min(vals) - 0.2, d3.max(vals) + 0.3], [ml, W - 60]);
+      const y = d3.scaleBand(rows.map((r) => r.agente), [10, h - 20]);
+      svg.append('g').attr('transform', `translate(0,${h - 20})`).call(d3.axisBottom(x).ticks(5).tickFormat((d) => `${d} s`))
+        .attr('font-size', null).attr('font-family', null).call((g) => g.select('.domain').attr('stroke', 'var(--cds-chart-axis)'));
+      svg.append('line').attr('x1', x(base)).attr('x2', x(base)).attr('y1', 4).attr('y2', h - 20).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-dasharray', '4 3');
+      const tip = nx.tip(b2);
+      rows.forEach((r) => {
+        const yc = y(r.agente) + y.bandwidth() / 2;
+        svg.append('text').attr('x', ml - 6).attr('text-anchor', 'end').attr('y', yc).attr('dy', '0.35em').text(r.agente);
+        if (r.puntaje_ronda1_s !== null) svg.append('circle').attr('cx', x(r.puntaje_ronda1_s)).attr('cy', yc).attr('r', 4).attr('fill', 'var(--color-panel)').attr('stroke', 'var(--cds-chart-muted)').attr('stroke-width', 1.5);
+        if (r.puntaje_s !== null) svg.append('circle').attr('cx', x(r.puntaje_s)).attr('cy', yc).attr('r', 4.5).attr('fill', r.agente === 'agente_071' ? C[0] : 'var(--color-fg-muted)')
+          .on('mousemove', (ev) => tip.show(ev, [r.agente, `ronda 2: ${nx.fmt2(r.puntaje_s)} s (checkpoint ${r.checkpoint_M}M)`, `ronda 1: ${nx.fmt2(r.puntaje_ronda1_s)} s`])).on('mouseleave', () => tip.hide());
+        else svg.append('text').attr('x', ml + 4).attr('y', yc).attr('dy', '0.35em').text(`descartado (${r.faltas} faltas)`);
+      });
+      svg.append('text').attr('x', x(base) + 4).attr('y', 8).text(`base ${nx.fmt2(base)} s`);
+    } else nx.fail(b2, nx.st('ronda2', 'base_rondas'));
+
+    if (pe.status === 'ok') {
+      nx.fail(b3, '');
+      const rows = [...pe.data].sort((a, b) => a.rho_ronda2 - b.rho_ronda2);
+      const h = 24 + rows.length * 22, W = b3.clientWidth, svg = nx.svg(b3, h);
+      const ml = nx.textW(svg, rows.map((r) => r.que_es)) + 10;
+      const x = d3.scaleLinear([-1, 1], [ml, W - 20]);
+      const y = d3.scaleBand(rows.map((r) => r.parametro), [8, h - 20]);
+      svg.append('g').attr('transform', `translate(0,${h - 20})`).call(d3.axisBottom(x).ticks(5)).attr('font-size', null).attr('font-family', null)
+        .call((g) => g.select('.domain').attr('stroke', 'var(--cds-chart-axis)'));
+      svg.append('line').attr('x1', x(0)).attr('x2', x(0)).attr('y1', 4).attr('y2', h - 20).attr('stroke', 'var(--cds-chart-reference)');
+      const tip = nx.tip(b3);
+      rows.forEach((r) => {
+        const yc = y(r.parametro) + y.bandwidth() / 2;
+        svg.append('text').attr('x', ml - 6).attr('text-anchor', 'end').attr('y', yc).attr('dy', '0.35em').text(r.que_es);
+        svg.append('line').attr('x1', x(r.rho_ronda1)).attr('x2', x(r.rho_ronda2)).attr('y1', yc).attr('y2', yc).attr('stroke', 'var(--cds-chart-grid)').attr('stroke-width', 2);
+        svg.append('circle').attr('cx', x(r.rho_ronda1)).attr('cy', yc).attr('r', 4).attr('fill', 'var(--color-panel)').attr('stroke', 'var(--cds-chart-muted)').attr('stroke-width', 1.5);
+        svg.append('circle').attr('cx', x(r.rho_ronda2)).attr('cy', yc).attr('r', 5).attr('fill', Math.abs(r.rho_ronda2) >= 0.5 ? C[0] : 'var(--color-fg-muted)')
+          .on('mousemove', (ev) => tip.show(ev, [r.que_es, `ronda 2: ${nx.fmt2(r.rho_ronda2)} · ronda 1: ${nx.fmt2(r.rho_ronda1)}`])).on('mouseleave', () => tip.hide());
+      });
+    } else nx.fail(b3, nx.st('pesos'));
+  }
+
+  function motores() {
+    const rr = dash.data('riesgo_resumen'), rk = dash.data('riesgo'), mr = dash.data('motores_reales');
+    const tiles = document.getElementById('tiles-motores');
+    if (rr.status === 'ok' && !tiles.children.length) {
+      tiles.dataset.source = 'riesgo_resumen';
+      rr.data.forEach((r) => {
+        const t = document.createElement('div'); t.className = 'nx-tile';
+        const lb = document.createElement('div'); lb.className = 'lb'; lb.textContent = r.caminata;
+        const big = document.createElement('div'); big.className = 'big';
+        const e = document.createElement('span'); e.dataset.source = 'riesgo_resumen'; e.dataset.field = 'energia_J_m'; e.dataset.where = `caminata=${encodeURIComponent(r.caminata)}`; e.textContent = nx.fmt1(r.energia_J_m);
+        big.append(e, ' J/m');
+        const sub = document.createElement('div'); sub.className = 'sub';
+        const i = document.createElement('span'); i.dataset.source = 'riesgo_resumen'; i.dataset.field = 'impacto_pico_x_peso'; i.dataset.where = `caminata=${encodeURIComponent(r.caminata)}`; i.textContent = nx.fmt2(r.impacto_pico_x_peso);
+        sub.append('energía por metro · impacto pico ', i, ' × peso');
+        t.append(lb, big, sub); tiles.appendChild(t);
+      });
+    }
+    if (rk.status === 'ok') {
+      const tb = document.querySelector('#tb-riesgo tbody');
+      nx.fill(tb, rk.data, [['caminata'], ['articulacion'], ['par_rms_Nm', 1, nx.fmt2], ['rms_sobre_continuo_pct', 1, String], ['pct_tiempo_sobre_continuo', 1, nx.fmt1],
+        ['vel_p99_rad_s', 1, nx.fmt2], ['pct_fuera_curva', 1, nx.fmt1], ['pct_cerca_tope', 1, nx.fmt1]]);
+      [...tb.rows].forEach((tr, i) => { tr.dataset.key = rk.data[i].clave; });
+    }
+    if (mr.status === 'ok') {
+      nx.fill(document.querySelector('#tb-motores tbody'), mr.data, [['articulaciones'], ['motor'], ['reductora', 1, String], ['par_parada_Nm', 1, nx.fmt2], ['par_continuo_Nm', 1, nx.fmt2], ['vel_max_rad_s', 1, nx.fmt2]]);
+    }
+    if (!visible('ch-calor')) return;
+    const cams = ['RL v1.1', 'RL v1.0', 'B-Human', 'NAOqi'];
+    const box = document.getElementById('ch-calor'), lg = document.getElementById('lg-calor');
+    if (rk.status !== 'ok') { nx.fail(box, nx.st('riesgo')); return; }
+    nx.fail(box, '');
+    lg.replaceChildren(...cams.map((s) => { const e = document.createElement('span'); e.style.setProperty('--sw', COL[s]); e.textContent = s; return e; }));
+    const J = ['LKneePitch', 'RKneePitch', 'LAnklePitch', 'RAnklePitch', 'LHipPitch', 'RHipPitch', 'LHipRoll', 'RHipRoll', 'LAnkleRoll', 'RAnkleRoll', 'LHipYawPitch'];
+    const h = 30 + J.length * 46, W = box.clientWidth, svg = nx.svg(box, h);
+    const ml = nx.textW(svg, J) + 10;
+    const x = d3.scaleLinear([0, 120], [ml, W - 30]);
+    const y = d3.scaleBand(J, [10, h - 22]).padding(0.15);
+    const yi = d3.scaleBand(cams, [0, y.bandwidth()]).padding(0.12);
+    svg.append('g').attr('transform', `translate(0,${h - 22})`).call(d3.axisBottom(x).ticks(6).tickFormat((d) => `${d} %`))
+      .attr('font-size', null).attr('font-family', null).call((g) => g.select('.domain').attr('stroke', 'var(--cds-chart-axis)'));
+    const tip = nx.tip(box);
+    J.forEach((j) => {
+      svg.append('text').attr('x', ml - 6).attr('text-anchor', 'end').attr('y', y(j) + y.bandwidth() / 2).attr('dy', '0.35em').text(j);
+      cams.forEach((c) => {
+        const r = rk.data.find((q) => q.caminata === c && q.articulacion === j);
+        if (!r || r.rms_sobre_continuo_pct === null) return;
+        svg.append('rect').attr('x', ml).attr('y', y(j) + yi(c)).attr('height', yi.bandwidth()).attr('rx', 2)
+          .attr('width', x(r.rms_sobre_continuo_pct) - ml).attr('fill', COL[c])
+          .on('mousemove', (ev) => tip.show(ev, [`${j} · ${c}`, `par RMS ${nx.fmt2(r.par_rms_Nm)} N·m = ${r.rms_sobre_continuo_pct} % del continuo`, `${nx.fmt1(r.pct_tiempo_sobre_continuo)} % del tiempo sobre el continuo`]))
+          .on('mouseleave', () => tip.hide());
+      });
+    });
+    svg.append('line').attr('x1', x(100)).attr('x2', x(100)).attr('y1', 4).attr('y2', h - 22).attr('stroke', 'var(--cds-chart-status-critical)').attr('stroke-dasharray', '4 3').attr('stroke-width', 1.5);
+    svg.append('text').attr('x', x(100) - 4).attr('y', 8).attr('text-anchor', 'end').text('par continuo');
+
+    const b2 = document.getElementById('ch-vel');
+    if (!nx.ok('riesgo', 'motores_reales')) { nx.fail(b2, nx.st('riesgo', 'motores_reales')); return; }
+    nx.fail(b2, '');
+    const w0 = mr.data.find((r) => r.articulaciones.startsWith('HipPitch')).vel_max_rad_s;
+    const J2 = ['LKneePitch', 'RKneePitch', 'LHipPitch', 'RHipPitch', 'LAnklePitch', 'RAnklePitch'];
+    const h2 = 30 + J2.length * 46, W2 = b2.clientWidth, svg2 = nx.svg(b2, h2);
+    const ml2 = nx.textW(svg2, J2) + 10;
+    const x2 = d3.scaleLinear([0, 10], [ml2, W2 - 30]);
+    const y2 = d3.scaleBand(J2, [14, h2 - 22]).padding(0.15);
+    const yi2 = d3.scaleBand(cams, [0, y2.bandwidth()]).padding(0.12);
+    svg2.append('g').attr('transform', `translate(0,${h2 - 22})`).call(d3.axisBottom(x2).ticks(5)).attr('font-size', null).attr('font-family', null)
+      .call((g) => g.select('.domain').attr('stroke', 'var(--cds-chart-axis)'));
+    const tip2 = nx.tip(b2);
+    J2.forEach((j) => {
+      svg2.append('text').attr('x', ml2 - 6).attr('text-anchor', 'end').attr('y', y2(j) + y2.bandwidth() / 2).attr('dy', '0.35em').text(j);
+      cams.forEach((c) => {
+        const r = rk.data.find((q) => q.caminata === c && q.articulacion === j);
+        if (!r) return;
+        svg2.append('rect').attr('x', ml2).attr('y', y2(j) + yi2(c)).attr('height', yi2.bandwidth()).attr('rx', 2).attr('width', x2(r.vel_p99_rad_s) - ml2).attr('fill', COL[c])
+          .on('mousemove', (ev) => tip2.show(ev, [`${j} · ${c}`, `${nx.fmt2(r.vel_p99_rad_s)} rad/s · ${nx.fmt1(r.pct_fuera_curva ?? 0)} % fuera de la curva par-velocidad`])).on('mouseleave', () => tip2.hide());
+      });
+    });
+    svg2.append('line').attr('x1', x2(w0)).attr('x2', x2(w0)).attr('y1', 10).attr('y2', h2 - 22).attr('stroke', 'var(--cds-chart-status-critical)').attr('stroke-dasharray', '4 3').attr('stroke-width', 1.5);
+    svg2.append('text').attr('x', x2(w0) - 4).attr('y', 8).attr('text-anchor', 'end').text(`máx. del motor ${nx.fmt2(w0)} rad/s`);
+  }
+
+  function simulacion() {
+    const s = dash.data('simulacion');
+    if (s.status !== 'ok') return;
+    nx.fill(document.querySelector('#tb-sim tbody'), s.data, [['grupo'], ['parametro'], ['valor'], ['por_que']]);
+  }
+
+  window.nxDraw = () => { resumen(); benchmark(); versiones(); agentes(); motores(); simulacion(); };
+  dash.onData(window.nxDraw);
+</script>
+
+<p class="nx-pie">Generado con <code>uv run python scripts/dashboard.py</code> a partir de <code>results/</code> del repo NAO. Los datos vienen de los archivos listados en el encabezado de ese script.</p>
+</div>
+</body>
+</html>

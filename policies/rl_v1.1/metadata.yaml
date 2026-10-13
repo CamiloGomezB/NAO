@@ -1,0 +1,11 @@
+fecha: '2026-10-12T00:36:55'
+git_commit: 5a5c01d-modificado
+python: 3.12.10
+sistema: Windows-11-10.0.26300-SP0
+mujoco: 3.14.0
+gymnasium: 1.3.0
+stable_baselines3: 2.9.0
+torch: 2.14.0+cpu
+comando: C:\Users\camil\Documents\GitHub\NAO\src\train.py --config C:\Users\camil\Documents\GitHub\NAO\results\barridos\ronda2\agente_071\config.yaml
+  --run-name barrido_ronda2_071 --continuar C:\Users\camil\Documents\GitHub\NAO\runs\barrido_ronda1_071\final_model.zip
+continua_de: runs/barrido_ronda1_071/final_model.zip

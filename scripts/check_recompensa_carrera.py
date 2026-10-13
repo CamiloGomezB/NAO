@@ -1,7 +1,7 @@
 """Orden de comportamientos de la recompensa de carrera (criterio del paso 55 del PLAN).
 
 Con la recompensa REAL del entorno (configs/carrera/pesos.yaml) y una politica que camina (--modelo; default la
-recomendada, policies/carrera_v03),
+recomendada, policies/rl_v1.0 = carrera_v03),
 en un episodio de 30 s con vx_cmd = 0.5 se comparan:
   A. rapido y limpio: la politica corre a lo que se le pide;
   B. lento y limpio: la politica ve vx_cmd = 0.15 (camina a ~0.15 m/s) pero la recompensa sigue pidiendo 0.5;
@@ -55,7 +55,7 @@ def episodio(model, vn, kw, semilla, vx_obs=None):
 def main() -> int:
     import argparse
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--modelo", type=Path, default=ROOT / "policies" / "carrera_v03" / "model.zip",
+    ap.add_argument("--modelo", type=Path, default=ROOT / "policies" / "rl_v1.0" / "model.zip",
                     help="politica que camina (default: la recomendada). El umbral depende de la politica")
     a = ap.parse_args()
     model, vn, kw, _ = eval_carrera.cargar(a.modelo)

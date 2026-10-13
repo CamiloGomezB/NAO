@@ -12,7 +12,7 @@ Cada número tiene su archivo de origen entre corchetes o en la columna "Fuente"
 |---|---|---|---|---|
 | `carrera_v01` | 2026-10-11, 00:26–02:00 | 15.3M | cero | [`policies/carrera_v01/`](../../policies/carrera_v01/) (checkpoint de 15M) |
 | `carrera_v02` | 2026-10-11, 02:05–05:53 | 40M | `v01` a 15M | [`policies/carrera_v02/`](../../policies/carrera_v02/) (checkpoint de 15M) |
-| `carrera_v03` | 2026-10-11, 12:40–14:18 | 20M | `v02` a 15M, con el paso 58c | [`policies/carrera_v03/`](../../policies/carrera_v03/) (checkpoint de 5M) |
+| `carrera_v03` | 2026-10-11, 12:40–14:18 | 20M | `v02` a 15M, con el paso 58c | [`policies/rl_v1.0/`](../../policies/rl_v1.0/) (checkpoint de 5M; antes `policies/carrera_v03/`) |
 
 Antes de esto, la política del sprint (`checkpoints/best_model.zip`, entorno `NaoWalk-v0`, modelo aproximado V5)
 caminaba a 0.20 m/s sin cámara. Se describe en la bitácora (etapa 1) y no se repite aquí.
@@ -508,7 +508,7 @@ Lo de E49 sigue igual, como era de esperar: no se cambió nada de eso.
 ## 12e. Entrenamiento por población: ronda 1 de 100 agentes (paso 61)
 
 **Cómo:** `scripts/barrido.py --nombre ronda1 --agentes 100 --pasos 1000000 --eval-semillas 2`.
-- Cada agente parte de `policies/carrera_v03` con `configs/carrera_v03.yaml` y sortea, con su semilla:
+- Cada agente parte de `policies/carrera_v03` (hoy `policies/rl_v1.0`) con `configs/carrera_v03.yaml` y sortea, con su semilla:
   - los 14 pesos dentro de `rangos` (`salida_carril` en [−400, −300] desde el paso 55b);
   - fricción mínima U(0.3, 0.5) y máxima U(1.0, 1.3);
   - `vx_max` U(0.40, 0.60);
@@ -659,7 +659,7 @@ uv run python -m src.train --config configs/carrera_v03.yaml --continuar policie
 ```
 
 ```bash
-uv run python scripts/eval_salida_mala.py --modelo policies/carrera_v03/model.zip --perturbaciones --mu 0.4 1.2
+uv run python scripts/eval_salida_mala.py --modelo policies/rl_v1.0/model.zip --perturbaciones --mu 0.4 1.2
 ```
 
 ```bash
@@ -685,8 +685,8 @@ uv run python scripts/resumen_carrera.py
 | `policies/carrera_v01/model_vecnormalize.pkl` | `a60675a1251f9530e39e70b9e6ad30ddbfaea7fe0dbf846a9ab7a0468653cf1f` |
 | `policies/carrera_v02/model.zip` | `1491947356c9937f63aee6a7d22d9a85c977ff74af5e7b5f69812df4f16dc728` |
 | `policies/carrera_v02/model_vecnormalize.pkl` | `6e667e792b84fd9d79da673994c4d4ddb225d1d72661af922ab302f58ef983bf` |
-| `policies/carrera_v03/model.zip` | `73ba8474fc3bb17eaf55c9602db71daf7ed59f9efe78f5224136c54c371af818` |
-| `policies/carrera_v03/model_vecnormalize.pkl` | `67fc03eb4a77a69b34290cb205fbaf5e215c8bcddfd8c57fc8906e22a5f1304c` |
+| `policies/rl_v1.0/model.zip` (antes `carrera_v03`) | `73ba8474fc3bb17eaf55c9602db71daf7ed59f9efe78f5224136c54c371af818` |
+| `policies/rl_v1.0/model_vecnormalize.pkl` | `67fc03eb4a77a69b34290cb205fbaf5e215c8bcddfd8c57fc8906e22a5f1304c` |
 
 ## 16. Índice de archivos
 

@@ -1746,3 +1746,51 @@ sin salida y cómo se resolvieron. Tiene tres usos:
   - `demo/run_demo.py --live` ahora acepta `--rl` y `--rl-vx` (antes no los pasaba al visor);
   - el título de la sección 4 de `analizar_barrido.py` dice "siguiente ronda".
 - **Siguiente:** paso 63 (ronda 3 con los 5 mejores). Antes, medir si 20 o 24 entornos rinden más en este PC.
+
+### 2026-10-13 — Nombres de versión de las políticas: `rl_v1.0` y `rl_v1.1`
+- **Autor:** Claude Code, a pedido de Camilo.
+- **Convención nueva:** las políticas de carrera que se entregan se llaman por versión, `policies/rl_vX.Y/`. Las
+  siguientes serán `rl_v1.2`, `rl_v1.3`…
+  - Las configs de entrenamiento (`configs/carrera_vNN.yaml`) y las generaciones `carrera_vNN` conservan su nombre:
+    describen **cómo** se entrenó; la versión dice **qué se entrega**.
+
+  | Versión | Qué es | Antes |
+  |---|---|---|
+  | **`rl_v1.0`** | Generación `carrera_v03` (checkpoint de 5M) | `policies/carrera_v03/` (`git mv`) |
+  | **`rl_v1.1`** | `agente_071` de la ronda 2 (paso 62), checkpoint de 3M | Solo en `runs/barrido_ronda2_071/`; se guardó con `scripts/guardar_politica.py` |
+- **Rutas actualizadas** (solo el nombre; no cambia el comportamiento):
+  - el visor (`carrera_vivo.py`, por defecto usa la más nueva: `rl_v1.1`);
+  - el default de `--base` en `scripts/barrido.py` y de `--modelo` en `scripts/check_recompensa_carrera.py`;
+  - el README de la política;
+  - los enlaces del README, del capítulo del entrenamiento, del diseño y del `PLAN.md`.
+
+  0 enlaces rotos.
+- **No se cambian:** las entradas viejas de la bitácora ni los resultados ya guardados (`results/…`), que siguen
+  diciendo `carrera_v03`: son registro histórico.
+
+### 2026-10-13 — Dashboard local del avance y análisis de riesgo de los motores en el repo
+- **Autor:** Claude Code, a pedido de Camilo.
+- **Pedido:** el enlace del dashboard (página de claude.ai) no se podía compartir con otras personas. Hace falta una
+  versión local: pasar el repo y que el otro corra un comando.
+- **Qué se hizo:**
+  - **`scripts/dashboard.py`:** arma los datos desde `results/` (no recalcula nada), los mete en una sola página HTML y
+    la abre en el navegador: `uv run python scripts/dashboard.py`.
+    - La página (`scripts/dashboard/pagina.html`) es la misma del dashboard en línea; un adaptador pequeño reemplaza el
+      servicio de claude.ai.
+    - Los gráficos usan d3 desde cdnjs, así que hace falta internet al abrirla.
+    - Sale en `results/dashboard/index.html`.
+  - **Datos pasados al repo:** antes solo estaban en la carpeta temporal de la sesión.
+    - `results/riesgo_motores/riesgo.json` y el informe `riesgo_motores_nao_v6.pdf` (análisis del 2026-10-13);
+    - `scripts/riesgo_motores.py`, el script que los genera;
+    - `results/carrera/carrera_v0{1,2}/benchmark_vx0.45/`: `carrera_v01` y `carrera_v02` con la batería del
+      benchmark (con visión, μ 0.4–1.2 × 5 semillas, `vx_cmd` 0.45, rumbo `arranque` como se entrenaron), 25/25 en
+      ~11.5 s cada una.
+- **Verificación:**
+  - los 10 conjuntos de datos del dashboard local son idénticos a los del dashboard en línea;
+  - en el navegador, las 6 pestañas dibujan sus gráficos y tablas, sin errores en la consola.
+- **README:** línea con el comando en "Proyecto actual" y filas nuevas en el mapa de información.
+- **Arreglo (mismo día):** en la versión local se veían todas las pestañas a la vez.
+  - **Causa:** las pestañas ocultan secciones con el atributo `hidden`, pero la regla `.nx-page { display: grid }` le
+    ganaba a la del navegador. En claude.ai no pasaba, porque su página fuerza `[hidden] { display: none }`.
+  - **Solución:** esa misma regla en `scripts/dashboard/pagina.html` y en el estilo de `scripts/dashboard.py`.
+  - **Verificado en el navegador:** se ve una sola sección por pestaña.

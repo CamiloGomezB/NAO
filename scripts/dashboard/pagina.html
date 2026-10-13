@@ -1,0 +1,585 @@
+<style>
+  .nx [hidden] { display: none !important; }   /* las pestanas ocultan secciones con hidden: que ningun display le gane */
+  .nx { font-family: var(--font-anthropic-sans); display: grid; gap: var(--cds-gap-lg); }
+  .nx-head { display: grid; gap: var(--cds-gap-xs); }
+  .nx-head h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; text-wrap: balance; }
+  .nx-take { color: var(--color-fg-muted); font-size: var(--cds-font-size-body); margin: 0; max-width: 70ch; }
+  .nx-tabs { display: flex; flex-wrap: wrap; gap: var(--cds-gap-xs); border-bottom: 1px solid var(--color-border-line); }
+  .nx-tab { font: inherit; font-size: var(--cds-font-size-body); background: none; border: 0; border-bottom: 2px solid transparent;
+    padding: var(--cds-pad-xs) var(--cds-pad-sm); color: var(--color-fg-muted); cursor: pointer; }
+  .nx-tab[aria-selected="true"] { color: var(--color-fg); border-bottom-color: var(--color-fg); }
+  .nx-tab:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 2px; }
+  .nx-page { display: grid; gap: var(--cds-gap-md); }
+  .nx-tiles { display: grid; gap: var(--cds-gap-md); grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); }
+  .nx-tile, .nx-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius);
+    padding: var(--cds-pad-lg); min-width: 0; }
+  .nx-tile .lb { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .nx-tile .big { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; }
+  .nx-tile .sub { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .nx-grid { display: grid; gap: var(--cds-gap-md); grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); }
+  .nx-card h2 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0 0 var(--cds-gap-xs); text-wrap: balance; }
+  .nx-card p.note { margin: 0 0 var(--cds-gap-sm); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .nx-chart { position: relative; min-height: 260px; }
+  .nx-tip { position: absolute; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border);
+    border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm);
+    font-size: var(--cds-font-size-caption); white-space: nowrap; z-index: 2; }
+  .nx-tip .t { color: var(--cds-text-secondary); }
+  .nx-wrap { overflow: auto; max-height: 30rem; }
+  .nx-table { border-collapse: collapse; width: 100%; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+  .nx-table th { text-align: left; font-weight: var(--cds-font-weight-medium); color: var(--color-fg-muted); position: sticky; top: 0;
+    background: var(--color-panel); padding: var(--cds-pad-xs); border-bottom: 1px solid var(--color-border-line); }
+  .nx-table td { padding: var(--cds-pad-xs); border-bottom: 1px solid var(--color-border-line); vertical-align: top; }
+  .nx-table td.num, .nx-table th.num { text-align: right; }
+  .nx-pill { display: inline-block; padding: 0 var(--cds-pad-xs); border-radius: var(--cds-radius); font-size: var(--cds-font-size-caption); border: 1px solid currentColor; }
+  .nx-pill.ok { color: var(--color-ok); } .nx-pill.warn { color: var(--color-warn); } .nx-pill.bad { color: var(--color-bad); }
+  .nx-legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin-bottom: var(--cds-gap-xs); }
+  .nx-legend span::before { content: ""; display: inline-block; width: .7rem; height: .7rem; border-radius: 2px; margin-right: .3rem; vertical-align: -1px; background: var(--sw); }
+  .nx-risk { display: grid; gap: var(--cds-gap-xs); }
+  .nx-risk div { display: grid; grid-template-columns: 5.5rem 1fr; gap: var(--cds-gap-sm); font-size: var(--cds-font-size-body); align-items: start; }
+  [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+  [data-dash-source-state=empty] { color: transparent; }
+  .nx svg text { fill: var(--color-fg-muted); font-size: 11px; font-family: var(--font-anthropic-sans); }
+  .nx svg text.vl { fill: var(--color-fg); }
+</style>
+
+<div class="nx">
+  <header class="nx-head">
+    <h1>Carrera NAO: avance del RL</h1>
+    <p class="nx-take" id="takeaway">—</p>
+  </header>
+
+  <nav class="nx-tabs" role="tablist" aria-label="Secciones">
+    <button class="nx-tab" role="tab" data-tab="resumen" id="tab-resumen">Resumen</button>
+    <button class="nx-tab" role="tab" data-tab="benchmark" id="tab-benchmark">Benchmark</button>
+    <button class="nx-tab" role="tab" data-tab="versiones" id="tab-versiones">Versiones</button>
+    <button class="nx-tab" role="tab" data-tab="agentes" id="tab-agentes">100 agentes</button>
+    <button class="nx-tab" role="tab" data-tab="motores" id="tab-motores">Motores</button>
+    <button class="nx-tab" role="tab" data-tab="simulacion" id="tab-simulacion">Simulación</button>
+  </nav>
+
+  <!-- RESUMEN -->
+  <section class="nx-page" id="resumen" data-page="resumen">
+    <div class="nx-tiles">
+      <div class="nx-tile"><div class="lb">RL v1.1 · 5 m con visión</div>
+        <div class="big"><span data-source="versiones" data-field="t_benchmark_s" data-where="version=1.1" class="js-v11">—</span> s</div>
+        <div class="sub">metas <span data-source="versiones" data-field="metas" data-where="version=1.1" class="js-v11m">—</span></div></div>
+      <div class="nx-tile"><div class="lb">B-Human (baseline 2)</div>
+        <div class="big"><span data-source="versiones" data-field="t_benchmark_s" data-where="version=B-Human" class="js-bh">—</span> s</div>
+        <div class="sub">metas <span data-source="versiones" data-field="metas" data-where="version=B-Human" class="js-bhm">—</span></div></div>
+      <div class="nx-tile"><div class="lb">NAOqi (baseline 1)</div>
+        <div class="big"><span data-source="versiones" data-field="t_benchmark_s" data-where="version=NAOqi" class="js-nq">—</span> s</div>
+        <div class="sub">metas <span data-source="versiones" data-field="metas" data-where="version=NAOqi" class="js-nqm">—</span></div></div>
+      <div class="nx-tile"><div class="lb">RL v1.1: menos tiempo que B-Human</div>
+        <div class="big"><span data-source="ventaja" data-field="pct" data-row="0" class="js-pct">—</span> %</div>
+        <div class="sub"><span data-source="ventaja" data-field="delta_s" data-row="0" class="js-delta">—</span> s menos en 5 m</div></div>
+    </div>
+    <div class="nx-grid">
+      <div class="nx-card" id="card-progreso">
+        <h2>Tiempo en 5 m por versión</h2>
+        <p class="note">Misma prueba para todas: con visión, fricción 0.4–1.2 × 5 semillas, meta en 5 m. Líneas: B-Human y NAOqi.</p>
+        <div class="nx-chart" id="ch-progreso" data-source="versiones"></div>
+      </div>
+      <div class="nx-card" id="card-riesgo-res">
+        <h2>Riesgo para los motores del robot real</h2>
+        <p class="note">De la pestaña Motores. Rodillas y tobillos trabajan en el límite del motor real.</p>
+        <div class="nx-risk">
+          <div><span class="nx-pill bad">Alto</span><span>Rodillas: velocidad por encima de la máxima del motor y par medio ≈ par continuo (calor).</span></div>
+          <div><span class="nx-pill warn">Medio</span><span>Impactos del pie, energía por metro y hombro izquierdo apoyado contra su tope.</span></div>
+          <div><span class="nx-pill ok">Bajo</span><span>Caderas roll/yaw y tobillos roll; choques entre piernas.</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BENCHMARK -->
+  <section class="nx-page" id="benchmark" data-page="benchmark" hidden>
+    <div class="nx-grid">
+      <div class="nx-card" id="card-friccion">
+        <h2>Tiempo en 5 m según la fricción del piso</h2>
+        <p class="note">Con visión. NAOqi (45–50 s) queda fuera de escala: ver la tabla.</p>
+        <div class="nx-legend" id="lg-friccion" data-source="benchmark"></div>
+        <div class="nx-chart" id="ch-friccion" data-source="benchmark"></div>
+      </div>
+      <div class="nx-card" id="card-vision">
+        <h2>Con y sin visión</h2>
+        <p class="note">Metas de 25 corridas (5 fricciones × 5 semillas). Sin visión todas se desvían; el RL desde v02 no se cae.</p>
+        <div class="nx-chart" id="ch-vision" data-source="benchmark"></div>
+      </div>
+    </div>
+    <div class="nx-card" id="card-bench-tabla">
+      <h2>Todas las corridas del benchmark</h2>
+      <p class="note">Una fila por caminata, visión y fricción. Desvío: máximo lateral medio.</p>
+      <div class="nx-wrap">
+        <table class="nx-table" id="tb-bench" data-source="benchmark" data-row-key="clave">
+          <thead><tr><th data-field="caminata">Caminata</th><th data-field="vision">Visión</th><th class="num" data-field="mu">Fricción</th>
+            <th class="num" data-field="metas">Metas</th><th class="num" data-field="caidas">Caídas</th><th class="num" data-field="salidas">Salidas</th>
+            <th class="num" data-field="t_meta_s">Tiempo [s]</th><th class="num" data-field="desvio_cm">Desvío [cm]</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- VERSIONES -->
+  <section class="nx-page" id="versiones" data-page="versiones" hidden>
+    <div class="nx-card" id="card-versiones">
+      <h2>Qué cambió en cada versión y por qué</h2>
+      <p class="note">Cada generación cambia una sola cosa, con una hipótesis. Tiempo: prueba del benchmark con visión.</p>
+      <div class="nx-wrap">
+        <table class="nx-table" id="tb-versiones" data-source="versiones" data-row-key="version">
+          <thead><tr><th data-field="version">Versión</th><th data-field="politica">Política</th><th data-field="fecha">Fecha</th>
+            <th class="num" data-field="pasos_M">Entrenamiento [M pasos]</th><th data-field="que_cambio">Qué cambió</th>
+            <th data-field="por_que">Por qué</th><th data-field="resultado">Resultado</th><th class="num" data-field="t_benchmark_s">Tiempo [s]</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- AGENTES -->
+  <section class="nx-page" id="agentes" data-page="agentes" hidden>
+    <div class="nx-grid">
+      <div class="nx-card" id="card-ronda1">
+        <h2>Ronda 1: 100 agentes con pesos sorteados</h2>
+        <p class="note">Puntaje = tiempo medio + 1 desviación (menos es mejor). Gris: descartados por alguna falta. Línea: la base (RL v1.0).</p>
+        <div class="nx-chart" id="ch-ronda1" data-source="ronda1 base_rondas"></div>
+      </div>
+      <div class="nx-card" id="card-ronda2">
+        <h2>Ronda 2: los 20 mejores con 5M pasos más</h2>
+        <p class="note">Puntaje en la ronda 1 (○) y en la ronda 2 (●), batería completa con empujones y salidas torcidas.</p>
+        <div class="nx-chart" id="ch-ronda2" data-source="ronda2 base_rondas"></div>
+      </div>
+    </div>
+    <div class="nx-card" id="card-pesos">
+      <h2>Qué pesos de la recompensa ganan</h2>
+      <p class="note">Correlación de cada parámetro con el puntaje entre los agentes que pasan. Hacia la izquierda: más alto, más rápido. ○ ronda 1 · ● ronda 2.</p>
+      <div class="nx-chart" id="ch-pesos" data-source="pesos"></div>
+    </div>
+  </section>
+
+  <!-- MOTORES -->
+  <section class="nx-page" id="motores" data-page="motores" hidden>
+    <div class="nx-tiles" id="tiles-motores"></div>
+    <div class="nx-card" id="card-calor">
+      <h2>Calor: par medio frente al par continuo del motor real</h2>
+      <p class="note">100 % = el motor trabaja todo el tiempo en su límite térmico. Mismo modelo y servos para las cuatro caminatas.</p>
+      <div class="nx-legend" id="lg-calor" data-source="riesgo"></div>
+      <div class="nx-chart" id="ch-calor" data-source="riesgo"></div>
+    </div>
+    <div class="nx-grid">
+      <div class="nx-card" id="card-vel">
+        <h2>Velocidad de las articulaciones pitch</h2>
+        <p class="note">Velocidad que se supera solo el 1 % del tiempo. Línea: máxima del motor real sin carga.</p>
+        <div class="nx-chart" id="ch-vel" data-source="riesgo motores_reales"></div>
+      </div>
+      <div class="nx-card" id="card-motores-reales">
+        <h2>Motores reales del NAO V6</h2>
+        <p class="note">Par en la articulación sin la pérdida del engranaje: el real es algo menor.</p>
+        <table class="nx-table" data-source="motores_reales" data-row-key="articulaciones" id="tb-motores">
+          <thead><tr><th data-field="articulaciones">Articulaciones</th><th data-field="motor">Motor</th><th class="num" data-field="reductora">Reductora</th>
+            <th class="num" data-field="par_parada_Nm">Parada [N·m]</th><th class="num" data-field="par_continuo_Nm">Continuo [N·m]</th>
+            <th class="num" data-field="vel_max_rad_s">Vel. máx. [rad/s]</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="nx-card" id="card-riesgo-tabla">
+      <h2>Detalle por articulación</h2>
+      <p class="note">Promedio de 3 corridas con fricción 0.8 y visión.</p>
+      <div class="nx-wrap">
+        <table class="nx-table" id="tb-riesgo" data-source="riesgo" data-row-key="clave">
+          <thead><tr><th data-field="caminata">Caminata</th><th data-field="articulacion">Articulación</th><th class="num" data-field="par_rms_Nm">Par RMS [N·m]</th>
+            <th class="num" data-field="rms_sobre_continuo_pct">RMS / continuo [%]</th><th class="num" data-field="pct_tiempo_sobre_continuo">% tiempo sobre continuo</th>
+            <th class="num" data-field="vel_p99_rad_s">Vel. p99 [rad/s]</th><th class="num" data-field="pct_fuera_curva">% fuera curva par-vel.</th>
+            <th class="num" data-field="pct_cerca_tope">% cerca del tope</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- SIMULACION -->
+  <section class="nx-page" id="simulacion" data-page="simulacion" hidden>
+    <div class="nx-card" id="card-sim">
+      <h2>Qué se simula y con qué valores</h2>
+      <p class="note">Lo que no se sabe del mundo real (piso, motores, cámara, empujones) se sortea en cada episodio, con margen.</p>
+      <div class="nx-wrap">
+        <table class="nx-table" id="tb-sim" data-source="simulacion" data-row-key="parametro">
+          <thead><tr><th data-field="grupo">Grupo</th><th data-field="parametro">Parámetro</th><th data-field="valor">Valor</th><th data-field="por_que">Por qué</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  // ---------- calculo: ventaja de la v1.1 sobre B-Human
+  dash.calc('ventaja', {
+    inputs: ['versiones'],
+    title: 'RL v1.1 frente a B-Human',
+    description: 'Diferencia de tiempo en 5 m entre B-Human y RL v1.1, y en porcentaje del tiempo de B-Human.',
+    fn: (versiones) => {
+      const t = (v) => versiones.find((r) => r.version === v).t_benchmark_s;
+      const delta_s = Math.round((t('B-Human') - t('1.1')) * 100) / 100;
+      return [{ delta_s, pct: Math.round((delta_s / t('B-Human')) * 1000) / 10 }];
+    },
+  });
+
+  // ---------- utilidades
+  window.nx = {};
+  nx.fmt1 = d3.format('.1f');
+  nx.fmt2 = d3.format('.2f');
+  nx.tip = (box) => {
+    let el = box.querySelector('.nx-tip');
+    if (!el) { el = document.createElement('div'); el.className = 'nx-tip'; el.hidden = true; box.appendChild(el); }
+    return {
+      show(ev, lines) {
+        el.replaceChildren(...lines.map((l, i) => { const d = document.createElement('div'); if (i === 0) d.className = 't'; d.textContent = l; return d; }));
+        el.hidden = false;
+        const b = box.getBoundingClientRect();
+        let x = ev.clientX - b.left + 12, y = ev.clientY - b.top + 12;
+        x = Math.min(x, box.clientWidth - el.offsetWidth - 4);
+        el.style.left = Math.max(0, x) + 'px'; el.style.top = y + 'px';
+      },
+      hide() { el.hidden = true; },
+    };
+  };
+  nx.textW = (svg, texts) => {
+    const g = svg.append('g');
+    let w = 0;
+    texts.forEach((t) => { const n = g.append('text').text(t).node(); w = Math.max(w, n.getComputedTextLength()); });
+    g.remove();
+    return w;
+  };
+  nx.svg = (box, h) => {
+    box.querySelectorAll('svg').forEach((s) => s.remove());
+    const w = box.clientWidth;
+    return d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${w} ${h}`).attr('height', h);
+  };
+  nx.fail = (box, st) => {
+    box.querySelectorAll('svg, .nx-fail').forEach((s) => s.remove());
+    if (st === 'error') {
+      const d = document.createElement('div'); d.className = 'nx-fail';
+      d.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:.4rem;min-height:inherit;color:var(--color-fg-muted);font-size:var(--cds-font-size-caption)';
+      const dot = document.createElement('span'); dot.style.cssText = 'width:.375rem;height:.375rem;border-radius:50%;background:var(--color-bad)';
+      d.append(dot, 'Failed to load'); box.appendChild(d);
+    }
+  };
+  nx.ok = (...ids) => ids.every((i) => dash.data(i).status === 'ok');
+  nx.st = (...ids) => (ids.some((i) => dash.data(i).status === 'error') ? 'error' : 'loading');
+  nx.fill = (tbody, rows, cols) => {
+    tbody.replaceChildren(...rows.map((r) => {
+      const tr = document.createElement('tr');
+      cols.forEach(([k, num, f]) => { const td = document.createElement('td'); if (num) td.className = 'num'; const v = r[k];
+        td.textContent = v === null || v === undefined ? '—' : f ? f(v) : String(v); tr.appendChild(td); });
+      return tr;
+    }));
+  };
+</script>
+
+<script>
+  // ---------- pestanas
+  const tabs = [...document.querySelectorAll('.nx-tab')];
+  const pages = [...document.querySelectorAll('[data-page]')];
+  window.nxShow = (name) => {
+    tabs.forEach((t) => t.setAttribute('aria-selected', String(t.dataset.tab === name)));
+    pages.forEach((p) => { p.hidden = p.dataset.page !== name; });
+    dash.setLink(name);
+    window.nxDraw && window.nxDraw();
+  };
+  tabs.forEach((t) => t.addEventListener('click', () => nxShow(t.dataset.tab)));
+  const inicial = pages.some((p) => p.id === location.hash.slice(1)) ? location.hash.slice(1) : 'resumen';
+  nxShow(inicial);
+</script>
+
+<script>
+  // ---------- dibujo
+  const C = dash.colors;
+  const COL = { 'RL v1.1': C[0], 'B-Human': C[1], 'NAOqi': C[2], 'RL v1.0': C[3], 'RL sprint (sep.)': C[4] };
+  const visible = (id) => !document.getElementById(id).closest('[data-page]').hidden;
+
+  function resumen() {
+    const v = dash.data('versiones'), k = dash.data('ventaja');
+    const take = document.getElementById('takeaway');
+    if (v.status === 'ok' && k.status === 'ok') {
+      const t = (x) => v.data.find((r) => r.version === x).t_benchmark_s;
+      take.textContent = `La versión 1.1 del RL recorre los 5 m en ${nx.fmt1(t('1.1'))} s con visión y sin faltas: ${nx.fmt1(k.data[0].delta_s)} s menos que B-Human (${nx.fmt1(t('B-Human'))} s) y casi 5 veces más rápido que NAOqi (${nx.fmt1(t('NAOqi'))} s). El costo es más exigencia para rodillas y tobillos.`;
+      const set = (cls, x, f) => { document.querySelector(cls).textContent = f(x); };
+      set('.js-v11', t('1.1'), nx.fmt2); set('.js-bh', t('B-Human'), nx.fmt2); set('.js-nq', t('NAOqi'), nx.fmt2);
+      const m = (x) => v.data.find((r) => r.version === x).metas;
+      set('.js-v11m', m('1.1'), String); set('.js-bhm', m('B-Human'), String); set('.js-nqm', m('NAOqi'), String);
+      set('.js-pct', k.data[0].pct, nx.fmt1); set('.js-delta', k.data[0].delta_s, nx.fmt2);
+    }
+    const box = document.getElementById('ch-progreso');
+    if (!visible('ch-progreso')) return;
+    if (v.status !== 'ok') return nx.fail(box, nx.st('versiones'));
+    nx.fail(box, '');
+    const rl = v.data.filter((r) => r.orden !== null).sort((a, b) => a.orden - b.orden);
+    const refs = v.data.filter((r) => r.orden === null);
+    const h = 40 + rl.length * 40;
+    const svg = nx.svg(box, h);
+    const W = box.clientWidth;
+    const lab = (r) => (r.version.match(/^\d/) ? `RL v${r.version}` : r.version === 'Sprint' ? 'RL sprint' : `carrera_${r.version}`);
+    const ml = nx.textW(svg, rl.map(lab)) + 10;
+    const x = d3.scaleLinear([0, d3.max(v.data, (r) => r.t_benchmark_s) * 1.08], [ml, W - 16]);
+    const y = d3.scaleBand(rl.map(lab), [24, h - 20]).padding(0.3);
+    svg.append('g').attr('transform', `translate(0,${h - 20})`).call(d3.axisBottom(x).ticks(5).tickFormat((d) => `${d} s`))
+      .attr('font-size', null).attr('font-family', null).call((g) => g.select('.domain').attr('stroke', 'var(--cds-chart-axis)'))
+      .call((g) => g.selectAll('line').attr('stroke', 'var(--cds-chart-grid)'));
+    const tip = nx.tip(box);
+    svg.append('g').selectAll('rect').data(rl).join('rect')
+      .attr('x', ml).attr('y', (r) => y(lab(r))).attr('height', y.bandwidth()).attr('rx', 4)
+      .attr('width', (r) => x(r.t_benchmark_s) - ml)
+      .attr('fill', (r) => (r.version === '1.1' ? C[0] : 'var(--cds-chart-muted)'))
+      .on('mousemove', (ev, r) => tip.show(ev, [lab(r), `${nx.fmt2(r.t_benchmark_s)} s · metas ${r.metas}`, r.que_cambio]))
+      .on('mouseleave', () => tip.hide());
+    svg.append('g').selectAll('text').data(rl).join('text').attr('class', 'vl')
+      .attr('x', (r) => x(r.t_benchmark_s) + 4).attr('y', (r) => y(lab(r)) + y.bandwidth() / 2).attr('dy', '0.35em')
+      .text((r) => `${nx.fmt1(r.t_benchmark_s)} s`);
+    svg.append('g').selectAll('text').data(rl).join('text').attr('x', ml - 6).attr('text-anchor', 'end')
+      .attr('y', (r) => y(lab(r)) + y.bandwidth() / 2).attr('dy', '0.35em').text(lab);
+    refs.forEach((r, i) => {
+      svg.append('line').attr('x1', x(r.t_benchmark_s)).attr('x2', x(r.t_benchmark_s)).attr('y1', 18).attr('y2', h - 20)
+        .attr('stroke', COL[r.version]).attr('stroke-dasharray', '4 3').attr('stroke-width', 1.5);
+      svg.append('text').attr('x', x(r.t_benchmark_s)).attr('y', 12).attr('text-anchor', i ? 'end' : 'middle')
+        .text(`${r.version} ${nx.fmt1(r.t_benchmark_s)} s`);
+    });
+  }
+
+  function benchmark() {
+    const b = dash.data('benchmark');
+    const tb = document.querySelector('#tb-bench tbody');
+    if (b.status === 'ok') {
+      const orden = ['RL v1.1', 'RL v1.0', 'carrera_v02', 'carrera_v01', 'RL sprint (sep.)', 'B-Human', 'NAOqi'];
+      const rows = [...b.data].sort((p, q) => orden.indexOf(p.caminata) - orden.indexOf(q.caminata) || (p.vision < q.vision ? 1 : -1) || p.mu - q.mu);
+      nx.fill(tb, rows, [['caminata'], ['vision'], ['mu', 1, nx.fmt1], ['metas', 1, (v) => String(v)], ['caidas', 1, String], ['salidas', 1, String],
+        ['t_meta_s', 1, nx.fmt2], ['desvio_cm', 1, nx.fmt1]]);
+      [...tb.rows].forEach((tr, i) => { tr.dataset.key = rows[i].clave; });
+    }
+    if (!visible('ch-friccion')) return;
+    const box = document.getElementById('ch-friccion'), lg = document.getElementById('lg-friccion');
+    if (b.status !== 'ok') { nx.fail(box, nx.st('benchmark')); nx.fail(document.getElementById('ch-vision'), nx.st('benchmark')); return; }
+    nx.fail(box, '');
+    const series = ['RL v1.1', 'RL v1.0', 'RL sprint (sep.)', 'B-Human'];
+    lg.replaceChildren(...series.map((s) => { const e = document.createElement('span'); e.style.setProperty('--sw', COL[s]); e.textContent = s; return e; }));
+    const pts = b.data.filter((r) => r.vision === 'sí' && series.includes(r.caminata) && r.t_meta_s !== null);
+    const h = 260, W = box.clientWidth;
+    const svg = nx.svg(box, h);
+    const x = d3.scaleLinear([0.4, 1.2], [44, W - 70]);
+    const y = d3.scaleLinear([0, d3.max(pts, (r) => r.t_meta_s) * 1.1], [h - 26, 10]);
+    svg.append('g').attr('transform', `translate(0,${h - 26})`).call(d3.axisBottom(x).ticks(5).tickFormat((d) => `μ ${d}`))
+      .attr('font-size', null).attr('font-family', null).call((g) => g.select('.domain').attr('stroke', 'var(--cds-chart-axis)'));
+    svg.append('g').attr('transform', 'translate(44,0)').call(d3.axisLeft(y).ticks(5).tickSize(-(W - 114)).tickFormat((d) => `${d} s`))
+      .attr('font-size', null).attr('font-family', null).call((g) => g.select('.domain').remove())
+      .call((g) => g.selectAll('line').attr('stroke', 'var(--cds-chart-grid)'));
+    const tip = nx.tip(box);
+    series.forEach((s) => {
+      const d = pts.filter((r) => r.caminata === s).sort((p, q) => p.mu - q.mu);
+      svg.append('path').datum(d).attr('fill', 'none').attr('stroke', COL[s]).attr('stroke-width', 2).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round')
+        .attr('d', d3.line((r) => x(r.mu), (r) => y(r.t_meta_s)));
+      svg.append('g').selectAll('circle').data(d).join('circle').attr('cx', (r) => x(r.mu)).attr('cy', (r) => y(r.t_meta_s)).attr('r', 4)
+        .attr('fill', COL[s]).attr('stroke', 'var(--color-panel)').attr('stroke-width', 2)
+        .on('mousemove', (ev, r) => tip.show(ev, [`${s} · fricción ${r.mu}`, `${nx.fmt2(r.t_meta_s)} s · metas ${r.metas}/${r.n}`])).on('mouseleave', () => tip.hide());
+      const last = d[d.length - 1];
+      if (last) svg.append('text').attr('class', 'vl').attr('x', x(last.mu) + 8).attr('y', y(last.t_meta_s)).attr('dy', '0.35em').text(`${nx.fmt1(last.t_meta_s)} s`);
+    });
+
+    // con y sin vision: metas por caminata
+    const box2 = document.getElementById('ch-vision');
+    nx.fail(box2, '');
+    const cams = ['RL v1.1', 'RL v1.0', 'carrera_v02', 'carrera_v01', 'RL sprint (sep.)', 'B-Human', 'NAOqi'];
+    const agg = cams.map((c) => ['sí', 'no'].map((vi) => { const rs = b.data.filter((r) => r.caminata === c && r.vision === vi);
+      return rs.length ? { c, vi, metas: d3.sum(rs, (r) => r.metas), n: d3.sum(rs, (r) => r.n), caidas: d3.sum(rs, (r) => r.caidas), salidas: d3.sum(rs, (r) => r.salidas) } : null; }))
+      .flat().filter(Boolean);
+    const camsCon = cams.filter((c) => agg.some((a) => a.c === c));
+    const h2 = 30 + camsCon.length * 34, W2 = box2.clientWidth;
+    const svg2 = nx.svg(box2, h2);
+    const ml = nx.textW(svg2, camsCon) + 10;
+    const xx = d3.scaleLinear([0, 25], [ml, W2 - 70]);
+    const yy = d3.scaleBand(camsCon, [8, h2 - 22]).padding(0.25);
+    svg2.append('g').attr('transform', `translate(0,${h2 - 22})`).call(d3.axisBottom(xx).ticks(5)).attr('font-size', null).attr('font-family', null)
+      .call((g) => g.select('.domain').attr('stroke', 'var(--cds-chart-axis)'));
+    const tip2 = nx.tip(box2);
+    agg.forEach((a) => {
+      const yb = yy(a.c) + (a.vi === 'sí' ? 0 : yy.bandwidth() / 2);
+      svg2.append('rect').attr('x', ml).attr('y', yb).attr('height', yy.bandwidth() / 2 - 2).attr('rx', 3)
+        .attr('width', xx(a.metas) - ml).attr('fill', a.vi === 'sí' ? COL[a.c] || 'var(--cds-chart-muted)' : 'var(--cds-chart-muted)')
+        .on('mousemove', (ev) => tip2.show(ev, [`${a.c} · ${a.vi === 'sí' ? 'con' : 'sin'} visión`, `metas ${a.metas}/${a.n} · caídas ${a.caidas} · salidas ${a.salidas}`])).on('mouseleave', () => tip2.hide());
+      svg2.append('text').attr('class', 'vl').attr('x', xx(a.metas) + 4).attr('y', yb + yy.bandwidth() / 4).attr('dy', '0.35em')
+        .text(`${a.metas}/${a.n} ${a.vi === 'sí' ? 'con' : 'sin'}`);
+    });
+    svg2.append('g').selectAll('text.lb').data(camsCon).join('text').attr('x', ml - 6).attr('text-anchor', 'end')
+      .attr('y', (c) => yy(c) + yy.bandwidth() / 2).attr('dy', '0.35em').text((c) => c);
+  }
+
+  function versiones() {
+    const v = dash.data('versiones');
+    if (v.status !== 'ok') return;
+    const rows = [...v.data].sort((a, b) => (a.orden ?? 99) - (b.orden ?? 99));
+    const tb = document.querySelector('#tb-versiones tbody');
+    nx.fill(tb, rows, [['version'], ['politica'], ['fecha'], ['pasos_M', 1, (x) => String(x)], ['que_cambio'], ['por_que'], ['resultado'], ['t_benchmark_s', 1, nx.fmt2]]);
+  }
+
+  function agentes() {
+    if (!visible('ch-ronda1')) return;
+    const r1 = dash.data('ronda1'), r2 = dash.data('ronda2'), bs = dash.data('base_rondas'), pe = dash.data('pesos');
+    const b1 = document.getElementById('ch-ronda1'), b2 = document.getElementById('ch-ronda2'), b3 = document.getElementById('ch-pesos');
+    if (nx.ok('ronda1', 'base_rondas')) {
+      nx.fail(b1, '');
+      const base = bs.data.find((r) => r.ronda === 'ronda1').puntaje_base_s;
+      const pas = r1.data.filter((r) => r.pasa === 'sí'), no = r1.data.filter((r) => r.pasa === 'no');
+      const h = 230, W = b1.clientWidth, svg = nx.svg(b1, h);
+      const x = d3.scaleLinear(d3.extent(pas, (r) => r.puntaje_s).map((v, i) => v + (i ? 0.2 : -0.2)), [20, W - 20]);
+      const bins = d3.bin().domain(x.domain()).thresholds(18)(pas.map((r) => r.puntaje_s));
+      const y = d3.scaleLinear([0, d3.max(bins, (b) => b.length)], [h - 50, 20]);
+      svg.append('g').attr('transform', `translate(0,${h - 50})`).call(d3.axisBottom(x).ticks(6).tickFormat((d) => `${d} s`))
+        .attr('font-size', null).attr('font-family', null).call((g) => g.select('.domain').attr('stroke', 'var(--cds-chart-axis)'));
+      const tip = nx.tip(b1);
+      svg.append('g').selectAll('rect').data(bins).join('rect').attr('x', (b) => x(b.x0) + 1).attr('width', (b) => Math.max(0, x(b.x1) - x(b.x0) - 2))
+        .attr('y', (b) => y(b.length)).attr('height', (b) => y(0) - y(b.length)).attr('rx', 3)
+        .attr('fill', (b) => (b.x1 <= base ? C[0] : 'var(--cds-chart-muted)'))
+        .on('mousemove', (ev, b) => tip.show(ev, [`${nx.fmt2(b.x0)}–${nx.fmt2(b.x1)} s`, `${b.length} agentes`])).on('mouseleave', () => tip.hide());
+      svg.append('line').attr('x1', x(base)).attr('x2', x(base)).attr('y1', 14).attr('y2', h - 50).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-dasharray', '4 3');
+      svg.append('text').attr('x', x(base)).attr('y', 10).attr('text-anchor', 'middle').text(`base ${nx.fmt2(base)} s`);
+      const mejor = d3.min(pas, (r) => r.puntaje_s), bate = pas.filter((r) => r.puntaje_s < base).length;
+      svg.append('text').attr('class', 'vl').attr('x', 20).attr('y', h - 14)
+        .text(`${pas.length} pasan · ${no.length} descartados · ${bate} superan a la base · mejor ${nx.fmt2(mejor)} s`);
+    } else nx.fail(b1, nx.st('ronda1', 'base_rondas'));
+
+    if (nx.ok('ronda2', 'base_rondas')) {
+      nx.fail(b2, '');
+      const base = bs.data.find((r) => r.ronda === 'ronda2').puntaje_base_s;
+      const rows = [...r2.data].sort((a, b) => (a.puntaje_s ?? 99) - (b.puntaje_s ?? 99));
+      const h = 24 + rows.length * 16, W = b2.clientWidth, svg = nx.svg(b2, h);
+      const ml = nx.textW(svg, rows.map((r) => r.agente)) + 10;
+      const vals = rows.flatMap((r) => [r.puntaje_s, r.puntaje_ronda1_s]).filter((v) => v !== null);
+      const x = d3.scaleLinear([d3.min(vals) - 0.2, d3.max(vals) + 0.3], [ml, W - 60]);
+      const y = d3.scaleBand(rows.map((r) => r.agente), [10, h - 20]);
+      svg.append('g').attr('transform', `translate(0,${h - 20})`).call(d3.axisBottom(x).ticks(5).tickFormat((d) => `${d} s`))
+        .attr('font-size', null).attr('font-family', null).call((g) => g.select('.domain').attr('stroke', 'var(--cds-chart-axis)'));
+      svg.append('line').attr('x1', x(base)).attr('x2', x(base)).attr('y1', 4).attr('y2', h - 20).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-dasharray', '4 3');
+      const tip = nx.tip(b2);
+      rows.forEach((r) => {
+        const yc = y(r.agente) + y.bandwidth() / 2;
+        svg.append('text').attr('x', ml - 6).attr('text-anchor', 'end').attr('y', yc).attr('dy', '0.35em').text(r.agente);
+        if (r.puntaje_ronda1_s !== null) svg.append('circle').attr('cx', x(r.puntaje_ronda1_s)).attr('cy', yc).attr('r', 4).attr('fill', 'var(--color-panel)').attr('stroke', 'var(--cds-chart-muted)').attr('stroke-width', 1.5);
+        if (r.puntaje_s !== null) svg.append('circle').attr('cx', x(r.puntaje_s)).attr('cy', yc).attr('r', 4.5).attr('fill', r.agente === 'agente_071' ? C[0] : 'var(--color-fg-muted)')
+          .on('mousemove', (ev) => tip.show(ev, [r.agente, `ronda 2: ${nx.fmt2(r.puntaje_s)} s (checkpoint ${r.checkpoint_M}M)`, `ronda 1: ${nx.fmt2(r.puntaje_ronda1_s)} s`])).on('mouseleave', () => tip.hide());
+        else svg.append('text').attr('x', ml + 4).attr('y', yc).attr('dy', '0.35em').text(`descartado (${r.faltas} faltas)`);
+      });
+      svg.append('text').attr('x', x(base) + 4).attr('y', 8).text(`base ${nx.fmt2(base)} s`);
+    } else nx.fail(b2, nx.st('ronda2', 'base_rondas'));
+
+    if (pe.status === 'ok') {
+      nx.fail(b3, '');
+      const rows = [...pe.data].sort((a, b) => a.rho_ronda2 - b.rho_ronda2);
+      const h = 24 + rows.length * 22, W = b3.clientWidth, svg = nx.svg(b3, h);
+      const ml = nx.textW(svg, rows.map((r) => r.que_es)) + 10;
+      const x = d3.scaleLinear([-1, 1], [ml, W - 20]);
+      const y = d3.scaleBand(rows.map((r) => r.parametro), [8, h - 20]);
+      svg.append('g').attr('transform', `translate(0,${h - 20})`).call(d3.axisBottom(x).ticks(5)).attr('font-size', null).attr('font-family', null)
+        .call((g) => g.select('.domain').attr('stroke', 'var(--cds-chart-axis)'));
+      svg.append('line').attr('x1', x(0)).attr('x2', x(0)).attr('y1', 4).attr('y2', h - 20).attr('stroke', 'var(--cds-chart-reference)');
+      const tip = nx.tip(b3);
+      rows.forEach((r) => {
+        const yc = y(r.parametro) + y.bandwidth() / 2;
+        svg.append('text').attr('x', ml - 6).attr('text-anchor', 'end').attr('y', yc).attr('dy', '0.35em').text(r.que_es);
+        svg.append('line').attr('x1', x(r.rho_ronda1)).attr('x2', x(r.rho_ronda2)).attr('y1', yc).attr('y2', yc).attr('stroke', 'var(--cds-chart-grid)').attr('stroke-width', 2);
+        svg.append('circle').attr('cx', x(r.rho_ronda1)).attr('cy', yc).attr('r', 4).attr('fill', 'var(--color-panel)').attr('stroke', 'var(--cds-chart-muted)').attr('stroke-width', 1.5);
+        svg.append('circle').attr('cx', x(r.rho_ronda2)).attr('cy', yc).attr('r', 5).attr('fill', Math.abs(r.rho_ronda2) >= 0.5 ? C[0] : 'var(--color-fg-muted)')
+          .on('mousemove', (ev) => tip.show(ev, [r.que_es, `ronda 2: ${nx.fmt2(r.rho_ronda2)} · ronda 1: ${nx.fmt2(r.rho_ronda1)}`])).on('mouseleave', () => tip.hide());
+      });
+    } else nx.fail(b3, nx.st('pesos'));
+  }
+
+  function motores() {
+    const rr = dash.data('riesgo_resumen'), rk = dash.data('riesgo'), mr = dash.data('motores_reales');
+    const tiles = document.getElementById('tiles-motores');
+    if (rr.status === 'ok' && !tiles.children.length) {
+      tiles.dataset.source = 'riesgo_resumen';
+      rr.data.forEach((r) => {
+        const t = document.createElement('div'); t.className = 'nx-tile';
+        const lb = document.createElement('div'); lb.className = 'lb'; lb.textContent = r.caminata;
+        const big = document.createElement('div'); big.className = 'big';
+        const e = document.createElement('span'); e.dataset.source = 'riesgo_resumen'; e.dataset.field = 'energia_J_m'; e.dataset.where = `caminata=${encodeURIComponent(r.caminata)}`; e.textContent = nx.fmt1(r.energia_J_m);
+        big.append(e, ' J/m');
+        const sub = document.createElement('div'); sub.className = 'sub';
+        const i = document.createElement('span'); i.dataset.source = 'riesgo_resumen'; i.dataset.field = 'impacto_pico_x_peso'; i.dataset.where = `caminata=${encodeURIComponent(r.caminata)}`; i.textContent = nx.fmt2(r.impacto_pico_x_peso);
+        sub.append('energía por metro · impacto pico ', i, ' × peso');
+        t.append(lb, big, sub); tiles.appendChild(t);
+      });
+    }
+    if (rk.status === 'ok') {
+      const tb = document.querySelector('#tb-riesgo tbody');
+      nx.fill(tb, rk.data, [['caminata'], ['articulacion'], ['par_rms_Nm', 1, nx.fmt2], ['rms_sobre_continuo_pct', 1, String], ['pct_tiempo_sobre_continuo', 1, nx.fmt1],
+        ['vel_p99_rad_s', 1, nx.fmt2], ['pct_fuera_curva', 1, nx.fmt1], ['pct_cerca_tope', 1, nx.fmt1]]);
+      [...tb.rows].forEach((tr, i) => { tr.dataset.key = rk.data[i].clave; });
+    }
+    if (mr.status === 'ok') {
+      nx.fill(document.querySelector('#tb-motores tbody'), mr.data, [['articulaciones'], ['motor'], ['reductora', 1, String], ['par_parada_Nm', 1, nx.fmt2], ['par_continuo_Nm', 1, nx.fmt2], ['vel_max_rad_s', 1, nx.fmt2]]);
+    }
+    if (!visible('ch-calor')) return;
+    const cams = ['RL v1.1', 'RL v1.0', 'B-Human', 'NAOqi'];
+    const box = document.getElementById('ch-calor'), lg = document.getElementById('lg-calor');
+    if (rk.status !== 'ok') { nx.fail(box, nx.st('riesgo')); return; }
+    nx.fail(box, '');
+    lg.replaceChildren(...cams.map((s) => { const e = document.createElement('span'); e.style.setProperty('--sw', COL[s]); e.textContent = s; return e; }));
+    const J = ['LKneePitch', 'RKneePitch', 'LAnklePitch', 'RAnklePitch', 'LHipPitch', 'RHipPitch', 'LHipRoll', 'RHipRoll', 'LAnkleRoll', 'RAnkleRoll', 'LHipYawPitch'];
+    const h = 30 + J.length * 46, W = box.clientWidth, svg = nx.svg(box, h);
+    const ml = nx.textW(svg, J) + 10;
+    const x = d3.scaleLinear([0, 120], [ml, W - 30]);
+    const y = d3.scaleBand(J, [10, h - 22]).padding(0.15);
+    const yi = d3.scaleBand(cams, [0, y.bandwidth()]).padding(0.12);
+    svg.append('g').attr('transform', `translate(0,${h - 22})`).call(d3.axisBottom(x).ticks(6).tickFormat((d) => `${d} %`))
+      .attr('font-size', null).attr('font-family', null).call((g) => g.select('.domain').attr('stroke', 'var(--cds-chart-axis)'));
+    const tip = nx.tip(box);
+    J.forEach((j) => {
+      svg.append('text').attr('x', ml - 6).attr('text-anchor', 'end').attr('y', y(j) + y.bandwidth() / 2).attr('dy', '0.35em').text(j);
+      cams.forEach((c) => {
+        const r = rk.data.find((q) => q.caminata === c && q.articulacion === j);
+        if (!r || r.rms_sobre_continuo_pct === null) return;
+        svg.append('rect').attr('x', ml).attr('y', y(j) + yi(c)).attr('height', yi.bandwidth()).attr('rx', 2)
+          .attr('width', x(r.rms_sobre_continuo_pct) - ml).attr('fill', COL[c])
+          .on('mousemove', (ev) => tip.show(ev, [`${j} · ${c}`, `par RMS ${nx.fmt2(r.par_rms_Nm)} N·m = ${r.rms_sobre_continuo_pct} % del continuo`, `${nx.fmt1(r.pct_tiempo_sobre_continuo)} % del tiempo sobre el continuo`]))
+          .on('mouseleave', () => tip.hide());
+      });
+    });
+    svg.append('line').attr('x1', x(100)).attr('x2', x(100)).attr('y1', 4).attr('y2', h - 22).attr('stroke', 'var(--cds-chart-status-critical)').attr('stroke-dasharray', '4 3').attr('stroke-width', 1.5);
+    svg.append('text').attr('x', x(100) - 4).attr('y', 8).attr('text-anchor', 'end').text('par continuo');
+
+    const b2 = document.getElementById('ch-vel');
+    if (!nx.ok('riesgo', 'motores_reales')) { nx.fail(b2, nx.st('riesgo', 'motores_reales')); return; }
+    nx.fail(b2, '');
+    const w0 = mr.data.find((r) => r.articulaciones.startsWith('HipPitch')).vel_max_rad_s;
+    const J2 = ['LKneePitch', 'RKneePitch', 'LHipPitch', 'RHipPitch', 'LAnklePitch', 'RAnklePitch'];
+    const h2 = 30 + J2.length * 46, W2 = b2.clientWidth, svg2 = nx.svg(b2, h2);
+    const ml2 = nx.textW(svg2, J2) + 10;
+    const x2 = d3.scaleLinear([0, 10], [ml2, W2 - 30]);
+    const y2 = d3.scaleBand(J2, [14, h2 - 22]).padding(0.15);
+    const yi2 = d3.scaleBand(cams, [0, y2.bandwidth()]).padding(0.12);
+    svg2.append('g').attr('transform', `translate(0,${h2 - 22})`).call(d3.axisBottom(x2).ticks(5)).attr('font-size', null).attr('font-family', null)
+      .call((g) => g.select('.domain').attr('stroke', 'var(--cds-chart-axis)'));
+    const tip2 = nx.tip(b2);
+    J2.forEach((j) => {
+      svg2.append('text').attr('x', ml2 - 6).attr('text-anchor', 'end').attr('y', y2(j) + y2.bandwidth() / 2).attr('dy', '0.35em').text(j);
+      cams.forEach((c) => {
+        const r = rk.data.find((q) => q.caminata === c && q.articulacion === j);
+        if (!r) return;
+        svg2.append('rect').attr('x', ml2).attr('y', y2(j) + yi2(c)).attr('height', yi2.bandwidth()).attr('rx', 2).attr('width', x2(r.vel_p99_rad_s) - ml2).attr('fill', COL[c])
+          .on('mousemove', (ev) => tip2.show(ev, [`${j} · ${c}`, `${nx.fmt2(r.vel_p99_rad_s)} rad/s · ${nx.fmt1(r.pct_fuera_curva ?? 0)} % fuera de la curva par-velocidad`])).on('mouseleave', () => tip2.hide());
+      });
+    });
+    svg2.append('line').attr('x1', x2(w0)).attr('x2', x2(w0)).attr('y1', 10).attr('y2', h2 - 22).attr('stroke', 'var(--cds-chart-status-critical)').attr('stroke-dasharray', '4 3').attr('stroke-width', 1.5);
+    svg2.append('text').attr('x', x2(w0) - 4).attr('y', 8).attr('text-anchor', 'end').text(`máx. del motor ${nx.fmt2(w0)} rad/s`);
+  }
+
+  function simulacion() {
+    const s = dash.data('simulacion');
+    if (s.status !== 'ok') return;
+    nx.fill(document.querySelector('#tb-sim tbody'), s.data, [['grupo'], ['parametro'], ['valor'], ['por_que']]);
+  }
+
+  window.nxDraw = () => { resumen(); benchmark(); versiones(); agentes(); motores(); simulacion(); };
+  dash.onData(window.nxDraw);
+</script>

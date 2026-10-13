@@ -8,7 +8,7 @@ Cada agente sortea, con su propia semilla:
   - la semilla de PPO.
 Luego, en cola y de a uno (este PC entrena uno a la vez con 16 entornos):
   1. escribe results/barridos/<nombre>/agente_NNN/config.yaml (config completa de src.train);
-  2. entrena con `src.train --continuar <base>` (por defecto policies/carrera_v03) en runs/barrido_<nombre>_NNN;
+  2. entrena con `src.train --continuar <base>` (por defecto policies/rl_v1.0, antes carrera_v03) en runs/barrido_<nombre>_NNN;
   3. evalua con la bateria de scripts/eval_carrera.py (con vision, perturbaciones, 5 fricciones x --eval-semillas);
   4. guarda resultado.json con la config sorteada, los numeros y el puntaje de seleccion (seccion 11.4).
 Es REANUDABLE: un agente con resultado.json se salta; uno entrenado sin evaluar solo se evalua.
@@ -145,7 +145,7 @@ def main() -> int:
     ap.add_argument("--nombre", required=True)
     ap.add_argument("--agentes", type=int, default=100)
     ap.add_argument("--pasos", type=int, default=1_000_000)
-    ap.add_argument("--base", type=Path, default=ROOT / "policies" / "carrera_v03")
+    ap.add_argument("--base", type=Path, default=ROOT / "policies" / "rl_v1.0")
     ap.add_argument("--n-envs", type=int, default=16)
     ap.add_argument("--semilla", type=int, default=0, help="semilla del sorteo de los agentes")
     ap.add_argument("--eval-semillas", type=int, default=2)

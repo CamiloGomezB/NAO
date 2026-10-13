@@ -527,7 +527,7 @@ arriba, que era el plan:
 - **semilla** de PPO;
 - **no se varía el período de marcha** (se queda en 0.5 s), porque la base ya está entrenada con ese reloj.
 
-**Base:** `policies/carrera_v03` con `configs/carrera_v03.yaml` (colocación amplia y rumbo `carril`).
+**Base:** `policies/carrera_v03` (hoy `policies/rl_v1.0`) con `configs/carrera_v03.yaml` (colocación amplia y rumbo `carril`).
 
 **Batería corta, con visión y perturbaciones, `vx_cmd` 0.45:**
 - μ 0.4, 0.6, 0.8, 1.0 y 1.2 × 2 semillas, con la colocación del benchmark;
