@@ -60,9 +60,9 @@
   <!-- RESUMEN -->
   <section class="nx-page" id="resumen" data-page="resumen">
     <div class="nx-tiles">
-      <div class="nx-tile js-tile-v12" hidden><div class="lb">RL v1.2 · motores ≤ 80 %</div>
-        <div class="big"><span data-source="versiones" data-field="t_benchmark_s" data-where="version=1.2" class="js-v12">—</span> s</div>
-        <div class="sub">metas <span data-source="versiones" data-field="metas" data-where="version=1.2" class="js-v12m">—</span></div></div>
+      <div class="nx-tile js-tile-v12" hidden><div class="lb js-v12lb">RL v1.2 · motores ≤ 80 %</div>
+        <div class="big"><span data-source="versiones" data-field="t_benchmark_s" class="js-v12">—</span> s</div>
+        <div class="sub">metas <span data-source="versiones" data-field="metas" class="js-v12m">—</span></div></div>
       <div class="nx-tile"><div class="lb">RL v1.1 · 5 m con visión</div>
         <div class="big"><span data-source="versiones" data-field="t_benchmark_s" data-where="version=1.1" class="js-v11">—</span> s</div>
         <div class="sub">metas <span data-source="versiones" data-field="metas" data-where="version=1.1" class="js-v11m">—</span></div></div>
@@ -84,9 +84,9 @@
       </div>
       <div class="nx-card" id="card-riesgo-res">
         <h2>Riesgo para los motores del robot real</h2>
-        <p class="note">De la pestaña Motores. En v1.0 y v1.1, rodillas y tobillos trabajan en el límite del motor real; v1.2 los baja a ≤ 80 %.</p>
+        <p class="note">De la pestaña Motores. En v1.0 y v1.1, rodillas y tobillos trabajan en el límite del motor real; v1.2 y v1.2.1 los bajan a ≤ 80 %.</p>
         <div class="nx-risk">
-          <div><span class="nx-pill ok">v1.2</span><span>Calor: todas las articulaciones ≤ 80 % del par continuo (fase M2), con 0.2 s más en 5 m que v1.1.</span></div>
+          <div><span class="nx-pill ok">v1.2.1</span><span>Calor: todas las articulaciones ≤ 80 % del par continuo y recta otra vez (desvío ≤ 6.5 cm). La v1.2 cumplía el 80 % pero llegaba torcida (E59).</span></div>
           <div><span class="nx-pill bad">Alto</span><span>v1.0 y v1.1: rodillas con velocidad por encima de la máxima del motor y par medio ≈ par continuo (calor).</span></div>
           <div><span class="nx-pill warn">Medio</span><span>Impactos del pie, energía por metro y hombro izquierdo apoyado contra su tope.</span></div>
           <div><span class="nx-pill ok">Bajo</span><span>Caderas roll/yaw y tobillos roll; choques entre piernas.</span></div>
@@ -166,7 +166,7 @@
     <div class="nx-tiles" id="tiles-motores"></div>
     <div class="nx-card" id="card-calor">
       <h2>Calor: par medio frente al par continuo del motor real</h2>
-      <p class="note">100 % = el motor trabaja todo el tiempo en su límite térmico. Línea punteada verde: límite de la fase M2 (80 %), que <code>rl_v1.2</code> debe cumplir en todas las articulaciones. Mismo modelo y servos para todas las caminatas.</p>
+      <p class="note">100 % = el motor trabaja todo el tiempo en su límite térmico. Línea punteada verde: límite de las fases M2 y M3 (80 %), que <code>rl_v1.2</code> y <code>rl_v1.2.1</code> cumplen en todas las articulaciones. Mismo modelo y servos para todas las caminatas.</p>
       <div class="nx-legend" id="lg-calor" data-source="riesgo"></div>
       <div class="nx-chart" id="ch-calor" data-source="riesgo"></div>
     </div>
@@ -300,7 +300,7 @@
 <script>
   // ---------- dibujo
   const C = dash.colors;
-  const COL = { 'RL v1.1': C[0], 'B-Human': C[1], 'NAOqi': C[2], 'RL v1.0': C[3], 'RL sprint (sep.)': C[4], 'RL v1.2': C[6] };
+  const COL = { 'RL v1.1': C[0], 'B-Human': C[1], 'NAOqi': C[2], 'RL v1.0': C[3], 'RL sprint (sep.)': C[4], 'RL v1.2': C[6], 'RL v1.2.1': C[5] };
   const visible = (id) => !document.getElementById(id).closest('[data-page]').hidden;
 
   function resumen() {
@@ -309,14 +309,19 @@
     if (v.status === 'ok' && k.status === 'ok') {
       const t = (x) => v.data.find((r) => r.version === x).t_benchmark_s;
       const hay12 = v.data.some((r) => r.version === '1.2');
-      take.textContent = hay12
+      const hay121 = v.data.some((r) => r.version === '1.2.1');
+      const act = hay121 ? '1.2.1' : '1.2';
+      take.textContent = hay121
+        ? `La versión 1.2.1 del RL recorre los 5 m en ${nx.fmt1(t('1.2.1'))} s con visión, sin faltas, recta (a menos de 7 cm del centro) y con todos los motores por debajo del 80 % de su par continuo: cuida el robot y sigue ${nx.fmt1(t('B-Human') - t('1.2.1'))} s por delante de B-Human (${nx.fmt1(t('B-Human'))} s). La 1.2 era más rápida (${nx.fmt1(t('1.2'))} s) pero llegaba torcida; la 1.1 (${nx.fmt1(t('1.1'))} s) llevaba rodillas y tobillos al ~100 %.`
+        : hay12
         ? `La versión 1.2 del RL recorre los 5 m en ${nx.fmt1(t('1.2'))} s con visión y sin faltas, con todos los motores por debajo del 80 % de su par continuo: cuida el robot y sigue ${nx.fmt1(t('B-Human') - t('1.2'))} s por delante de B-Human (${nx.fmt1(t('B-Human'))} s). La 1.1 hace ${nx.fmt1(t('1.1'))} s, pero con rodillas y tobillos al ~100 %.`
         : `La versión 1.1 del RL recorre los 5 m en ${nx.fmt1(t('1.1'))} s con visión y sin faltas: ${nx.fmt1(k.data[0].delta_s)} s menos que B-Human (${nx.fmt1(t('B-Human'))} s) y casi 5 veces más rápido que NAOqi (${nx.fmt1(t('NAOqi'))} s). El costo es más exigencia para rodillas y tobillos.`;
       const set = (cls, x, f) => { document.querySelector(cls).textContent = f(x); };
       if (hay12) {
         document.querySelector('.js-tile-v12').hidden = false;
-        set('.js-v12', t('1.2'), nx.fmt2);
-        set('.js-v12m', v.data.find((r) => r.version === '1.2').metas, String);
+        set('.js-v12lb', act === '1.2.1' ? 'RL v1.2.1 · recta y motores ≤ 80 %' : 'RL v1.2 · motores ≤ 80 %', String);
+        set('.js-v12', t(act), nx.fmt2);
+        set('.js-v12m', v.data.find((r) => r.version === act).metas, String);
       }
       set('.js-v11', t('1.1'), nx.fmt2); set('.js-bh', t('B-Human'), nx.fmt2); set('.js-nq', t('NAOqi'), nx.fmt2);
       const m = (x) => v.data.find((r) => r.version === x).metas;
@@ -343,7 +348,7 @@
     svg.append('g').selectAll('rect').data(rl).join('rect')
       .attr('x', ml).attr('y', (r) => y(lab(r))).attr('height', y.bandwidth()).attr('rx', 4)
       .attr('width', (r) => Math.max(0, x(r.t_benchmark_s) - ml))
-      .attr('fill', (r) => (r.version === '1.2' ? C[6] : r.version === '1.1' ? C[0] : 'var(--cds-chart-muted)'))
+      .attr('fill', (r) => (r.version === '1.2.1' ? C[5] : r.version === '1.2' ? C[6] : r.version === '1.1' ? C[0] : 'var(--cds-chart-muted)'))
       .on('mousemove', (ev, r) => tip.show(ev, [lab(r), `${nx.fmt2(r.t_benchmark_s)} s · metas ${r.metas}`, r.que_cambio]))
       .on('mouseleave', () => tip.hide());
     svg.append('g').selectAll('text').data(rl).join('text').attr('class', 'vl')
@@ -532,7 +537,7 @@
       nx.fill(document.querySelector('#tb-motores tbody'), mr.data, [['articulaciones'], ['motor'], ['reductora', 1, String], ['par_parada_Nm', 1, nx.fmt2], ['par_continuo_Nm', 1, nx.fmt2], ['vel_max_rad_s', 1, nx.fmt2]]);
     }
     if (!visible('ch-calor')) return;
-    const cams = ['RL v1.2', 'RL v1.1', 'RL v1.0', 'B-Human', 'NAOqi'].filter((c) => rk.data.some((q) => q.caminata === c));
+    const cams = ['RL v1.2.1', 'RL v1.2', 'RL v1.1', 'RL v1.0', 'B-Human', 'NAOqi'].filter((c) => rk.data.some((q) => q.caminata === c));
     const box = document.getElementById('ch-calor'), lg = document.getElementById('lg-calor');
     if (rk.status !== 'ok') { nx.fail(box, nx.st('riesgo')); return; }
     nx.fail(box, '');

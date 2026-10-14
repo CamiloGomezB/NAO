@@ -6,7 +6,11 @@ articulares programadas a mano.
 
 ## Proyecto actual: Carrera Individual — Copa NAO CCM MX 2026
 
-> **Estado (2026-10-14):** **`rl_v1.2` cuida los motores**: todas las articulaciones quedan ≤ 80 % del par continuo del
+> **Estado (2026-10-14, mediodía):** **`rl_v1.2.1` cuida los motores y camina recto**: todas las articulaciones ≤ 80 %
+> del par continuo y desvío máximo de 6.5 cm en el benchmark (`rl_v1.2`: 23 cm, E59). Llega 25/25 en **11.7 s**
+> (B-Human 16.2–18.3 s). Fase M3 del `PLAN.md`; verla: `uv run python demo/caminatas/carrera_vivo.py --rl-vx 0.45`.
+>
+> **Antes (2026-10-14, madrugada):** **`rl_v1.2` cuida los motores**: todas las articulaciones quedan ≤ 80 % del par continuo del
 > motor real (rodillas 70–72 %, como B-Human; `rl_v1.1`: 97–105 %). Llega 25/25 en **10.9 s** (`rl_v1.1`: 10.7 s; B-Human
 > 16.2–18.3 s), aunque menos recta (desvío de hasta 18 cm). Fase M2 del `PLAN.md`; verla:
 > `uv run python demo/caminatas/carrera_vivo.py --rl-vx 0.45`.
@@ -70,9 +74,10 @@ Cada archivo tiene su enlace y una línea que dice qué contiene. Se mantiene al
 |---|---|
 | [`results/dashboard/index.html`](results/dashboard/index.html) | **Dashboard del avance**, generado con `uv run python scripts/dashboard.py` (página en `scripts/dashboard/pagina.html`). Se abre con doble clic |
 | [`results/riesgo_motores/`](results/riesgo_motores/) | **Riesgo físico de la caminata para los motores del NAO V6**: informe en PDF y mediciones por articulación (`riesgo.json`, de `scripts/riesgo_motores.py`) |
-| [`results/esfuerzo_motores/`](results/esfuerzo_motores/) | **Fase M2 (motores ≤ 80 %)**: línea base del esfuerzo de cada motor (par RMS ÷ par continuo del motor real) de `rl_v1.0`, `rl_v1.1`, B-Human, NAOqi y el robot quieto (`linea_base.md`, paso 62b) |
+| [`results/esfuerzo_motores/`](results/esfuerzo_motores/) | **Fase M2 (motores ≤ 80 %)**: línea base del esfuerzo de cada motor (par RMS ÷ par continuo del motor real) de `rl_v1.0`, `rl_v1.1`, B-Human, NAOqi y el robot quieto (`linea_base.md`, paso 62b) y el diagnóstico de por qué `rl_v1.2` llega torcida (`diagnostico_rectitud.md`, E59), más la rectitud de `rl_v1.2.1` con la cámara renderizada (`rectitud_camara_renderizada_v121.json`) |
 | [`results/carrera/resumen.md`](results/carrera/resumen.md) | **Tabla de todas las evaluaciones** de las políticas de carrera (metas, caídas, salidas, tiempo, desvío) con la referencia de B-Human |
 | [`results/carrera/carrera_v01/`](results/carrera/carrera_v01/), [`carrera_v02/`](results/carrera/carrera_v02/) y [`carrera_v03/`](results/carrera/carrera_v03/) | Por generación (en `benchmark_vx0.45/`, `v01` y `v02` con la batería del benchmark): cada evaluación de cada checkpoint (`eval_*.md` legible y `.json` con cada corrida), las **curvas completas del entrenamiento** (`curvas_entrenamiento.csv` y `.png`), pruebas con la cámara renderizada, la prueba de rectitud de 100 episodios (`rectitud_58/`) y la batería de selección (`seleccion_100/`) |
+| [`results/carrera/rl_v1.2.1/benchmark_vx0.45/`](results/carrera/rl_v1.2.1/benchmark_vx0.45/eval_model_vx0.45.md) | `rl_v1.2.1` con la batería del benchmark (25 corridas), con el esfuerzo de cada motor y el desvío por corrida |
 | [`results/carrera/rl_v1.2/benchmark_vx0.45/`](results/carrera/rl_v1.2/benchmark_vx0.45/eval_model_vx0.45.md) | `rl_v1.2` con la batería del benchmark (25 corridas, `vx_cmd` 0.45), con el esfuerzo de cada motor por corrida |
 | [`results/carrera/analisis_politicas.json`](results/carrera/analisis_politicas.json) | Qué aprendió cada política: normalización de las 54 observaciones, uso de cada acción y métricas de la marcha |
 | [`results/carrera/orden_recompensa.json`](results/carrera/orden_recompensa.json), [`orden_recompensa_carrera_v03.json`](results/carrera/orden_recompensa_carrera_v03.json) | Prueba de si salirse siempre es peor que ir lento: con `v01` a −200 (E47) y con `v03` a −300 (paso 55b, E53) |
@@ -82,14 +87,15 @@ Cada archivo tiene su enlace y una línea que dice qué contiene. Se mantiene al
 | [`results/benchmark/benchmark.md`](results/benchmark/benchmark.md) | **Benchmark de los 3 carriles** (RL del sprint, B-Human, NAOqi): 150 corridas, 5 fricciones, con y sin visión; datos en `benchmark.json` y `corridas.csv` |
 | [`results/diagnostico_45.md`](results/diagnostico_45.md) | Diagnóstico de las caídas al pausar la demo y del choque entre piernas en el V6 |
 | [`results/camara/`](results/camara/) | Validación de la visión: modelo de error, matriz de colores, lazo cerrado, cámara simulada contra renderizada |
-| [`results/barridos/`](results/barridos/) | Barridos de agentes. **`ronda1/`**: los 100 agentes del paso 61 (por agente: config sorteada, log de entrenamiento y `resultado.json`; `tabla.md` ordenada por puntaje; `base_carrera_v03.json` = la base con la misma batería). **`ronda2/`**: los 20 mejores con 5M pasos más, la batería completa y el mejor checkpoint de cada uno (paso 62); `analisis.md` dice qué pesos ganan, y `comparacion_3_carriles/` compara a los mejores con la batería del benchmark de B-Human y NAOqi. `prueba_paso60/`, `prueba_paso61/` y `prueba_paso62/`: pruebas de los lanzadores. **`esfuerzo_*/`** (fase M2, `scripts/barrido_esfuerzo.py`): ajuste fino de `rl_v1.1` con el castigo al esfuerzo de los motores; `base_rl_v1.1.json` = `rl_v1.1` con la batería completa y el filtro del 80 %, y `tabla.md` con el esfuerzo de cada agente (`esfuerzo_prueba/`: paso 62f; `esfuerzo_v12/`: barrido de 4 agentes, paso 62g; `esfuerzo_v12_cont/`: continuación del mejor, de donde sale `rl_v1.2`, paso 62g2) |
+| [`results/barridos/`](results/barridos/) | Barridos de agentes. **`ronda1/`**: los 100 agentes del paso 61 (por agente: config sorteada, log de entrenamiento y `resultado.json`; `tabla.md` ordenada por puntaje; `base_carrera_v03.json` = la base con la misma batería). **`ronda2/`**: los 20 mejores con 5M pasos más, la batería completa y el mejor checkpoint de cada uno (paso 62); `analisis.md` dice qué pesos ganan, y `comparacion_3_carriles/` compara a los mejores con la batería del benchmark de B-Human y NAOqi. `prueba_paso60/`, `prueba_paso61/` y `prueba_paso62/`: pruebas de los lanzadores. **`esfuerzo_*/`** (fase M2, `scripts/barrido_esfuerzo.py`): ajuste fino de `rl_v1.1` con el castigo al esfuerzo de los motores; `base_rl_v1.1.json` = `rl_v1.1` con la batería completa y el filtro del 80 %, y `tabla.md` con el esfuerzo de cada agente (`esfuerzo_prueba/`: paso 62f; `esfuerzo_v12/`: barrido de 4 agentes, paso 62g; `esfuerzo_v12_cont/`: continuación del mejor, de donde sale `rl_v1.2`, paso 62g2; `recto_v13/`: fase M3, el ajuste para volver a ir recto, de donde sale `rl_v1.2.1`, paso 62j; `prueba_m3/`: prueba del script con el filtro de rectitud) |
 | [`results/comparison.md`](results/comparison.md), [`results/metrics.json`](results/metrics.json) | Resultados de la política del sprint inicial (septiembre) |
 
 **Políticas y configuraciones**
 
 | Archivo o carpeta | Qué tiene |
 |---|---|
-| [`policies/rl_v1.2/`](policies/rl_v1.2/README.md) | **Versión 1.2, la actual**: `rl_v1.1` con el castigo al esfuerzo de los motores (fase M2). Todas las articulaciones ≤ 80 % del par continuo; 10.9 s en el benchmark |
+| [`policies/rl_v1.2.1/`](policies/rl_v1.2.1/README.md) | **Versión 1.2.1, la actual**: arreglo de la 1.2. Mismos límites de motores (≤ 80 %) y otra vez recta (desvío ≤ 6.5 cm en el benchmark); 11.7 s |
+| [`policies/rl_v1.2/`](policies/rl_v1.2/README.md) | **Versión 1.2**: `rl_v1.1` con el castigo al esfuerzo de los motores (fase M2). Todas las articulaciones ≤ 80 % del par continuo; 10.9 s en el benchmark |
 | [`policies/rl_v1.1/`](policies/rl_v1.1/README.md) | **Versión 1.1, la más rápida**: el `agente_071` de la ronda 2 (10.7 s en el benchmark). Modelo, normalización, config, metadatos y README |
 | [`policies/rl_v1.0/`](policies/rl_v1.0/README.md) | **Versión 1.0** (generación `carrera_v03`): corrige salidas torcidas hasta ±25°. Modelo, normalización, config, metadatos y README con su origen y resultados |
 | [`policies/carrera_v02/`](policies/carrera_v02/README.md) | Política anterior: la base de `v03`, la primera que camina sin visión sin caerse |
@@ -151,7 +157,8 @@ Se actualiza con cada resultado:
 | **RL** | **`carrera_v02`** (15M pasos sobre `v01`, más pérdida de visión), con visión y perturbaciones, `vx_cmd` 0.40 | **13.0 s** (100/100) | ~0.38 m/s | 0 | — | — | [`results/carrera/carrera_v02/`](results/carrera/carrera_v02/) (paso 59b). **Sin visión: 89/100 metas, 0 caídas.** Cámara renderizada: 36/36 |
 | **RL** | **`carrera_v03`** (5M sobre `v02`, salidas torcidas + rumbo alineado al carril), con visión y perturbaciones, `vx_cmd` 0.40 | **12.8 s** (100/100) | ~0.39 m/s | 0 | — | — | [`results/carrera/carrera_v03/`](results/carrera/carrera_v03/) (pasos 58c y 59c). Salidas malas hasta ±25°: 70/70 (cámara renderizada 30/30). Sin visión 82/100, 0 caídas |
 | **RL** | **`rl_v1.1`** (`agente_071` de la ronda 2), con visión, `vx_cmd` 0.45 | **10.68–10.78 s** (25/25) | ~0.46 m/s | 0 | — | — | [`results/barridos/ronda2/comparacion_3_carriles/`](results/barridos/ronda2/comparacion_3_carriles/) (paso 62). Rodillas y tobillos al 97–105 % del par continuo |
-| **RL** | **`rl_v1.2`** (`rl_v1.1` + castigo al esfuerzo de los motores), con visión, `vx_cmd` 0.45 | **10.71–11.0 s** (25/25) | ~0.46 m/s | 0 | — | — | [`results/carrera/rl_v1.2/`](results/carrera/rl_v1.2/benchmark_vx0.45/eval_model_vx0.45.md) (fase M2). **Todas las articulaciones ≤ 80 % del par continuo** (peor 77 %). Desvío de hasta 18 cm |
+| **RL** | **`rl_v1.2`** (`rl_v1.1` + castigo al esfuerzo de los motores), con visión, `vx_cmd` 0.45 | **10.71–11.0 s** (25/25) | ~0.46 m/s | 0 | — | — | [`results/carrera/rl_v1.2/`](results/carrera/rl_v1.2/benchmark_vx0.45/eval_model_vx0.45.md) (fase M2). **Todas las articulaciones ≤ 80 % del par continuo** (peor 77 %). Desvío de hasta 23 cm: llega torcida (E59) |
+| **RL** | **`rl_v1.2.1`** (arreglo de la 1.2: + castigo al descentrado y filtro de rectitud), con visión, `vx_cmd` 0.45 | **11.4–12.0 s** (25/25; media 11.74) | ~0.43 m/s | 0 | — | — | [`results/carrera/rl_v1.2.1/`](results/carrera/rl_v1.2.1/benchmark_vx0.45/eval_model_vx0.45.md) (fase M3). **Motores ≤ 80 %** (peor 79 %) y **desvío máximo 6.5 cm** |
 
 **Cambiar los colores de la pista** (los avisan poco antes del evento): `uv run python scripts/cambiar_colores.py --piso <color> --linea <color>`.
 

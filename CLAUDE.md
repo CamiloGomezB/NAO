@@ -114,7 +114,9 @@ desactualizado. Esa revisión se registra en la bitácora como parte del paso. L
   - La inferencia exportada debe correr en Python 2.7 a bordo, sin torch.
   - El arranque es por el táctil frontal de la cabeza (0.25 s) y el paro por el botón del pecho (0.3 s).
 - **Versiones de políticas (`rl_vX.Y`):** desde el 2026-10-13, las políticas que se entregan son
-  `policies/rl_v1.0/` (= `carrera_v03`), `policies/rl_v1.1/` (= `agente_071` de la ronda 2), `rl_v1.2`… Cada versión
+  `policies/rl_v1.0/` (= `carrera_v03`), `policies/rl_v1.1/` (= `agente_071` de la ronda 2), `rl_v1.2`… Un
+  **arreglo pequeño** de una versión, que corrige un efecto secundario sin cambiar su objetivo, lleva un tercer
+  número: `rl_v1.2.1` arregla la desviación que trajo el límite de motores de la `rl_v1.2` (E59). Cada versión
   nueva es un avance chico, y sigue siempre este proceso:
   1. plan en `PLAN.md` (fase y pasos), que el usuario aprueba; luego código y pruebas;
   2. **los entrenamientos largos se lanzan solo cuando el usuario avisa**;

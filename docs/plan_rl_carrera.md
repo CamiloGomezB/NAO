@@ -426,6 +426,12 @@ que una caída o una salida. Descarta al agente.
 10.9 s (`rl_v1.1`: 10.7 s) y tiene un desvío de hasta 18 cm. Se usa el modo `instante` con peso −0.5: el modo `media`
 no bajó el esfuerzo. Detalle en `docs/paper/entrenamiento_rl.md`, sección 12g.
 
+**Efecto secundario y arreglo (E59, fase M3):** la `rl_v1.2` cumple el 80 % pero llega torcida (23 cm), porque el
+castigo al esfuerzo desplaza la corrección con la cámara y la selección no medía la rectitud. `rl_v1.2.1` lo arregla
+con `centrado` −5 (antes −0.89) y un **filtro de rectitud** en la selección: desvío medio de las salidas normales
+≤ 10 cm en la batería completa, y ≤ 10 cm en cada corrida del benchmark. Resultado: 0/25 sobre el 80 % y desvío
+máximo de 6.5 cm, a 11.7 s.
+
 **Qué queda para después.** Esta primera versión es liviana y la decidió Camilo así: ajuste fino de `rl_v1.1`, solo
 castigo, misma observación de 54 valores. Para un RL más pesado quedan:
 - la corriente de los motores en la observación (contrato v2; el NAO la entrega por ALMemory);

@@ -1053,3 +1053,46 @@ para la visión, el trabajo de Daniel en [danielpaya/nao_linea](https://github.c
   tiene ancho (al cambiar de pestaña o al cargar), la escala queda invertida y el ancho sale negativo.
 - **Solución:** `Math.max(0, …)` en los cuatro anchos de barra de `scripts/dashboard/pagina.html`, como ya hacía el
   histograma. Después de recorrer las 6 pestañas, la consola no muestra errores.
+
+### E59 — `rl_v1.2` cumple el 80 % pero llega torcida: la selección no medía la rectitud
+- **Fecha / paso:** 2026-10-14, después del 62h. Lo vio Camilo en el visor: "llega a la meta y tal, pero llega torcido".
+  En su captura, B-Human llega al centro de su carril y `rl_v1.2` cerca de la línea derecha.
+- **Síntoma:** en el benchmark, `rl_v1.2` tenía un desvío máximo de 11–18 cm (`rl_v1.1`: 5–7 cm). Se anotó como costo,
+  pero igual se eligió, porque "no se salía".
+- **Diagnóstico** (`results/esfuerzo_motores/diagnostico_rectitud.md`):
+
+| Prueba (cámara simulada, `vx_cmd` 0.45, μ 0.4/0.8/1.2 × 3 semillas, sin perturbaciones) | `rl_v1.1` | `rl_v1.2` |
+|---|---|---|
+| Desvío máximo medio, con visión | 3.5 cm | **17.6 cm** |
+| Desvío final medio, con visión | +1.1 cm | **−17.5 cm** (a la derecha) |
+| Desvío máximo medio, sin visión | 14.7 cm (2 salidas) | 17.2 cm (2 salidas) |
+| Cambio de la acción si la cámara dice d + 5 cm | 0.087 | 0.067 |
+| Cambio de la acción si la cámara dice psi + 5° | 0.177 | 0.163 |
+| Cambio de la acción si el rumbo de la IMU dice + 5° | 0.459 | 0.441 |
+
+  La cámara sigue en la observación (los mismos 54 valores) y la política todavía reacciona a ella, pero ya no corrige
+  lo suficiente: se corre ~4 cm por metro a la derecha, casi como sin visión. Otros checkpoints del mismo entrenamiento
+  iban rectos:
+
+| Checkpoint (benchmark parcial: μ 0.4–1.2 × 3 semillas) | Desvío máx. medio | Final medio | Peor esfuerzo | Tiempo |
+|---|---|---|---|---|
+| Barrido 62g, `agente_000` 2M | 4.2 cm | +2.4 cm | 95 % | 11.24 s |
+| Barrido 62g, `agente_000` 4M (base del 62g2) | **2.7 cm** | −0.5 cm | 80 % | 10.94 s |
+| 62g2, 1M | **2.6 cm** | −1.4 cm | 75 % | 11.19 s |
+| 62g2, 2M | 17.2 cm | −17.2 cm | 78 % | 11.42 s |
+| 62g2, 3M = `rl_v1.2` | 18.0 cm | −17.9 cm | 76 % | 10.95 s |
+
+- **Causa:**
+  1. Al seguir entrenando con el castigo al esfuerzo, la política perdió entre 1M y 2M la corrección con la cámara.
+     El castigo de centrado (−0.89 · d²) cuesta solo ~0.03 por paso a 20 cm, mucho menos que el castigo al esfuerzo;
+     corregir el rumbo con pasos asimétricos le "cuesta" esfuerzo y casi nada le premia hacerlo.
+  2. **La selección no medía la rectitud.** El filtro duro solo tenía caídas, salidas y el 80 %. Fue un error de
+     criterio al elegir `rl_v1.2`: el reglamento y el objetivo piden llegar **lo más recto posible**.
+- **Lección para el paper:** al poner el límite del 80 % de los motores en el entrenamiento, el robot **tiende a
+  desviarse**. Cada restricción nueva en la recompensa tiene que ir con filtros que protejan lo que ya se había
+  logrado.
+- **Solución (fase M3, pasos 62i–62k):**
+  - filtro de rectitud en la selección: en la batería completa, desvío máximo medio de las salidas normales ≤ 10 cm
+    (`rl_v1.1` 8.4 cm, `rl_v1.2` 17.7 cm); en la batería del benchmark, sin perturbaciones, cada corrida con
+    desvío ≤ 10 cm, ≤ 80 % y meta;
+  - ajuste fino desde un checkpoint recto, con un castigo de centrado más fuerte → `rl_v1.2.1` (al principio se llamó `rl_v1.3`; Camilo la renombró).

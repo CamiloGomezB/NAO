@@ -77,21 +77,29 @@ def config_agente(s: dict, pasos: int, n_envs: int, nombre: str) -> dict:
 
 
 LIMITE_ESFUERZO = 0.80   # fase M2 (rl_v1.2): par RMS / par continuo del motor real por articulacion
+LIMITE_DESVIO_M = 0.10   # fase M3 (rl_v1.2.1, E59): desvio maximo medio de las salidas normales de la bateria
 
 
 def puntaje(filas: list) -> dict:
     """Seccion 11.4: filtro duro (cualquier choque, salida o caida descarta) y luego media + 1 sigma del tiempo.
     Desde la fase M2 (2026-10-13), una corrida con alguna articulacion sobre el 80 % del par continuo tambien es
-    falta (las corridas guardadas antes no tienen "esfuerzo_max" y no se ven afectadas)."""
+    falta (las corridas guardadas antes no tienen "esfuerzo_max" y no se ven afectadas).
+    Desde la fase M3 (2026-10-14, E59), ademas hay que ir recto: el desvio maximo MEDIO de las corridas con salida
+    normal (tipo "normal") debe ser <= 10 cm. Es la media y no cada corrida porque con perturbaciones (servos
+    desiguales, empujones, deriva de la IMU) hasta rl_v1.1 llega a 20 cm en alguna; rl_v1.1 da 8.4 cm de media."""
     faltas = sum(f["resultado"] != "META" or f.get("esfuerzo_max", 0.0) > LIMITE_ESFUERZO for f in filas)
     ts = [f["t"] for f in filas if f["resultado"] == "META"]
     desvio = max(f["desvio_max"] for f in filas)
     esf = max((f.get("esfuerzo_max", 0.0) for f in filas), default=0.0)
-    if faltas:
-        return {"pasa_filtro": False, "faltas": faltas, "puntaje": None, "desvio_max_cm": 100 * desvio,
-                "esfuerzo_max_pct": 100 * esf}
+    normales = [f["desvio_max"] for f in filas if f.get("tipo") == "normal"]
+    desvio_normal = float(np.mean(normales)) if normales else 0.0
+    recto = desvio_normal <= LIMITE_DESVIO_M
+    comun = {"desvio_max_cm": 100 * desvio, "esfuerzo_max_pct": 100 * esf,
+             "desvio_medio_normal_cm": 100 * desvio_normal, "recto": recto}
+    if faltas or not recto:
+        return {"pasa_filtro": False, "faltas": faltas, "puntaje": None, **comun}
     return {"pasa_filtro": True, "faltas": 0, "puntaje": float(np.mean(ts) + np.std(ts)),
-            "t_medio": float(np.mean(ts)), "desvio_max_cm": 100 * desvio, "esfuerzo_max_pct": 100 * esf}
+            "t_medio": float(np.mean(ts)), **comun}
 
 
 SALIDAS_MALAS = ((0.10, 15.0), (-0.10, -15.0), (0.0, 25.0), (0.0, -25.0))   # (y0 [m], rumbo0 [grados]), mu 0.6

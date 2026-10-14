@@ -498,6 +498,15 @@ noviembre de 2026.
   - commit: pendiente (lo hace Camilo).
 - **Errores:** E55, E56, E57 y E58.
 
+### Fase M3 — `rl_v1.2.1`: motores ≤ 80 % y recto (2026-10-14)
+- **Motivo:** E59. `rl_v1.2` llegaba torcida (23 cm) y la selección no medía la rectitud.
+- **62i:** filtro de rectitud en la selección (10 cm). Verificación: `rl_v1.1` pasa (8.4 cm), `rl_v1.2` no (17.7 cm).
+- **62j:** 2 agentes × 3M desde el checkpoint de 1M del 62g2, con `centrado` −5 o −10. Pasa `centrado` −5 en 2M.
+- **62k:** `rl_v1.2.1`.
+  - resultado: benchmark 25/25, 0/25 sobre el 80 %, desvío máximo 6.5 cm, 11.74 s;
+  - verificación: benchmark, `riesgo_motores.py`, cámara renderizada y dashboard sin errores;
+  - commit: pendiente (lo hace Camilo).
+
 ## Trabajo de documentación (sin número de paso, 2026-10-10)
 
 Pedido por el usuario para el paper. Commits `441dcb0`, `a266095` y el de la revisión previa al paso 41.

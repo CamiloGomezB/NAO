@@ -1968,3 +1968,68 @@ Cada celda: faltas de 44 (con el filtro del 80 %) / peor esfuerzo / tiempo medio
   - revisión visual en el visor: `uv run python demo/caminatas/carrera_vivo.py --rl-vx 0.45`;
   - decidir lo siguiente: los pasos 63–65 siguen pospuestos, y quedan pendientes un RL más pesado de motores
     (corriente en la observación y límite de velocidad articular) y la portabilidad (66+) con `rl_v1.2`.
+
+### 2026-10-14 — `rl_v1.2` llega torcida (E59); fase M3 para volver a caminar recto
+- **Autor:** Claude Code, a pedido de Camilo.
+- **Qué vio Camilo:** en el visor, `rl_v1.2` llega a la meta pero torcida, cerca de la línea derecha, mientras B-Human
+  llega al centro. Preguntó si se había dejado de usar la cámara.
+- **Diagnóstico** (`results/esfuerzo_motores/diagnostico_rectitud.md`):
+  - la cámara sigue en la observación y la política reacciona a ella;
+  - pero `rl_v1.2` se corre ~4 cm por metro a la derecha, casi igual con visión que sin ella (17.6 contra 17.2 cm);
+  - otros checkpoints del mismo entrenamiento iban rectos: 4M del barrido 2.7 cm y 1M del 62g2 2.6 cm. La corrección
+    se perdió entre 1M y 2M del 62g2;
+  - la selección no medía la rectitud. Error de criterio: el desvío de 18 cm se anotó como costo y aun así se eligió.
+    Registrado como **E59**.
+- **Conclusión para el paper** (pedido de Camilo): al limitar los motores al 80 % en el entrenamiento, el robot tiende
+  a desviarse.
+- **Decisión de Camilo:** mantener todo lo anterior y volver a caminar recto. Fase M3 en el `PLAN.md`.
+- **62i (hecho):**
+  - filtro de rectitud en `barrido.puntaje` (desvío máximo medio de las salidas normales ≤ 10 cm);
+  - en `barrido_esfuerzo.py`, la batería del benchmark se corre en cada checkpoint que pasa la completa (cada corrida
+    ≤ 10 cm, ≤ 80 % y meta), y se pueden pasar pesos extra por agente (`0.5:instante:centrado=-5`);
+  - verificación: `rl_v1.1` 8.4 cm (recto), barrido 4M 7.1 cm (recto), `rl_v1.2` 17.7 cm (no recto);
+  - prueba corta (20k pasos, 4 entornos, `results/barridos/prueba_m3/`) desde el checkpoint de 1M del 62g2 con
+    `centrado` −5: pasa todo (0/44 faltas, 76 %, 7.4 cm; benchmark 25/25, desvío máximo 8.2 cm, 74 %, 11.19 s). Es
+    solo la prueba del script.
+- **Siguiente:** 62j cuando Camilo avise:
+  `uv run python scripts/barrido_esfuerzo.py --nombre recto_v13 --agentes 0.5:instante:centrado=-5 0.5:instante:centrado=-10 --pasos 3000000 --checkpoints 6 --base runs/esfuerzo_esfuerzo_v12_cont_000/checkpoints/model_1000000_steps.zip`
+  (~75 min). Después, 62k (`rl_v1.3`).
+
+### 2026-10-14 — Paso 62j lanzado; la versión de la fase M3 se llamará `rl_v1.2.1`
+- **Autor:** Claude Code, a pedido de Camilo.
+- **62j lanzado a las 10:08**, con el aviso de Camilo ("haz el entrenamiento"):
+  `scripts/barrido_esfuerzo.py --nombre recto_v13 --agentes 0.5:instante:centrado=-5 0.5:instante:centrado=-10 --pasos 3000000 --checkpoints 6 --base runs/esfuerzo_esfuerzo_v12_cont_000/checkpoints/model_1000000_steps.zip`.
+  Log en `runs/recto_v13.log`.
+- **Nombre (decisión de Camilo):** la versión que salga de la fase M3 no será `rl_v1.3` sino **`rl_v1.2.1`**. Sigue
+  siendo el tema de la 1.2 (motores): es un arreglo pequeño de la desviación que trajo el límite de motores. Un tercer
+  número = arreglo de una versión (anotado en `CLAUDE.md`). Se corrigió en `PLAN.md`, en E59 y en `barrido.py`; las
+  entradas anteriores de esta bitácora que dicen `rl_v1.3` se refieren a esta misma versión. El barrido ya lanzado
+  conserva su nombre de carpeta (`recto_v13`).
+
+### 2026-10-14 — Pasos 62j y 62k: `rl_v1.2.1` lista, recta y con los motores ≤ 80 %
+- **Autor:** Claude Code, con el aviso de Camilo.
+- **62j** (`results/barridos/recto_v13/tabla.md`, 10:08–11:00):
+  - `centrado` −5 pasa en el checkpoint de 2M: batería completa con 0/44 faltas, peor 77 % y desvío medio de 5.6 cm;
+    benchmark 25/25 con desvío máximo de 6.5 cm, peor 79 % y 11.74 s;
+  - `centrado` −10 no pasa en ningún checkpoint;
+  - los dos empeoran después de 2M (oscilación, E48 y E54).
+- **62k:**
+  - `scripts/guardar_politica.py --run esfuerzo_recto_v13_000 --nombre rl_v1.2.1 --cual 2000000`;
+  - benchmark en `results/carrera/rl_v1.2.1/benchmark_vx0.45/`: 25/25, 0/25 sobre el 80 %, desvío máximo 6.5 cm,
+    11.74 s;
+  - cámara renderizada, como el visor (`results/esfuerzo_motores/rectitud_camara_renderizada_v121.json`): desvío de
+    2.4 a 5.2 cm, y 11.2 cm en una corrida con μ 0.6 (`rl_v1.1` llegaba a 13.4 cm en esa misma);
+  - `riesgo_motores.py` (ahora con `rl_v1.2` y `rl_v1.2.1`):
+    - rodillas 70/64 %, tobillos 60/56 %;
+    - velocidad p99 de las rodillas de 5.0/5.3 rad/s, dentro del motor (6.96);
+    - energía 45 J/m;
+    - **costos:** 11.9 s y picos de impacto del pie de ~3 × peso (p99 1.88, como antes);
+  - el visor `carrera_vivo.py` usa `rl_v1.2.1` por defecto;
+  - dashboard: v1.2.1 en Resumen (tarjeta y texto), Benchmark, Versiones y Motores, sin errores en la consola. Se
+    corrigió un detalle de la tabla del barrido: los checkpoints de 0.5M salían como "0M";
+  - documentación: README (estado, 3 carriles, mapa), `PLAN.md`, capítulo de RL (12h), diseño (6.9), historial y
+    `CLAUDE.md` (convención de versiones X.Y.Z).
+- **Pendiente para Camilo:**
+  - revisión visual: `uv run python demo/caminatas/carrera_vivo.py --rl-vx 0.45`. Ver que llegue al centro de su
+    carril, como B-Human, y que no pise fuerte;
+  - decidir lo siguiente.

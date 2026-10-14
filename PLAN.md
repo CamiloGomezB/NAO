@@ -3,7 +3,7 @@
 Stack: **MuJoCo + Stable-Baselines3 (PPO)**, Windows nativo, entrenamiento en CPU.
 Regla: cada paso termina con una **confirmación**, una **entrada en la bitácora** ([`docs/bitacora.md`](docs/bitacora.md)) y un **commit**.
 
-> **Paso actual: fase M2 terminada (`rl_v1.2`); revisión visual de Camilo y decidir lo siguiente** (fase M2, `rl_v1.2` con todos los motores ≤ 80 %; 63–65 pospuestos; pendientes de revisión del usuario: 49, 56, 58 y 58b; silbato pospuesto en 68b) · Objetivo vigente: **caminata por RL para la Carrera Individual de la Copa NAO CCM MX 2026 (3 de noviembre de 2026)**,
+> **Paso actual: fase M3 terminada (`rl_v1.2.1`, recta y motores ≤ 80 %); revisión visual de Camilo y decidir lo siguiente** ( fase M2, `rl_v1.2` con todos los motores ≤ 80 %; 63–65 pospuestos; pendientes de revisión del usuario: 49, 56, 58 y 58b; silbato pospuesto en 68b) · Objetivo vigente: **caminata por RL para la Carrera Individual de la Copa NAO CCM MX 2026 (3 de noviembre de 2026)**,
 > más rápida que las caminatas de **B-Human** y **NAOqi** (tres carriles de comparación), con visión de carril y portable al repo final **PenaltyStack**.
 > Diseño: [`docs/plan_rl_carrera.md`](docs/plan_rl_carrera.md) · Repo final: [`docs/integracion_penaltystack.md`](docs/integracion_penaltystack.md) · Historial, errores y soluciones: [`docs/bitacora.md`](docs/bitacora.md).
 
@@ -273,6 +273,36 @@ del equipo.
     (10.71–11.0), contra 10.7 s de `rl_v1.1` y 16.2–18.3 s de B-Human. Desvío máximo 11–18 cm (`rl_v1.1`: 5–7 cm).
     `riesgo_motores.py`: rodillas 70–72 % y tobillos 60–65 % (`rl_v1.1`: 97–105 %). Dashboard con la v1.2 y la línea
     del 80 %. Visor: `uv run python demo/caminatas/carrera_vivo.py --rl-vx 0.45` (usa `rl_v1.2` por defecto).
+
+## Fase M3 — `rl_v1.2.1`: motores ≤ 80 % y recto (pasos 62i–62k)
+
+> **Replanificación del 2026-10-14 (Camilo, E59).** `rl_v1.2` cumple el 80 % pero llega torcida, a ~18 cm del centro
+> (`rl_v1.1`: 3–7 cm). Queda documentado que, al limitar los motores al 80 % en el entrenamiento, el robot tiende a
+> desviarse. **Objetivo:** mantener todo lo anterior (0 faltas y motores ≤ 80 %) y volver a caminar recto.
+
+- [x] **62i. Filtro de rectitud en la selección** (`barrido.puntaje` y `scripts/barrido_esfuerzo.py`):
+  - batería completa: desvío máximo medio de las salidas normales ≤ 10 cm;
+  - batería del benchmark (sin perturbaciones, 25 corridas): cada corrida con meta, ≤ 80 % y desvío ≤ 10 cm;
+  - ✅ `rl_v1.1` pasa la parte de rectitud (8.4 cm), `rl_v1.2` no (17.7 cm); prueba corta del script en OK
+  - Hecho (2026-10-14): prueba de 20k pasos desde el checkpoint de 1M del 62g2 con `centrado` −5
+    (`results/barridos/prueba_m3/`). Ya pasa los dos filtros: 0/44 faltas, peor 76 %, desvío medio 7.4 cm;
+    benchmark 25/25 con desvío máximo de 8.2 cm, peor 74 % y 11.19 s. Es solo la prueba del script (4 entornos);
+    no se usa como versión.
+- [x] **62j. Ajuste fino para ir recto**: 2 agentes × 3M pasos desde el checkpoint de 1M del 62g2 (recto: 2.6 cm),
+  con el mismo castigo al esfuerzo (`instante` −0.5) y `centrado` −5 o −10 (antes −0.89); se evalúa cada 0.5M
+  con los dos filtros (~75 min). **Se lanza cuando Camilo avise** — ✅ Al menos un checkpoint pasa la batería
+  completa y la del benchmark
+  - Hecho (2026-10-14, 10:08–11:00; `results/barridos/recto_v13/tabla.md`): **cumple** con `agente_000`
+    (`centrado` −5), checkpoint de 2M. Batería completa: 0/44 faltas, peor 77 %, desvío medio 5.6 cm. Benchmark:
+    25/25, desvío máximo 6.5 cm, peor 79 %, 11.74 s. `centrado` −10 no pasa en ningún checkpoint. Los dos oscilan:
+    después de 2M vuelven a empeorar (E48, E54).
+- [x] **62k. `rl_v1.2.1`**: guardar en `policies/rl_v1.2.1/`; benchmark, motores, dashboard, visor, README y
+  `docs/paper/` — ✅ 25/25 metas, 0/25 sobre el 80 % y desvío máximo ≤ 10 cm en cada corrida del benchmark
+  - Hecho (2026-10-14, 11:00–11:05): `policies/rl_v1.2.1/`. Benchmark (`results/carrera/rl_v1.2.1/benchmark_vx0.45/`):
+    25/25, 0/25 sobre el 80 % (peor 79 %), desvío máximo 6.5 cm, 11.74 s. Con la cámara renderizada (visor):
+    2.4–5.2 cm y una corrida de 11.2 cm con μ 0.6 (`rl_v1.1`: 13.4 cm en esa misma). Motores: rodillas 64–70 %,
+    tobillos 56–60 % y rodillas dentro de la velocidad del motor (p99 5.0–5.3 rad/s). Costo: más lenta (11.7 s) y
+    picos de impacto del pie de ~3 × peso (p99 igual que antes). Dashboard y visor con la v1.2.1.
 
 - [ ] **63. Ronda 3: 5 agentes** *(pospuesto el 2026-10-13 hasta tener `rl_v1.2`)* (~20M pasos) con domain randomization completa, cámara renderizada y escena de 3 carriles con vecinos → campeón — ✅ Campeón con 0 faltas en la batería y tiempo comparado con B-Human y NAOqi
 - [ ] **64. Ciclo de generaciones** *(pospuesto el 2026-10-13)*: lo aprendido define nuevos rangos y una nueva base — ✅ Cada generación documentada en la bitácora y en la tabla del README

@@ -1,0 +1,5 @@
+Continuando desde runs/esfuerzo_esfuerzo_v12_cont_000/checkpoints/model_1000000_steps.zip (1,000,000 pasos previos)
+Entrenando 'esfuerzo_prueba_m3_000': 20,000 pasos, 4 entornos, semilla 1287221631
+Resultados en: runs\esfuerzo_prueba_m3_000
+[  0.02M / 0.0M]   975 pasos/s | retorno medio   1656.2 | episodio medio 28.28 s | transcurrido   0.4 min | faltan ~  0.0 min
+Listo. Modelo final: runs\esfuerzo_prueba_m3_000\final_model.zip

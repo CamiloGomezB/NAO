@@ -726,6 +726,73 @@ Lectura:
 - la rodilla derecha todavía pasa la velocidad máxima del motor en el p99 (7.3 contra 6.96 rad/s): queda para un RL
   más pesado, con el límite de velocidad.
 
+## 12h. Fase M3: volver a caminar recto con los motores ≤ 80 % (`rl_v1.2.1`, pasos 62i–62k)
+
+**Problema (E59).** `rl_v1.2` cumple el 80 % pero llega torcida: se corre ~4 cm por metro a la derecha, casi igual
+que sin cámara, y en el benchmark llega a 23 cm del centro. La cámara sigue en la observación, pero la política dejó
+de corregir con ella entre 1M y 2M del 62g2. **Conclusión:** al limitar los motores al 80 % en el entrenamiento, el
+robot tiende a desviarse. El castigo de centrado (−0.89 · d²) casi no costaba frente al castigo al esfuerzo, y la
+selección no medía la rectitud. Diagnóstico completo en `results/esfuerzo_motores/diagnostico_rectitud.md`.
+
+**Cambios (una sola idea: proteger la rectitud):**
+- **selección (62i):** filtro de rectitud (`barrido.LIMITE_DESVIO_M` = 10 cm):
+  - batería completa: desvío máximo medio de las salidas normales ≤ 10 cm. Es la media, porque con perturbaciones
+    hasta `rl_v1.1` llega a 20 cm en alguna corrida (media 8.4 cm);
+  - batería del benchmark: cada corrida con meta, ≤ 80 % y desvío ≤ 10 cm. Se corre solo en los checkpoints que pasan
+    la completa;
+- **recompensa:** `centrado` de −0.89 a −5 o −10. A 20 cm cuesta 0.2–0.4 por paso, contra ~0.035 antes;
+- **punto de partida:** el checkpoint de 1M del 62g2, que todavía iba recto (2.6 cm) y estaba cerca del 80 %
+  (1/44 faltas, peor 86.7 %).
+
+**Barrido (62j, 2026-10-14, 10:08–11:00)** [`results/barridos/recto_v13/tabla.md`]: 2 agentes × 3M pasos, con el
+mismo castigo al esfuerzo (`instante` −0.5), 16 entornos, evaluados cada 0.5M:
+
+| Agente | `centrado` | 0.5M | 1M | 1.5M | 2M | 2.5M | 3M |
+|---|---|---|---|---|---|---|---|
+| `agente_000` | −5 | 3 / 98 % / 7.0 cm | 1 / 96 % / 7.8 cm | 5 / 89 % / 6.7 cm | **0 / 77 % / 5.6 cm**; benchmark pasa (6.5 cm, 79 %, 11.74 s) | 18 / 82 % / 8.8 cm | 28 / 86 % / 14.0 cm |
+| `agente_001` | −10 | 3 / 83 % / 9.6 cm | 5 / 84 % / 7.2 cm | 6 / 83 % / 7.6 cm | 7 / 82 % / 10.2 cm | 22 / 84 % / 11.7 cm | 9 / 92 % / 18.4 cm |
+
+Cada celda: faltas de 44 / peor esfuerzo / desvío máximo medio de las salidas normales.
+
+Lectura:
+- `centrado` −5 encuentra en 2M una política que cumple todo;
+- −10 no pasa en ningún checkpoint: castigar demasiado el descentrado también la desestabiliza;
+- los dos oscilan, y después de 2M empeoran mucho (hasta 28 faltas). Una vez más, se elige por checkpoint.
+
+**`rl_v1.2.1` (62k)** = checkpoint de 2M de `runs/esfuerzo_recto_v13_000`. El nombre lo eligió Camilo: es un
+arreglo de la 1.2, no una versión nueva.
+
+| Benchmark (con visión, μ 0.4–1.2 × 5 semillas, `vx_cmd` 0.45) | `rl_v1.1` | `rl_v1.2` | **`rl_v1.2.1`** | B-Human |
+|---|---|---|---|---|
+| Metas | 25/25 | 25/25 | **25/25** | 25/25 |
+| Corridas con algún motor > 80 % | 25/25 | 0/25 | **0/25** (peor 79 %) | 0/25 |
+| Desvío máximo (peor corrida) | 6.9 cm | 23 cm | **6.5 cm** | ~3 cm |
+| Tiempo medio | 10.7 s | 10.9 s | **11.7 s** | 16.2–18.3 s |
+
+**Motores** (`riesgo_motores.py`, regenerado con las cuatro políticas):
+
+| Medida (μ 0.8, sin perturbaciones, 3 semillas) | `rl_v1.1` | `rl_v1.2` | **`rl_v1.2.1`** | B-Human |
+|---|---|---|---|---|
+| Calor, rodillas (izq. / der.) | 101 / 97 % | 70 / 72 % | **70 / 64 %** | 70 / 67 % |
+| Calor, tobillos pitch | 100 / 105 % | 60 / 65 % | **60 / 56 %** | 44 / 40 % |
+| Calor, caderas pitch | 66 / 63 % | 60 / 74 % | **64 / 74 %** | 53 / 55 % |
+| Velocidad p99 de las rodillas (máx. del motor 6.96 rad/s) | 7.4 / 7.9 | 5.9 / 7.3 | **5.0 / 5.3** | 4.9 / 4.7 |
+| % del tiempo de la rodilla fuera de la curva par–velocidad | 10.7 / 16.4 % | 2.9 / 7.5 % | **0.3 / 1.0 %** | 0.1 / 0 % |
+| Impacto del pie: pico (p99) | 2.32 (1.72) × peso | 2.58 (1.90) × peso | **3.06 (1.88) × peso** | 2.05 (1.78) × peso |
+| Energía por metro | 57.4 J/m | 49.7 J/m | **45.2 J/m** | 36.0 J/m |
+| Tiempo en 5 m | 10.68 s | 10.94 s | **11.88 s** | 16.41 s |
+
+Lectura:
+- además de bajar el calor, las rodillas quedan **dentro de la velocidad máxima del motor** (p99 5.0–5.3 rad/s) y
+  casi siempre dentro de su curva par–velocidad, como B-Human. Eso se esperaba para un RL más pesado;
+- el **costo** es la velocidad (11.7–11.9 s, ~1 s más que la 1.1) y los **picos de impacto del pie** (~3 × peso,
+  contra 2.3 de la 1.1). El p99 del impacto (1.88 × peso) es casi igual al de la 1.1 (1.72) y al de B-Human (1.78),
+  así que son picos aislados. Queda como riesgo a vigilar en el robot real.
+
+**Con la cámara renderizada** (`results/esfuerzo_motores/rectitud_camara_renderizada_v121.json`, como el visor):
+μ 1.0, desvío máximo de 5.2 y 3.8 cm; μ 0.6, 11.2 y 2.4 cm. En la corrida μ 0.6 / semilla 1000, `rl_v1.1` llegaba a
+13.4 cm.
+
 ## 13. Fallos y callejones de este entrenamiento
 
 | ID | Qué pasó | Qué se hizo |

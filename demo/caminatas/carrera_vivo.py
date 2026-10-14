@@ -361,7 +361,7 @@ def agregar_argumentos(ap):
     ap.add_argument("--sin-camaras", action="store_true", help="no abrir la ventana 'Lo que ve cada NAO'")
     ap.add_argument("--rl", default=None,
                     help="modelo .zip de la politica de carrera (NaoRace-v0) para el carril central; por defecto "
-                         "la politica de carrera mas nueva en policies/ (rl_v1.2, rl_v1.1, rl_v1.0, carrera_v02 o v01), si no la politica del sprint (checkpoints/)")
+                         "la politica de carrera mas nueva en policies/ (rl_v1.2.1, rl_v1.2, rl_v1.1, rl_v1.0, carrera_v02 o v01), si no la politica del sprint (checkpoints/)")
     ap.add_argument("--rl-vx", type=float, default=0.40,
                     help="vx_cmd de la politica de carrera [m/s] (perilla de seguridad; 0.40 = sin faltas en la bateria)")
     ap.add_argument("--captura", default=None,
@@ -386,7 +386,7 @@ def main(argv=None):
 
     print("Preparando los 3 robots (vision: %s, mu = %.2f, colocacion d = %+.1f cm, psi = %+.1f grados)..."
           % (vision, a.mu, 100 * d0, math.degrees(psi0)))
-    rl = a.rl or next((ROOT / "policies" / g / "model.zip" for g in ("rl_v1.2", "rl_v1.1", "rl_v1.0", "carrera_v02", "carrera_v01")
+    rl = a.rl or next((ROOT / "policies" / g / "model.zip" for g in ("rl_v1.2.1", "rl_v1.2", "rl_v1.1", "rl_v1.0", "carrera_v02", "carrera_v01")
                        if (ROOT / "policies" / g / "model.zip").exists()), ROOT / "policies" / "carrera_v01" / "model.zip")
     if Path(rl).exists():                                      # politica de carrera con su propia camara (paso 58b)
         print("RL: politica de carrera %s" % rl)

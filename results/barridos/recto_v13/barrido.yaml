@@ -1,0 +1,10 @@
+nombre: recto_v13
+agentes:
+- 0.5:instante:centrado=-5
+- 0.5:instante:centrado=-10
+pasos: 3000000
+checkpoints: 6
+n_envs: 16
+eval_vx: 0.45
+base: runs/esfuerzo_esfuerzo_v12_cont_000/checkpoints/model_1000000_steps.zip
+umbral_esfuerzo: 0.75

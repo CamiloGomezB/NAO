@@ -47,7 +47,10 @@ VERSIONES = [
 # Fase M2: solo aparece cuando existen policies/rl_v1.2 y su benchmark (resultado: se completa al elegirla).
 VERSION_12 = ("1.2", "RL v1.2", "2026-10-14", 7, "Castigo al esfuerzo de los motores (par RMS / par continuo) y filtro duro: ninguna articulación sobre el 80 %",
               "Rodillas y tobillos de v1.0 y v1.1 trabajaban al 96–110 % del par continuo del motor real (calor en las prácticas)",
-              "Todas las articulaciones ≤ 80 % (peor 77–79 %); 0.2 s más lenta que v1.1 y menos recta (desvío de hasta 18 cm)")
+              "Todas las articulaciones ≤ 80 % (peor 77–79 %) y 0.2 s más lenta que v1.1, pero torcida: desvío de hasta 23 cm (E59)")
+VERSION_121 = ("1.2.1", "RL v1.2.1", "2026-10-14", 2, "Arreglo de la 1.2: mismos límites de motores + castigo al descentrado más fuerte (−5) y filtro de rectitud en la selección",
+               "La 1.2 llegaba torcida (~18 cm del centro): el límite de motores hizo que dejara de corregir con la cámara (E59)",
+               "Recta otra vez (desvío ≤ 6.5 cm) con todos los motores ≤ 80 %; 0.8 s más lenta que la 1.2")
 EXPLICACION_PESOS = {
     "seguimiento_vx": "Premio por ir a la velocidad pedida", "barrera_margen": "Castigo por acercarse a la línea (< 10 cm)",
     "cambio_accion": "Castigo por cambios bruscos de los motores", "salida_carril": "Castigo por salirse del carril",
@@ -108,9 +111,13 @@ def datos():
     comp = ROOT / "results/barridos/ronda2/comparacion_3_carriles"
     bench += filas_resumen(leer(comp / "eval_model_vx0.45.json")["resumen"], "RL v1.0")
     bench += filas_resumen(leer(comp / "eval_model_3000000_steps_vx0.45.json")["resumen"], "RL v1.1")
-    v12 = ROOT / "results/carrera/rl_v1.2/benchmark_vx0.45/eval_model_vx0.45.json"   # fase M2 (motores <= 80 %)
-    if v12.exists():
-        bench += filas_resumen(leer(v12)["resumen"], "RL v1.2")
+    # Fases M2 (rl_v1.2, motores <= 80 %) y M3 (rl_v1.2.1, ademas recta): aparecen cuando existe su benchmark.
+    nuevas = []
+    for tupla, carpeta in ((VERSION_12, "rl_v1.2"), (VERSION_121, "rl_v1.2.1")):
+        ruta = ROOT / f"results/carrera/{carpeta}/benchmark_vx0.45/eval_model_vx0.45.json"
+        if ruta.exists():
+            bench += filas_resumen(leer(ruta)["resumen"], tupla[1])
+            nuevas.append(tupla)
     for v in ("carrera_v01", "carrera_v02"):
         bench += filas_resumen(leer(ROOT / f"results/carrera/{v}/benchmark_vx0.45/eval_model_vx0.45_arranque.json")["resumen"], v)
     for f in bench:
@@ -123,7 +130,7 @@ def datos():
                 f"{sum(f['metas'] for f in con)}/{sum(f['n'] for f in con)}")
 
     vers = []
-    lista = VERSIONES + ([VERSION_12] if v12.exists() else [])
+    lista = VERSIONES + nuevas
     for orden, (ver, nombre, fecha, pasos, cambio, porque, resultado) in enumerate(lista):
         t, metas = t_bench(nombre)
         vers.append(dict(orden=orden, version=ver, politica=nombre, fecha=fecha, pasos_M=pasos, t_benchmark_s=t, metas=metas,
@@ -173,6 +180,7 @@ def datos():
     for r in rg["corridas"]:
         por[r["caminata"]].append(r)
     nom = {"rl_v1.0 (vx 0.45)": "RL v1.0", "rl_v1.1 (vx 0.45)": "RL v1.1", "rl_v1.2 (vx 0.45)": "RL v1.2",
+           "rl_v1.2.1 (vx 0.45)": "RL v1.2.1",
            "B-Human (0.30)": "B-Human", "NAOqi (0.12)": "NAOqi"}
     riesgo, resumen = [], []
     for c, n in nom.items():
