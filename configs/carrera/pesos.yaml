@@ -27,6 +27,9 @@ pesos:
   choque_piernas: -1.0       # 1 si una pierna toca la otra
   cambio_accion: -0.02       # ||a_t - a_{t-1}||^2
   torque: -0.001             # sum(tau^2)
+  esfuerzo_motor: 0.0        # fase M2 (rl_v1.2): sum_j max(0, r_j - u) / u, r_j = par RMS de 1 s / par continuo
+                             # del motor real, u = umbral_esfuerzo del entorno (0.75). 0 = apagado (v01-v03,
+                             # rl_v1.0 y rl_v1.1 se entrenaron sin el)
 
 rangos:                      # [min, max] del barrido (tabla de la seccion 6.4)
   seguimiento_vx: [0.5, 2.0]

@@ -1811,3 +1811,95 @@ sin salida y cómo se resolvieron. Tiene tres usos:
     `git ls-remote` (HEAD `b3ad586`).
 - **No se cambia:** la carpeta local sigue llamándose `NAO`. No afecta nada.
 - **Siguiente:** sin cambios. Paso 63, ronda 3 con los 5 mejores, cuando Camilo lo decida.
+
+### 2026-10-13 — Replanificación: `rl_v1.2` con todos los motores ≤ 80 % (fase M2, pasos 62b–62h)
+- **Autor:** Claude Code, a pedido de Camilo.
+- **Motivo:** el análisis de motores (`results/riesgo_motores/`, gráfica "Calor" del dashboard) muestra que, en
+  simulación, `rl_v1.0` y `rl_v1.1` llevan las rodillas y los tobillos al 96–110 % del par continuo del motor real.
+  B-Human (rodillas 67–70 %) y NAOqi (≤ 61 %) quedan por debajo. Con las prácticas, eso puede sobrecalentar y dañar
+  los motores. Decisión de Camilo: sacrificar velocidad para cuidar el robot. Ninguna articulación debe pasar del
+  80 %.
+- **Decisiones de Camilo:**
+  - nueva versión `rl_v1.2`, que parte de la caminata ya entrenada (`rl_v1.1`) y la limita;
+  - castigo en la recompensa al pasar el 80 %;
+  - los datos de los motores que entrega el NAO entran a la observación;
+  - los pasos 63–65 se posponen y se replantean después de `rl_v1.2`.
+- **Propuesta de diseño, a confirmar en el paso 62c:**
+  - **Corriente en la observación.** El NAO la entrega por ALMemory (`.../ElectricCurrent/Sensor/Value`), así que
+    respeta la regla de compatibilidad. Va como "esfuerzo acumulado": media móvil del cuadrado de la corriente
+    normalizada a su 80 %, 13 valores, observación de 54 → 67 (contrato v2).
+  - **Temperatura fuera de la observación.** En la simulación no hay temperatura: habría que inventar un modelo
+    térmico sin constantes conocidas, y en un episodio de ~10 s casi no cambia. Se usa en el robot real para
+    vigilar y para un paro por temperatura (pasos 68 y 69).
+  - **Umbral de entrenamiento de 75 %**, con margen sobre el 80 %, porque la constante par → corriente y el par
+    continuo tienen incertidumbre (ver el análisis de riesgo del 2026-10-13).
+  - **El filtro es duro.** En la selección y en la batería, cualquier articulación > 80 % es falta y descarta al
+    agente.
+- **Riesgos conocidos:**
+  - `rl_v1.2` puede quedar bastante más lenta;
+  - el ajuste fino puede desestabilizar la política (E54), y por eso el 62f decide si se sigue con ajuste fino o se
+    entrena desde cero;
+  - el límite de velocidad articular (rodillas por encima de la velocidad sin carga del motor el 1–9 % del tiempo)
+    no forma parte de este objetivo. Se mide y se reporta en el 62h.
+- **Cambios:** `PLAN.md` (fase M2, "Paso actual: 62b", 63–65 pospuestos, notas en 68 y 69).
+- **Siguiente:** paso 62b, después de que Camilo apruebe el plan.
+
+### 2026-10-13 — Pasos 62b y 62d: línea base del esfuerzo, castigo y filtro del 80 % (versión liviana)
+- **Autor:** Claude Code, a pedido de Camilo.
+- **Revisión de documentación al empezar:**
+  - el `PLAN.md` ya tenía la fase M2 y "Paso actual: 62b";
+  - la bitácora terminaba en la replanificación;
+  - el README no cambia hasta tener `rl_v1.2`.
+- **Decisión de Camilo (~22:35):** esta noche, avance chico de ~3 h de cómputo. Solo castigo y filtro, con la misma
+  observación de 54 valores, en ajuste fino de `rl_v1.1`. La corriente en la observación (62c y 62e) queda para un RL
+  más pesado. El resto de la noche es para revisar y mejorar el dashboard.
+- **62b, línea base** (`results/esfuerzo_motores/linea_base.md`):
+  - solo pasan el límite rodillas y tobillos (pitch). `rl_v1.1`: rodillas 97–102 % y tobillos 100–109 %. B-Human y
+    NAOqi pasan, con 70 % como máximo;
+  - quieto en la pose de partida, la rodilla ya usa ~34 %;
+  - los hombros no tienen dato del motor y quedan fuera. Su par RMS es 0.36–0.41 N·m, contra 0.17 de B-Human;
+  - con la batería completa (44 corridas con perturbaciones, `vx_cmd` 0.45), `rl_v1.1` llega 44/44, pero las 44
+    pasan el 80 %. Peor caso: RAnklePitch, 109 %.
+- **62d, código:**
+  - `src/race/valores_v6.py`: par continuo por articulación (`PAR_CONTINUO_NM`, mismos valores que
+    `riesgo_motores.py`, verificado con assert), `LIMITE_ESFUERZO = 0.80` y `VENTANA_ESFUERZO_S = 1.0`;
+  - `src/envs/nao_race_env.py`:
+    - `_paso_fisica` mide (par / par continuo)² en cada paso de 2 ms y lo promedia por ciclo de 12 ms;
+    - media móvil de 1 s, el término `esfuerzo_motor` y los métodos `esfuerzo_actual()` y `esfuerzo_corrida()`;
+    - `umbral_esfuerzo = 0.75`. El peso por defecto es 0 en `pesos.yaml`, así que v01–v03, `rl_v1.0` y `rl_v1.1` no
+      cambian;
+  - `scripts/eval_carrera.py`: cada corrida guarda el esfuerzo por articulación y el máximo;
+  - `scripts/barrido.py`: en `puntaje`, una articulación > 80 % es falta;
+  - `scripts/barrido_esfuerzo.py`: script nuevo, ajuste fino de `rl_v1.1` con varios pesos y elección por checkpoint;
+  - `docs/plan_rl_carrera.md`: sección 6.9 nueva y fila del término en la tabla de 6.4.
+- **Problemas:**
+  - **E56:** medir el par solo cada 12 ms se saltaba los picos tras cada acción. La rodilla derecha daba 80 % en vez
+    de 97 %. Se corrigió midiendo cada 2 ms, y ahora coincide exactamente con `riesgo_motores.py`. El entorno queda
+    12 % más lento: 1409 frente a 1603 pasos/s por proceso.
+  - **E55:** `check_race_env.py` fallaba desde el paso 55b, porque esperaba −200 de castigo de salida. Ahora lee el
+    peso de la config y da `RESULTADO: OK`.
+- **Siguiente:** 62f, prueba corta (1 agente, peso −1.0, 1M pasos). Lanzada a las ~22:42:
+  `scripts/barrido_esfuerzo.py --nombre esfuerzo_prueba --pesos -1.0 --pasos 1000000 --checkpoints 1`.
+
+### 2026-10-13 — Paso 62f: prueba corta del ajuste fino; barrido 62g listo, esperando el aviso de Camilo
+- **Autor:** Claude Code, a pedido de Camilo.
+- **Qué se hizo:**
+  - `scripts/barrido_esfuerzo.py --nombre esfuerzo_prueba --pesos -1.0 --pasos 1000000 --checkpoints 1` (22:43–22:51).
+    Primero evalúa la base `rl_v1.1` con la batería completa: 44/44 metas en 11.26 s, pero 44/44 sobre el 80 %
+    (peor 109 %, RAnklePitch);
+  - el ajuste fino con peso −1.0 en modo `media` dio 44/44 metas en 11.22 s y 44/44 sobre el 80 % (peor 108 %). El
+    castigo bajó de −1.7 a −1.45 por paso, y en el entrenamiento aparecen salidas de carril (`salida_carril` −0.22 por
+    episodio a 1M). Detalle en `docs/paper/entrenamiento_rl.md`, sección 12g.
+- **Decisiones:**
+  - modo nuevo `instante` del castigo (Σ max(0, x − u²) por paso de 24 ms), con señal más directa. Su tamaño con
+    `rl_v1.1` es 2.88 por paso;
+  - el barrido 62g prueba los dos modos: `instante` −0.5, `media` −1.0, `instante` −0.3 e `instante` −0.8, con
+    4 agentes × 4M pasos y 4 checkpoints cada uno (~2 h 20 min).
+- **Problemas:** **E57.** El primer lanzamiento del barrido no arrancó, porque argparse tomó `-0.5:instante` por una
+  opción. Ahora los pesos se pasan sin signo.
+- **Proceso de versiones** (pedido de Camilo): en `CLAUDE.md` queda el procedimiento de cada `rl_vX.Y`. Los
+  entrenamientos largos se lanzan solo con su aviso, se hace todo el paso a paso y al final se le da el comando para
+  ejecutar la versión.
+- **Siguiente:** paso 62g cuando Camilo avise:
+  `uv run python scripts/barrido_esfuerzo.py --nombre esfuerzo_v12 --agentes 0.5:instante 1.0:media 0.3:instante 0.8:instante --pasos 4000000 --checkpoints 4`.
+  Después, 62h: `rl_v1.2`, benchmark, motores, dashboard y documentación.

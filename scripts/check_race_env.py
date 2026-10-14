@@ -124,8 +124,10 @@ def main() -> int:
     env.data.qpos[1] = MEDIO_CARRIL_M - 0.05      # pie izquierdo pasa el borde interior de la linea
     mujoco.mj_forward(env.model, env.data)
     _, r, term, _, info = env.step(np.zeros(13))
-    revisar(term and info["falta"] == "salida_carril" and info["terminos"]["salida_carril"] == -200.0,
-            f"pie sobre la linea -> salida_carril, termina, -200 (falta={info['falta']}, r={r:.1f})")
+    # El peso se lee de pesos.yaml: estaba fijo en -200 y quedo viejo cuando el paso 55b lo paso a -300 (E55).
+    w_salida = env.pesos["salida_carril"]
+    revisar(term and info["falta"] == "salida_carril" and info["terminos"]["salida_carril"] == w_salida,
+            f"pie sobre la linea -> salida_carril, termina, {w_salida:.0f} (falta={info['falta']}, r={r:.1f})")
     env.reset(seed=1)
     env.data.qpos[1] = MEDIO_CARRIL_M - 0.15
     mujoco.mj_forward(env.model, env.data)

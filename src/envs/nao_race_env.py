@@ -12,6 +12,10 @@
 - Perdida de rectitud (seccion 8): ganancia de servos por pierna, calibracion por articulacion, centro de masa
   corrido, suelo inclinado, empujones, deriva de la IMU y tramos sin vision.
 - Recompensa: pesos de configs/carrera/pesos.yaml (seccion 6.4), con la d, psi y velocidad REALES del simulador.
+- Esfuerzo de los motores (fase M2 del PLAN, rl_v1.2): en cada paso de 2 ms se mide (par / par continuo del motor
+  real)^2 en las 11 articulaciones de las piernas, promediado por ciclo de 12 ms (el del NAO). Una media movil de
+  1 s alimenta el castigo `esfuerzo_motor` (cuanto pasa cada una su umbral) y la suma de la corrida da el par RMS
+  que usa el filtro del 80 %.
 """
 
 import math
@@ -106,6 +110,10 @@ class NaoRaceEnv(gym.Env):
         rumbo_objetivo: str = "carril",     # "carril": rumbo de la IMU - psi medido de pie (paso 58c, E50);
                                             # "arranque": rumbo de la IMU al arrancar (como se entrenaron v01 y v02)
         escena: str | None = None,          # MJCF de la escena (default assets/nao/scene.xml); la demo usa la pista
+        umbral_esfuerzo: float = 0.75,      # castigo esfuerzo_motor: par RMS / par continuo por encima de esto (fase
+                                            # M2: 75 %, con margen sobre el limite del 80 %)
+        modo_esfuerzo: str = "media",       # "media": sum max(0, sqrt(media movil de 1 s) - u) / u;
+                                            # "instante": sum max(0, x - u^2), x = (par/continuo)^2 medio de los 24 ms
         render_mode: str | None = None,
         render_size: tuple[int, int] = (640, 480),
     ):
@@ -132,6 +140,10 @@ class NaoRaceEnv(gym.Env):
         if rumbo_objetivo not in ("carril", "arranque"):
             raise ValueError(f"rumbo_objetivo debe ser 'carril' o 'arranque', no {rumbo_objetivo!r}")
         self.rumbo_objetivo = rumbo_objetivo
+        self.umbral_esfuerzo = float(umbral_esfuerzo)
+        if modo_esfuerzo not in ("media", "instante"):
+            raise ValueError(f"modo_esfuerzo debe ser 'media' o 'instante', no {modo_esfuerzo!r}")
+        self.modo_esfuerzo = modo_esfuerzo
         self.render_mode = render_mode
         self.render_size = render_size
         self._renderer = None
@@ -158,6 +170,11 @@ class NaoRaceEnv(gym.Env):
         self._ipos0 = m.body_ipos[self._torso].copy()
         self._grav0 = m.opt.gravity.copy()
         self._act_pierna = {lado: [m.actuator(n).id for n in nombres] for lado, nombres in PIERNAS_ACT.items()}
+        # Articulaciones con dato del motor real (las 11 de las piernas) y su par continuo.
+        self.articulaciones_esfuerzo = tuple(n for n in C.ARTICULACIONES_ACCION if n in V6.PAR_CONTINUO_NM)
+        self._act_esf = np.array([m.actuator(n).id for n in self.articulaciones_esfuerzo])
+        self._par_cont = np.array([V6.PAR_CONTINUO_NM[n] for n in self.articulaciones_esfuerzo])
+        self._alfa_esf = 1.0 - math.exp(-C.CICLO_S / V6.VENTANA_ESFUERZO_S)
 
         self.action_space = spaces.Box(-1.0, 1.0, shape=(C.N_ACCION,), dtype=np.float32)
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=(C.DIM_OBSERVACION,), dtype=np.float32)
@@ -210,6 +227,9 @@ class NaoRaceEnv(gym.Env):
         self._hist = []                        # (t, d, psi) reales para el retardo de la camara
         self._psi_de_pie = []                  # psi medidos por la camara antes de arrancar (paso 58c)
         self.camara = C.EstadoCamara()
+        self._esf_ema = None                   # media movil de (par / par continuo)^2 por articulacion
+        self._esf_suma = np.zeros(len(self._act_esf))
+        self._esf_n = 0
         mujoco.mj_forward(m, d)
 
         # De pie 0.5 s en la pose home: la camara toma sus primeras fotos.
@@ -217,7 +237,7 @@ class NaoRaceEnv(gym.Env):
         d.ctrl[self._act] = self._home_acc + self._cal
         self._medir()
         while self.t < -1e-9:
-            mujoco.mj_step(m, d, nstep=self.frame_skip)
+            self._paso_fisica()
             self._medir()
             self._avanzar_tiempo()
         # Rumbo objetivo de la IMU. Paso 58c (E50): la direccion del CARRIL medida por la camara de pie; antes era el
@@ -233,7 +253,7 @@ class NaoRaceEnv(gym.Env):
         obj = C.accion_a_objetivos(a)
         self.data.ctrl[self._act] = np.array([obj[n] for n in C.ARTICULACIONES_ACCION]) + self._cal
         self._aplicar_empujon()
-        mujoco.mj_step(self.model, self.data, nstep=self.frame_skip)
+        self._paso_fisica()
         self._medir()
         self._avanzar_tiempo()
         if self._t_cambio_vx is not None and self.t >= self._t_cambio_vx:
@@ -308,6 +328,34 @@ class NaoRaceEnv(gym.Env):
         if self.perturbaciones and rng.random() < c["apagon_prob"]:
             ini = _u(rng, c.get("apagon_inicio_s", (0.5, 20.0)))
             self._apagon = (ini, ini + _u(rng, c["apagon_s"]))
+
+    # ------------------------------------------------------------------ Fisica y esfuerzo de los motores
+
+    def _paso_fisica(self):
+        """24 ms de fisica (12 pasos de 2 ms). El esfuerzo se mide en CADA paso de 2 ms y se promedia por ciclo de
+        12 ms: medir solo al final de cada ciclo se salta los picos de par que siguen a cada accion nueva (la
+        rodilla derecha de rl_v1.1 daba 80 % en vez de 97 %; bitacora del 2026-10-13)."""
+        m, d = self.model, self.data
+        medio = self.frame_skip // C.CICLOS_POR_ACCION
+        self._esf_paso = np.zeros(len(self._act_esf))
+        for _ in range(C.CICLOS_POR_ACCION):
+            x = np.zeros(len(self._act_esf))
+            for _ in range(medio):
+                mujoco.mj_step(m, d)
+                x += (d.actuator_force[self._act_esf] / self._par_cont) ** 2
+            x /= medio
+            self._esf_ema = x.copy() if self._esf_ema is None else self._esf_ema + self._alfa_esf * (x - self._esf_ema)
+            self._esf_suma += x
+            self._esf_n += 1
+            self._esf_paso += x / C.CICLOS_POR_ACCION
+
+    def esfuerzo_actual(self):
+        """{articulacion: par RMS de la ultima ~1 s / par continuo} (1.0 = 100 % del par continuo)."""
+        return dict(zip(self.articulaciones_esfuerzo, np.sqrt(self._esf_ema).tolist()))
+
+    def esfuerzo_corrida(self):
+        """{articulacion: par RMS desde el reset / par continuo}: la medida del limite del 80 % (fase M2)."""
+        return dict(zip(self.articulaciones_esfuerzo, np.sqrt(self._esf_suma / max(self._esf_n, 1)).tolist()))
 
     # ------------------------------------------------------------------ Tiempo, camara e IMU
 
@@ -471,6 +519,11 @@ class NaoRaceEnv(gym.Env):
         if not self._meta and self.x_frente() >= LARGO_CARRERA_M:
             self._meta, self.tiempo_meta, meta = True, self.t, 1.0
         torque = d.actuator_force[self._act]
+        u = self.umbral_esfuerzo
+        if self.modo_esfuerzo == "media":
+            esfuerzo = float(np.sum(np.maximum(np.sqrt(self._esf_ema) - u, 0.0)) / u)
+        else:   # el promedio de la corrida de este castigo es >= sum(max(0, RMS^2 - u^2)): llevarlo a 0 cumple el limite
+            esfuerzo = float(np.sum(np.maximum(self._esf_paso - u * u, 0.0)))
         crudo = {
             "seguimiento_vx": math.exp(-(((vx - self.vx_cmd) / SIGMA_VX) ** 2)),
             "meta": meta,
@@ -489,6 +542,7 @@ class NaoRaceEnv(gym.Env):
             "choque_piernas": float(self.choque_piernas()),
             "cambio_accion": float(np.sum((a - self._prev_action) ** 2)),
             "torque": float(np.sum(torque ** 2)),
+            "esfuerzo_motor": esfuerzo,
         }
         return {k: w[k] * v for k, v in crudo.items()}
 

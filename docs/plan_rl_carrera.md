@@ -309,6 +309,7 @@ tobillos hacia adentro a la vez, los pies se cruzan en el 2.2 % de las acciones 
 | | Choque entre piernas | 1 si una pierna toca la otra | −1.0 | −0.5 a −5 |
 | | Cambio de acción | ‖aₜ − aₜ₋₁‖² | −0.02 | −0.005 a −0.1 |
 | | Torque | Σ τ² | −0.001 | fijo |
+| | **Esfuerzo de los motores** (fase M2, desde `rl_v1.2`) | Σⱼ max(0, rⱼ − 0.75) / 0.75, con rⱼ = par RMS de ~1 s / par continuo del motor real (11 articulaciones de las piernas). Ver 6.9 | 0 hasta `rl_v1.1`; −0.5 a −2.0 en el barrido de esfuerzo | fijo por agente |
 
 **Cómo elegir el tamaño de los castigos por falta.**
 - **Muy chicos:** a la política le conviene arriesgar por velocidad, porque perder un episodio le cuesta
@@ -388,6 +389,44 @@ En el robot real se hace igual: de pie, antes de tocar la cabeza, la cámara mid
 es el rumbo de la IMU menos ese `psi`. Así la IMU y la cámara apuntan al mismo lugar: el carril.
 
 ---
+
+### 6.9 Esfuerzo de los motores: ninguna articulación por encima del 80 % (fase M2, 2026-10-13)
+
+**Problema.** En simulación, `rl_v1.0` y `rl_v1.1` llevan rodillas y tobillos al 96–110 % del **par continuo** del
+motor real: el par que el motor aguanta indefinidamente sin pasarse de temperatura (`results/riesgo_motores/`).
+B-Human queda en 67–71 % y NAOqi en ≤ 61 %. Una carrera de 10 s no daña el motor, pero las prácticas acumulan calor.
+**Decisión de Camilo:** `rl_v1.2`, más lenta si hace falta, con todas las articulaciones ≤ 80 %.
+
+**La medida** (la misma de la gráfica "Calor" del dashboard):
+- rⱼ = par RMS de la articulación j ÷ par continuo de su motor;
+- par continuo en la articulación = par continuo del motor × reductora, sin la eficiencia del engranaje (cota
+  superior). Tipo 5 (HipPitch, KneePitch, AnklePitch): 2.33 N·m. Tipo 1 (HipYawPitch, HipRoll, AnkleRoll):
+  2.47 N·m. Valores en `src/race/valores_v6.py`;
+- se mide en **cada paso de física de 2 ms**. Medir solo cada 12 ms se salta los picos de par que siguen a cada acción
+  nueva (E56);
+- los hombros no tienen dato del motor y quedan fuera del límite. Su par RMS es 0.36–0.41 N·m (B-Human 0.17); se
+  revisa con el robot real.
+
+**En el entrenamiento** (`NaoRace-v0`):
+- media móvil de (par / par continuo)² con constante de tiempo de **1 s** (unos 2 ciclos de marcha);
+- castigo `esfuerzo_motor` = Σⱼ max(0, √media − u) / u, con **u = 0.75**: margen sobre el 80 %, porque el par
+  continuo y el modelo del servo tienen incertidumbre;
+- el castigo es lineal, porque uno cuadrático casi no empuja cerca del umbral;
+- **modo `instante`** (agregado tras la prueba del paso 62f): Σⱼ max(0, xⱼ − u²), con xⱼ = (par / par continuo)²
+  medio de los últimos 24 ms. Es una señal inmediata para la política, y su media en la corrida es ≥
+  Σ max(0, RMS² − u²), así que llevarlo a cero cumple el límite. Se elige con `modo_esfuerzo` del entorno;
+- con `rl_v1.1` el castigo vale ~1.5 por paso, contra ~2 de recompensa positiva. Un peso mucho mayor que 1 puede
+  dejar la recompensa por paso en negativo, y entonces caerse temprano "conviene" (el episodio dura 30 s): por eso el
+  barrido usa pesos de −0.5 a −2.0.
+
+**En la selección** (`scripts/barrido.py`, `puntaje`): una corrida con alguna articulación > 80 % es **falta**, igual
+que una caída o una salida. Descarta al agente.
+
+**Qué queda para después.** Esta primera versión es liviana y la decidió Camilo así: ajuste fino de `rl_v1.1`, solo
+castigo, misma observación de 54 valores. Para un RL más pesado quedan:
+- la corriente de los motores en la observación (contrato v2; el NAO la entrega por ALMemory);
+- la temperatura para vigilar en el robot y un paro por temperatura;
+- el límite de velocidad articular: las rodillas pasan la velocidad sin carga del motor el 1–9 % del tiempo.
 
 ## 7. Cámara simulada con ruido gaussiano
 

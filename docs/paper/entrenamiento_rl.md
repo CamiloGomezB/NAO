@@ -603,6 +603,57 @@ Descartes: 7 caídas en salidas torcidas y 1 en la batería normal.
 | Baseline 2 | B-Human (réplica) | 25/25 | 16.2–18.3 s | ~3 cm |
 | Baseline 1 | NAOqi (réplica) | 25/25 | 45.3–49.9 s | ~2.4 cm |
 
+## 12g. Fase M2: limitar el esfuerzo de los motores (`rl_v1.2`, pasos 62b–62h, en curso)
+
+**Por qué.** El análisis de motores del 2026-10-13 (`results/riesgo_motores/`) compara el par de cada articulación en
+simulación con el motor real del NAO V6. En `rl_v1.0` y `rl_v1.1`, el **par RMS** de rodillas y tobillos (pitch) es
+el 96–110 % del **par continuo**, el que el motor aguanta indefinidamente sin sobrecalentarse. B-Human queda en 67–71 %
+y NAOqi en ≤ 61 %. Una carrera de 10 s no daña el motor, pero las prácticas reales encadenan muchas corridas.
+**Decisión de Camilo:** `rl_v1.2`, más lenta si hace falta, con todas las articulaciones ≤ 80 %.
+
+**Variables nuevas** (diseño, sección 6.9):
+
+| Variable | Valor | Dónde | Por qué |
+|---|---|---|---|
+| Par continuo, motor tipo 5 (HipPitch, KneePitch, AnklePitch) | 0.0178 N·m × 130.85 = 2.33 N·m | `valores_v6.PAR_CONTINUO_NM` | Hoja del motor × reductora, sin eficiencia (cota superior) |
+| Par continuo, motor tipo 1 (HipYawPitch, HipRoll, AnkleRoll) | 2.47 N·m | ídem | ídem |
+| Hombros | Fuera del límite | — | No hay dato del motor |
+| Límite (selección y batería) | 80 % del par RMS de la corrida | `barrido.LIMITE_ESFUERZO`, `valores_v6.LIMITE_ESFUERZO` | Margen para las prácticas |
+| Umbral del castigo `u` | 0.75 | `umbral_esfuerzo` del entorno | Margen sobre el 80 % (incertidumbre del par continuo y del servo) |
+| Muestreo del par | Cada paso de 2 ms, promediado por ciclo de 12 ms | `_paso_fisica` | Cada 12 ms se saltaba picos (E56) |
+| Ventana de la media móvil | 1 s (`exp(−0.012/1.0)` por ciclo) | `valores_v6.VENTANA_ESFUERZO_S` | ~2 ciclos de marcha |
+| Castigo, modo `media` | Σⱼ max(0, √mediaⱼ − u) / u | `modo_esfuerzo="media"` | Directo sobre el RMS reciente |
+| Castigo, modo `instante` | Σⱼ max(0, xⱼ − u²), con xⱼ = (par/continuo)² medio de los 24 ms | `modo_esfuerzo="instante"` | Señal inmediata. Su media en la corrida es ≥ Σ max(0, RMS² − u²), así que llevarlo a 0 cumple el límite |
+| Peso por defecto | 0 | `configs/carrera/pesos.yaml` | Las políticas anteriores no cambian |
+
+**Tamaño del castigo con `rl_v1.1`** (vx 0.45, μ 0.8, 450 pasos): modo `media` 1.16 por paso (con perturbaciones y
+`vx_cmd` hasta 0.56 en el entrenamiento: ~1.7); modo `instante` 2.88 por paso. La recompensa positiva es de ~2 por paso
+(`seguimiento_vx` 1.3, más `rumbo`, `patron_marcha` y `vivo`). Si el castigo la supera, la recompensa por paso queda
+negativa y caerse temprano "conviene", porque el episodio dura 30 s. Por eso los pesos van de −0.3 a −1.0.
+
+**Prueba corta (paso 62f)** [`results/barridos/esfuerzo_prueba/`]: 1M pasos desde `rl_v1.1`, modo `media`, peso
+−1.0, 16 entornos a ~2,100 pasos/s (7 min). En TensorBoard (`runs/esfuerzo_esfuerzo_prueba_000/tb/`):
+
+| Pasos | `esfuerzo_motor` por paso | `seguimiento_vx` | Largo del episodio | `salida_carril` |
+|---|---|---|---|---|
+| 0.01M | −1.68 | 1.32 | 163 | −0.11 |
+| 0.25M | −1.86 | 1.35 | 1119 | 0 |
+| 0.50M | −1.71 | 1.35 | 1052 | 0 |
+| 0.75M | −1.61 | 1.31 | 930 | −0.19 |
+| 1.0M | −1.39 | 1.35 | 923 | −0.22 |
+
+Batería completa del checkpoint de 1M: 44/44 metas en 11.22 s, pero **44/44 sobre el 80 %**: peor 108 % (LAnklePitch),
+contra 109 % de `rl_v1.1`. El castigo baja despacio y empiezan salidas de carril en el entrenamiento. Lectura: con una
+media de 1 s, a la política le cuesta saber qué acción causó el castigo. Por eso se agregó el modo `instante`.
+
+**Barrido (paso 62g, pendiente del aviso de Camilo):** 4 agentes × 4M pasos desde `rl_v1.1`, con la config de
+`rl_v1.1` (sus pesos, fricción, cámara y PPO):
+- `instante` −0.5, `media` −1.0, `instante` −0.3 e `instante` −0.8;
+- se evalúan 4 checkpoints por agente con la batería completa y el filtro del 80 %.
+
+Comando:
+`uv run python scripts/barrido_esfuerzo.py --nombre esfuerzo_v12 --agentes 0.5:instante 1.0:media 0.3:instante 0.8:instante --pasos 4000000 --checkpoints 4`.
+
 ## 13. Fallos y callejones de este entrenamiento
 
 | ID | Qué pasó | Qué se hizo |

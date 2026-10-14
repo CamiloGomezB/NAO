@@ -1,0 +1,19 @@
+{
+ "quieto": {
+  "LHipYawPitch": 0.00832216447550406,
+  "LHipRoll": 0.00019886209974099938,
+  "LHipPitch": 0.02676742440844644,
+  "LKneePitch": 0.33767249326662546,
+  "LAnklePitch": 0.05461135550147737,
+  "LAnkleRoll": 0.0054603090606833845,
+  "RHipRoll": 0.0007400949083262126,
+  "RHipPitch": 0.014959828771507588,
+  "RKneePitch": 0.33550138098862076,
+  "RAnklePitch": 0.04153701112453244,
+  "RAnkleRoll": 0.004599753494031996
+ },
+ "fuentes": [
+  "results/riesgo_motores/riesgo.json",
+  "results/barridos/esfuerzo_prueba/base_rl_v1.1.json"
+ ]
+}

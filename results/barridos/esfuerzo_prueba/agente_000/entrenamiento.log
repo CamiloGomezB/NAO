@@ -1,0 +1,17 @@
+Continuando desde policies/rl_v1.1/model.zip (3,000,000 pasos previos)
+Entrenando 'esfuerzo_esfuerzo_prueba_000': 1,000,000 pasos, 16 entornos, semilla 1287219631
+Resultados en: runs\esfuerzo_esfuerzo_prueba_000
+[  0.08M / 1.0M]  2683 pasos/s | retorno medio   -146.8 | episodio medio 24.54 s | transcurrido   0.5 min | faltan ~  5.7 min
+[  0.16M / 1.0M]  2638 pasos/s | retorno medio   -165.1 | episodio medio 24.37 s | transcurrido   1.0 min | faltan ~  5.3 min
+[  0.25M / 1.0M]  2598 pasos/s | retorno medio   -127.9 | episodio medio 26.34 s | transcurrido   1.6 min | faltan ~  4.8 min
+[  0.33M / 1.0M]  2584 pasos/s | retorno medio     18.1 | episodio medio 27.20 s | transcurrido   2.1 min | faltan ~  4.3 min
+[  0.41M / 1.0M]  2594 pasos/s | retorno medio      0.6 | episodio medio 25.32 s | transcurrido   2.6 min | faltan ~  3.8 min
+[  0.49M / 1.0M]  2608 pasos/s | retorno medio   -140.4 | episodio medio 24.79 s | transcurrido   3.1 min | faltan ~  3.2 min
+[  0.57M / 1.0M]  2619 pasos/s | retorno medio     42.6 | episodio medio 26.52 s | transcurrido   3.6 min | faltan ~  2.7 min
+[  0.66M / 1.0M]  2620 pasos/s | retorno medio    -77.8 | episodio medio 22.99 s | transcurrido   4.2 min | faltan ~  2.2 min
+[  0.74M / 1.0M]  2615 pasos/s | retorno medio   -283.4 | episodio medio 22.64 s | transcurrido   4.7 min | faltan ~  1.7 min
+[  0.82M / 1.0M]  2616 pasos/s | retorno medio   -298.3 | episodio medio 22.36 s | transcurrido   5.2 min | faltan ~  1.2 min
+[  0.90M / 1.0M]  2614 pasos/s | retorno medio   -181.4 | episodio medio 23.00 s | transcurrido   5.7 min | faltan ~  0.6 min
+[  0.98M / 1.0M]  2614 pasos/s | retorno medio   -286.4 | episodio medio 21.19 s | transcurrido   6.3 min | faltan ~  0.1 min
+[  1.01M / 1.0M]  2599 pasos/s | retorno medio   -221.8 | episodio medio 22.14 s | transcurrido   6.5 min | faltan ~  0.0 min
+Listo. Modelo final: runs\esfuerzo_esfuerzo_prueba_000\final_model.zip

@@ -164,10 +164,13 @@ def datos():
     por = collections.defaultdict(list)
     for r in rg["corridas"]:
         por[r["caminata"]].append(r)
-    nom = {"rl_v1.0 (vx 0.45)": "RL v1.0", "rl_v1.1 (vx 0.45)": "RL v1.1", "B-Human (0.30)": "B-Human", "NAOqi (0.12)": "NAOqi"}
+    nom = {"rl_v1.0 (vx 0.45)": "RL v1.0", "rl_v1.1 (vx 0.45)": "RL v1.1", "rl_v1.2 (vx 0.45)": "RL v1.2",
+           "B-Human (0.30)": "B-Human", "NAOqi (0.12)": "NAOqi"}
     riesgo, resumen = [], []
     for c, n in nom.items():
         rs = por[c]
+        if not rs:      # rl_v1.2 solo aparece cuando existe (fase M2)
+            continue
         for j in rs[0]["articulaciones"]:
             def media(k):
                 v = [r["articulaciones"][j].get(k) for r in rs]

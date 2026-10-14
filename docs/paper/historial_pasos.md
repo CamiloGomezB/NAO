@@ -474,6 +474,21 @@ noviembre de 2026.
   - en la batería del benchmark, 10.7 s contra 16.2–18.3 s de B-Human;
   - ganan los pesos `seguimiento_vx`, `barrera_margen`, `cambio_accion` y `salida_carril`.
 
+### Fase M2 — `rl_v1.2`: motores ≤ 80 % del par continuo (2026-10-13, en curso)
+- **Motivo:** en simulación, `rl_v1.0` y `rl_v1.1` llevan rodillas y tobillos al 96–110 % del par continuo del motor
+  real, contra B-Human (≤ 71 %) y NAOqi (≤ 61 %). Camilo decidió sacrificar velocidad para cuidar el robot en las
+  prácticas. Versión liviana: solo castigo y filtro, en ajuste fino de `rl_v1.1`.
+- **Paso 62b (línea base):** `results/esfuerzo_motores/linea_base.md`. Pasan el límite solo rodillas y tobillos
+  (pitch). Quieto, la rodilla usa ~34 %. `rl_v1.1`, con la batería completa, tiene las 44 corridas sobre el 80 %
+  (peor caso 109 %).
+- **Paso 62d (castigo y filtro):**
+  - qué se hizo: esfuerzo medido en cada paso de 2 ms en `NaoRace-v0`, término `esfuerzo_motor` y filtro duro del
+    80 % en `barrido.puntaje`;
+  - verificación: coincide exactamente con `riesgo_motores.py` (E56) y `check_race_env.py` da OK (E55).
+- **Paso 62f (prueba, 1M pasos, peso −1.0 sobre la media de 1 s):** el castigo bajó de −1.7 a −1.45 por paso, pero el
+  peor motor sigue en 108 %. Se agrega el modo `instante` (castigo por paso de 24 ms).
+- **Errores:** E55, E56 y E57.
+
 ## Trabajo de documentación (sin número de paso, 2026-10-10)
 
 Pedido por el usuario para el paper. Commits `441dcb0`, `a266095` y el de la revisión previa al paso 41.

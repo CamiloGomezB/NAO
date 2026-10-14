@@ -24,3 +24,22 @@ FRAME_SKIP = 12
 ALTURA_CADERA_HOME_M = 0.232     # B-Human camina con 230 mm: la pose home ya tiene su altura de cadera
 SEPARACION_PIES_M = 0.106        # entre los centros de las suelas
 ESPACIO_ENTRE_PIERNAS_M = 0.030  # entre las cajas de colision de las dos piernas
+
+# Par continuo de cada motor del NAO V6 en la articulacion [N.m] = par continuo del motor x reductora, SIN la
+# eficiencia del engranaje (cota superior; el motor real se calienta algo antes). Mismos valores que
+# scripts/riesgo_motores.py (analisis del 2026-10-13): tipo 5 (22NT Z20, reductora 130.85) en HipPitch, KneePitch y
+# AnklePitch; tipo 1 (reductora 201.3) en HipYawPitch, HipRoll y AnkleRoll. Los hombros no tienen dato del motor y
+# quedan fuera del limite del 80 % (fase M2 del PLAN).
+PAR_CONTINUO_TIPO5_NM = 0.0178 * 130.85     # 2.329
+PAR_CONTINUO_TIPO1_NM = 2.47
+PAR_CONTINUO_NM = {}
+for _lado in "LR":
+    for _art in ("HipPitch", "KneePitch", "AnklePitch"):
+        PAR_CONTINUO_NM[_lado + _art] = PAR_CONTINUO_TIPO5_NM
+    for _art in ("HipRoll", "AnkleRoll"):
+        PAR_CONTINUO_NM[_lado + _art] = PAR_CONTINUO_TIPO1_NM
+PAR_CONTINUO_NM["LHipYawPitch"] = PAR_CONTINUO_TIPO1_NM
+# Limite de la fase M2: par RMS de la corrida <= 80 % del par continuo en cada articulacion con dato del motor.
+LIMITE_ESFUERZO = 0.80
+# Media movil del esfuerzo para el castigo (constante de tiempo, s): unos 2 ciclos de marcha.
+VENTANA_ESFUERZO_S = 1.0

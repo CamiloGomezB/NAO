@@ -76,15 +76,22 @@ def config_agente(s: dict, pasos: int, n_envs: int, nombre: str) -> dict:
     return cfg
 
 
+LIMITE_ESFUERZO = 0.80   # fase M2 (rl_v1.2): par RMS / par continuo del motor real por articulacion
+
+
 def puntaje(filas: list) -> dict:
-    """Seccion 11.4: filtro duro (cualquier choque, salida o caida descarta) y luego media + 1 sigma del tiempo."""
-    faltas = sum(f["resultado"] != "META" for f in filas)
+    """Seccion 11.4: filtro duro (cualquier choque, salida o caida descarta) y luego media + 1 sigma del tiempo.
+    Desde la fase M2 (2026-10-13), una corrida con alguna articulacion sobre el 80 % del par continuo tambien es
+    falta (las corridas guardadas antes no tienen "esfuerzo_max" y no se ven afectadas)."""
+    faltas = sum(f["resultado"] != "META" or f.get("esfuerzo_max", 0.0) > LIMITE_ESFUERZO for f in filas)
     ts = [f["t"] for f in filas if f["resultado"] == "META"]
     desvio = max(f["desvio_max"] for f in filas)
+    esf = max((f.get("esfuerzo_max", 0.0) for f in filas), default=0.0)
     if faltas:
-        return {"pasa_filtro": False, "faltas": faltas, "puntaje": None, "desvio_max_cm": 100 * desvio}
+        return {"pasa_filtro": False, "faltas": faltas, "puntaje": None, "desvio_max_cm": 100 * desvio,
+                "esfuerzo_max_pct": 100 * esf}
     return {"pasa_filtro": True, "faltas": 0, "puntaje": float(np.mean(ts) + np.std(ts)),
-            "t_medio": float(np.mean(ts)), "desvio_max_cm": 100 * desvio}
+            "t_medio": float(np.mean(ts)), "desvio_max_cm": 100 * desvio, "esfuerzo_max_pct": 100 * esf}
 
 
 SALIDAS_MALAS = ((0.10, 15.0), (-0.10, -15.0), (0.0, 25.0), (0.0, -25.0))   # (y0 [m], rumbo0 [grados]), mu 0.6

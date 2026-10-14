@@ -3,7 +3,7 @@
 Stack: **MuJoCo + Stable-Baselines3 (PPO)**, Windows nativo, entrenamiento en CPU.
 Regla: cada paso termina con una **confirmación**, una **entrada en la bitácora** ([`docs/bitacora.md`](docs/bitacora.md)) y un **commit**.
 
-> **Paso actual: 63** (ronda 3: los 5 mejores de la ronda 2; pendientes de revisión del usuario: 49, 56, 58 y 58b; silbato pospuesto en 68b) · Objetivo vigente: **caminata por RL para la Carrera Individual de la Copa NAO CCM MX 2026 (3 de noviembre de 2026)**,
+> **Paso actual: 62g, esperando el aviso de Camilo** (fase M2, `rl_v1.2` con todos los motores ≤ 80 %; 63–65 pospuestos; pendientes de revisión del usuario: 49, 56, 58 y 58b; silbato pospuesto en 68b) · Objetivo vigente: **caminata por RL para la Carrera Individual de la Copa NAO CCM MX 2026 (3 de noviembre de 2026)**,
 > más rápida que las caminatas de **B-Human** y **NAOqi** (tres carriles de comparación), con visión de carril y portable al repo final **PenaltyStack**.
 > Diseño: [`docs/plan_rl_carrera.md`](docs/plan_rl_carrera.md) · Repo final: [`docs/integracion_penaltystack.md`](docs/integracion_penaltystack.md) · Historial, errores y soluciones: [`docs/bitacora.md`](docs/bitacora.md).
 
@@ -212,19 +212,64 @@ del equipo.
   - Hecho (2026-10-12, 21:38; pausa de 07:05 a 19:05): `results/barridos/ronda2/tabla.md` y `analisis.md`. **17/20 pasan** la batería completa; **16 superan a la base** (12.54 s). Los 5 mejores: `agente_071` 11.38 s, `026` 11.51 s, `062` 11.58 s, `081` 11.64 s y `004` 11.72 s. Con 5M pasos sí aparecen pesos que ganan: `seguimiento_vx` (ρ −0.64), barrera de margen (−0.57), castigo a los cambios bruscos (+0.54 a favor de castigar más) y castigo de salida (−0.53). Batería del benchmark: `071` 10.7 s y `062` 11.0 s, contra B-Human 16.2–18.3 s.
   - Cambio el 2026-10-12 a las 00:10 (E54): se evalúa **cada checkpoint** (1M–5M) de cada agente y se elige el mejor, porque el modelo final del primero empeoró (6 caídas) y su checkpoint de 4M pasa sin faltas (12.35 s). Relanzada a las 00:12; fin estimado ~11:30 (~33 min por agente).
   - En curso (lanzada el 2026-10-11 a las 23:41, encadenada a la ronda 1): `scripts/ronda_siguiente.py --anterior ronda1 --nombre ronda2 --pasos 5000000`. Cada uno de los 20 sigue con su config desde su modelo; batería completa de 44 corridas (5 μ × 4 semillas + 12 salidas torcidas × μ 0.4/1.0, perturbaciones, `vx_cmd` 0.45). Referencia: la base con la misma batería pasa con **12.54 s** (`results/barridos/ronda2/base_carrera_v03.json`). ~30 min por agente: fin estimado ~10:00 del 2026-10-12.
-- [ ] **63. Ronda 3: 5 agentes** (~20M pasos) con domain randomization completa, cámara renderizada y escena de 3 carriles con vecinos → campeón — ✅ Campeón con 0 faltas en la batería y tiempo comparado con B-Human y NAOqi
-- [ ] **64. Ciclo de generaciones**: lo aprendido define nuevos rangos y una nueva base — ✅ Cada generación documentada en la bitácora y en la tabla del README
-- [ ] **65. (Opcional) Reducir el costo del barrido** si no alcanza el tiempo en un solo PC: menos pasos por ronda, menos agentes o GPU (la torre con RTX 5060 no está disponible por ahora) — ✅ Decisión documentada con mediciones
+
+## Fase M2 — `rl_v1.2`: ningún motor por encima del 80 % (pasos 62b–62h)
+
+> **Replanificación del 2026-10-13 (pedido de Camilo).** `rl_v1.0` y `rl_v1.1` ya son rápidas (10.7 s contra
+> 16.2–18.3 s de B-Human), pero en simulación sus rodillas y tobillos trabajan al **96–110 % del par continuo** del
+> motor real (`results/riesgo_motores/`). B-Human (67–70 %) y NAOqi (≤ 61 %) quedan por debajo. Con las prácticas,
+> eso puede sobrecalentar y dañar los motores del NAO. **Objetivo:** `rl_v1.2`, más lenta si hace falta, con
+> **todas las articulaciones ≤ 80 %**. Se parte de la caminata ya entrenada (`rl_v1.1`) y se la limita.
+> - **Cómo:** la corriente de cada motor, que el NAO entrega por ALMemory, entra a la observación como "esfuerzo
+>   acumulado"; pasar el límite se castiga en la recompensa, y en la selección pasar el 80 % **descarta** al agente,
+>   igual que una caída.
+> - **Pospuestos** hasta tener `rl_v1.2`: 63, 64 y 65. Se replantean después (la ronda 3 partiría de `rl_v1.2`).
+>   De la fase N en adelante, la política que se porta es `rl_v1.2`.
+> - **Medida del 80 %:** la del dashboard: par RMS de cada articulación en la corrida ÷ par continuo de su motor
+>   (tipo 5: 2.33 N·m → 80 % = 1.86 N·m; tipo 1: 2.47 N·m → 1.98 N·m).
+
+> **Versión liviana (decisión de Camilo, 2026-10-13, ~22:35):** esta noche es un avance chico, ~3 horas de cómputo.
+> Solo castigo y filtro, con la misma observación de 54 valores, partiendo de `rl_v1.1`. La corriente en la
+> observación (contrato v2) queda para un RL más pesado: pasos 62c y 62e pospuestos.
+
+- [x] **62b. Definir el límite y medir la línea base**: fórmula, umbral por tipo de motor (los hombros no tienen dato
+  del motor y quedan fuera), par de cada articulación con el robot quieto en la postura de partida — ✅ Tabla de la
+  línea base y valores con su fuente
+- [ ] **62c. (Pospuesto: RL pesado) Corriente de los motores en la observación (contrato v2)**: corriente simulada =
+  par / constante del motor, con ruido y error de escala; "esfuerzo acumulado" por articulación en la observación
+  (54 → 65); el robot la lee de ALMemory (`Device/SubDeviceList/<articulación>/ElectricCurrent/Sensor/Value`) — ✅
+  La simulación y el contrato dan la misma observación; `rl_v1.0` y `rl_v1.1` siguen corriendo en v1
+- [x] **62d. Castigo y filtro del 80 %**: esfuerzo medido en cada paso de 2 ms en `NaoRace-v0`; término
+  `esfuerzo_motor` (umbral 75 %, media móvil de 1 s); en la selección y en la batería, cualquier articulación por
+  encima del 80 % = **falta** (diseño, sección 6.9) — ✅ El esfuerzo del entorno coincide con
+  `riesgo_motores.py`; el filtro descarta a `rl_v1.1`; `check_race_env.py` en OK
+- [ ] **62e. (Pospuesto con el 62c) Pasar `rl_v1.1` a la red de 65 entradas** — ✅ Mismas acciones que `rl_v1.1`
+- [x] **62f. Prueba corta de ajuste fino** (1 agente, peso −1.0, 1M pasos) con `scripts/barrido_esfuerzo.py` — ✅
+  El esfuerzo baja sin caídas; si no, se ajusta el peso antes del 62g
+  - Hecho (2026-10-13, 22:44–22:51; `results/barridos/esfuerzo_prueba/`): el castigo medio bajó de −1.7 a −1.45 por
+    paso, pero en la batería completa el peor motor sigue en 108 % (LAnklePitch) y las 44 corridas pasan el 80 %
+    (`rl_v1.1`: 109 %). 0 caídas en la batería; en el entrenamiento empiezan salidas de carril. Se cumple la segunda
+    rama del criterio: no baja lo suficiente, así que se ajusta. Se agrega el modo `instante` (castigo por paso de
+    24 ms: Σ max(0, x − u²), con señal más directa) y el 62g prueba los dos modos con varios pesos.
+- [ ] **62g. Barrido pequeño** (4 agentes × 4M pasos: `media` −1.0 e `instante` −0.3, −0.5 y −0.8; ~2 h 20 min)
+  con selección por checkpoint y el filtro del 80 %. **Se lanza cuando Camilo avise** — ✅ Al menos un agente con 0 faltas y todas sus articulaciones ≤ 80 % en la batería completa
+- [ ] **62h. `rl_v1.2`**: guardar en `policies/rl_v1.2/`; batería del benchmark de 3 carriles, análisis de motores y
+  dashboard actualizados; README, bitácora y `docs/paper/` — ✅ 0 faltas y **todas las articulaciones ≤ 80 % en las
+  25 corridas** (no solo en promedio); tiempo comparado con `rl_v1.1`, B-Human y NAOqi
+
+- [ ] **63. Ronda 3: 5 agentes** *(pospuesto el 2026-10-13 hasta tener `rl_v1.2`)* (~20M pasos) con domain randomization completa, cámara renderizada y escena de 3 carriles con vecinos → campeón — ✅ Campeón con 0 faltas en la batería y tiempo comparado con B-Human y NAOqi
+- [ ] **64. Ciclo de generaciones** *(pospuesto el 2026-10-13)*: lo aprendido define nuevos rangos y una nueva base — ✅ Cada generación documentada en la bitácora y en la tabla del README
+- [ ] **65. (Opcional, pospuesto el 2026-10-13) Reducir el costo del barrido** si no alcanza el tiempo en un solo PC: menos pasos por ronda, menos agentes o GPU (la torre con RTX 5060 no está disponible por ahora) — ✅ Decisión documentada con mediciones
 
 ## Fase N — Portabilidad a PenaltyStack
 - [ ] **66. Exportar la política** (pesos y normalización en JSON o `.npz` + versión del contrato) y módulo de inferencia compatible con Python 2.7 y 3 — ✅ Diferencia con SB3 < 1e-5; tiempo de inferencia medido en PC
 - [ ] **67. Correr la política dentro del simulador de PenaltyStack**, junto a la caminata original de B-Human — ✅ Camina 5 m; comparación directa en el mismo simulador
-- [ ] **68. Ejecutor a bordo**: visión en Python puro + política exportada, START (táctil frontal 0.25 s), ABORT (pecho 0.3 s), ciclo de 24 ms y paro por inclinación, desplegado con el mecanismo de PenaltyStack — ✅ Probado en seco y revisado por el autor de PenaltyStack
+- [ ] **68. Ejecutor a bordo**: visión en Python puro + política exportada, START (táctil frontal 0.25 s), ABORT (pecho 0.3 s), ciclo de 24 ms, paro por inclinación y **paro por temperatura de los motores** (fase M2), desplegado con el mecanismo de PenaltyStack — ✅ Probado en seco y revisado por el autor de PenaltyStack
 
 - [ ] **68b. Silbato (pospuesto)**: decidir con Luis Mario si el NAO arranca solo al escuchar el silbato o se queda el arranque manual por el táctil de la cabeza (lo actual, reglamentario). PenaltyStack (`9c08a41`) solo trae la estructura de datos `Whistle` de B-Human, sin detector. Pospuesto el 2026-10-11 hasta hablar con él — ✅ Decisión documentada; si es automático, detector a bordo con táctil de respaldo y prueba con ruido de público
 
 ## Fase O — Robot real
-- [ ] **69. Sesión real #1** (robot suspendido): Python y numpy a bordo; tiempo de inferencia + visión; respuesta de los servos; ruido de IMU y FSR; deriva de `AngleZ`; **μ de la duela** (plano inclinado); ALMotion vs LoLA — ✅ Datos en `data/real/sesion_01/` y decisiones documentadas
+- [ ] **69. Sesión real #1** (robot suspendido): Python y numpy a bordo; tiempo de inferencia + visión; respuesta de los servos; ruido de IMU y FSR; deriva de `AngleZ`; **μ de la duela** (plano inclinado); ALMotion vs LoLA; **corriente y temperatura de cada motor** (escala y ruido de la corriente, para el contrato v2 de la fase M2) — ✅ Datos en `data/real/sesion_01/` y decisiones documentadas
 - [ ] **70. Precisión de la cámara en pista réplica** (`race_nao.py --dry-run` y `--medir`, 30 posiciones con cinta métrica) — ✅ σ real de `d` y `psi` comparado con el simulado; rango de ruido del paso 57 ajustado
 - [ ] **71. Identificación de servos y ruidos** → valores en el simulador — ✅ Gráfica simulación vs real por articulación
 - [ ] **72. Pruebas escalonadas de la política con visión** (suspendido → arnés → 1 m → 5 m, `vx_cmd` creciente) — ✅ Cada prueba registrada con video, log y resultado

@@ -1,0 +1,9 @@
+nombre: esfuerzo_prueba
+pesos:
+- -1.0
+pasos: 1000000
+checkpoints: 1
+n_envs: 16
+eval_vx: 0.45
+base: policies/rl_v1.1
+umbral_esfuerzo: 0.75

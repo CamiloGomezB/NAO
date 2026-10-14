@@ -980,3 +980,59 @@ para la visión, el trabajo de Daniel en [danielpaya/nao_linea](https://github.c
   - **Solución:** un entrenamiento solo es válido si el modelo final no está vacío y hay checkpoints; si no, se borra y
     se repite. Sin checkpoints se evalúa el modelo final.
   - Se relanzó a las 00:12; los logs de los intentos quedaron en `runs/barrido_ronda2_intento{1,2}.log`.
+
+### E55 — `check_race_env.py` fallaba desde el paso 55b: esperaba el castigo de salida viejo (−200)
+- **Fecha / paso:** 2026-10-13, ~22:40, paso 62d (fase M2). Se vio al correr las pruebas tras agregar el castigo de
+  esfuerzo.
+- **Síntoma:**
+  ```
+  4. Faltas y recompensa (paso 55)
+     FALLA pie sobre la linea -> salida_carril, termina, -200 (falta=salida_carril, r=-309.9)
+  ...
+  RESULTADO: FALLA
+  ```
+- **Causa:** la prueba tenía el peso fijo en −200. El paso 55b (E47) lo cambió a −300 en `configs/carrera/pesos.yaml`
+  y la prueba no se actualizó. Con `git stash`, sin los cambios de la fase M2, falla igual: no la causó el castigo
+  nuevo.
+- **Solución:** la prueba lee el peso de `env.pesos["salida_carril"]`. Ahora da
+  `OK    pie sobre la linea -> salida_carril, termina, -300 (falta=salida_carril, r=-309.9)` y `RESULTADO: OK`.
+- **Lección:** una prueba no debe repetir números de una config; se leen de la config.
+
+### E56 — Medir el par cada 12 ms subestimaba el esfuerzo: la rodilla derecha de `rl_v1.1` daba 80 % en vez de 97 %
+- **Fecha / paso:** 2026-10-13, ~22:40, paso 62d (fase M2).
+- **Síntoma:** la primera versión del esfuerzo en `NaoRace-v0` medía el par al final de cada ciclo de 12 ms (el del
+  NAO). Con las mismas 3 corridas de `scripts/riesgo_motores.py` (rl_v1.1, vx 0.45, μ 0.8, semillas 1000–1002, que
+  dan trayectorias idénticas), la comparación (análisis cada 2 ms, entorno cada 12 ms), en %:
+  ```
+  1000 1000 10.68 10.68
+     {'LHipYawPitch': (18, 18), 'LHipRoll': (37, 36), 'LHipPitch': (66, 61), 'LKneePitch': (102, 94), 'LAnklePitch': (100, 100), 'LAnkleRoll': (24, 21), 'RHipRoll': (39, 38), 'RHipPitch': (63, 56), 'RKneePitch': (97, 80), 'RAnklePitch': (104, 107), 'RAnkleRoll': (26, 24)}
+  ```
+- **Causa:** la política cambia el ángulo objetivo cada 24 ms. El servo PD responde con un pico de par justo después,
+  que dura pocos pasos de 2 ms. Las muestras a los 12 y 24 ms caen siempre en la misma fase del ciclo y se saltan ese
+  pico (aliasing). Una política entrenada con esa medida podría además "esconder" par entre muestras.
+- **Solución:** `_paso_fisica` da los 12 pasos de 2 ms uno por uno, suma (par / par continuo)² en cada uno y promedia
+  por ciclo de 12 ms. Ahora coincide exactamente con el análisis:
+  ```
+  {'LHipYawPitch': (18.1, 18.1), 'LHipRoll': (36.9, 36.9), 'LHipPitch': (65.7, 65.7), 'LKneePitch': (101.9, 101.9), 'LAnklePitch': (99.8, 99.8), 'LAnkleRoll': (23.9, 23.9), 'RHipRoll': (38.6, 38.6), 'RHipPitch': (62.6, 62.6), 'RKneePitch': (96.7, 96.7), 'RAnklePitch': (104.4, 104.4), 'RAnkleRoll': (26.4, 26.4)}
+  ```
+- **Costo:** el entorno pasa de 1603 a 1409 pasos/s por proceso (−12 %), por las 12 llamadas a `mj_step` desde Python.
+- **Para el robot real:** la corriente se lee cada 12 ms. Si en el robot se quiere estimar el mismo RMS, hay que
+  tenerlo en cuenta: la corriente del motor también tiene esos picos y una muestra por ciclo puede no verlos.
+
+### E57 — El barrido de esfuerzo no arrancó: argparse tomó los pesos negativos por opciones
+- **Fecha / paso:** 2026-10-13, ~22:57, paso 62g (fase M2).
+- **Síntoma:** al lanzar
+  `scripts/barrido_esfuerzo.py --nombre esfuerzo_v12 --agentes -0.5:instante -1.0:media -0.3:instante -0.8:instante ...`
+  salió de inmediato con código 2:
+  ```
+  usage: barrido_esfuerzo.py [-h] --nombre NOMBRE --agentes AGENTES
+                             [AGENTES ...] [--pasos PASOS]
+                             [--checkpoints CHECKPOINTS] [--n-envs N_ENVS]
+                             [--eval-vx EVAL_VX]
+  barrido_esfuerzo.py: error: argument --agentes: expected at least one argument
+  ```
+- **Causa:** argparse solo reconoce como valor un texto que empieza con `-` si es un número puro (`-1.0`).
+  `-0.5:instante` lo toma como una opción desconocida, así que `--agentes` queda vacío. La prueba anterior funcionó
+  porque usó `--pesos -1.0`, un número puro.
+- **Solución:** se pasa la magnitud sin signo (`0.5:instante`) y el script usa peso = −magnitud. No se perdió nada:
+  el barrido no llegó a crear su carpeta ni a entrenar.

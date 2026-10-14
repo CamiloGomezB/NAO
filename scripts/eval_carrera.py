@@ -83,12 +83,15 @@ def correr(model, vn, env_kwargs, mu, semilla, vision, vx, perturbaciones, graba
             break
     h = np.array(hist)
     T = h[-1, 0]
+    esfuerzo = env.esfuerzo_corrida()          # par RMS / par continuo del motor real (fase M2, limite 80 %)
     extra = {"qpos": np.array(qs), "hist": h} if grabar else {}
     return {**extra, "caminata": "rl_carrera", "mu": mu, "resultado": resultado, "t": float(T), "avance": float(h[-1, 1]),
             "vel_media": float(h[-1, 1] / T), "desvio_max": float(np.max(np.abs(h[:, 2]))),
             "desvio_final": float(h[-1, 2]), "rumbo_max_deg": float(np.degrees(np.max(np.abs(h[:, 3])))),
             "inclinacion_max": float(np.max(h[:, 4])), "torque2_por_m": torque2 / max(0.05, float(h[-1, 1])),
             "t_meta_punta": t_punta, "falta": info["falta"], "semilla": semilla, "vision": int(vision),
+            "esfuerzo": {k: round(v, 4) for k, v in esfuerzo.items()}, "esfuerzo_max": max(esfuerzo.values()),
+            "esfuerzo_max_articulacion": max(esfuerzo, key=esfuerzo.get),
             "traza": h[::20, :3].round(4).tolist()}
 
 
@@ -116,7 +119,8 @@ def main() -> int:
                 filas.append(f)
                 print(f"   vision={'si' if vision else 'no'} mu={mu:.1f} semilla={s}: {f['resultado']:16s} "
                       f"t={f['t']:5.1f} s  v={f['vel_media']:.3f} m/s  desvio max {100 * f['desvio_max']:4.1f} cm  "
-                      f"rumbo max {f['rumbo_max_deg']:4.1f} grados", flush=True)
+                      f"rumbo max {f['rumbo_max_deg']:4.1f} grados  esfuerzo max {100 * f['esfuerzo_max']:3.0f} % "
+                      f"({f['esfuerzo_max_articulacion']})", flush=True)
     res = resumen(filas)
     meta = info_corrida()
     meta.update(modelo=rel(args.modelo), normalizacion=rel(vn_path), vx_cmd=args.vx,
@@ -149,6 +153,10 @@ def main() -> int:
           f"{sum(f['resultado'] == 'SALIO DEL CARRIL' for f in filas)} salidas."]
     if metas:
         L.append(f"Tiempo a meta medio {np.mean([f['t'] for f in metas]):.2f} s (mejor {min(f['t'] for f in metas):.2f} s).")
+    peor = max(filas, key=lambda f: f["esfuerzo_max"])
+    L.append(f"Esfuerzo de los motores (par RMS / par continuo, limite 80 %): maximo {100 * peor['esfuerzo_max']:.0f} % "
+             f"({peor['esfuerzo_max_articulacion']}); corridas sobre el 80 %: "
+             f"{sum(f['esfuerzo_max'] > 0.80 for f in filas)}/{len(filas)}.")
     (salida / f"eval_{tag}.md").write_text("\n".join(L) + "\n", encoding="utf-8")
     print("\n".join(L[-2:]))
     print(f"Escrito {rel(salida / f'eval_{tag}.md')}")

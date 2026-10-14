@@ -1,7 +1,7 @@
 """Riesgo fisico de la caminata para los motores del NAO V6 (analisis del 2026-10-13).
 
 Registra en cada paso de fisica (2 ms) par, velocidad y posicion de cada articulacion de las piernas y los hombros, y la
-fuerza normal de cada pie, para: rl_v1.0, rl_v1.1, la replica de B-Human y la de NAOqi. Mismo modelo V6 y mismos servos.
+fuerza normal de cada pie, para: rl_v1.0, rl_v1.1, rl_v1.2 (si existe), la replica de B-Human y la de NAOqi. Mismo modelo V6 y mismos servos.
 Compara con los motores reales del NAO V6 (par continuo, par de parada, velocidad maxima, curva par-velocidad).
 Lo usa el dashboard (scripts/dashboard.py, pestana Motores). El informe en PDF esta en results/riesgo_motores/.
 
@@ -156,6 +156,8 @@ def main():
              ("rl_v1.1 (vx 0.50)", lambda s: correr_rl(ROOT / "policies/rl_v1.1/model.zip", 0.50, s, 0.8)),
              ("B-Human (0.30)", lambda s: correr_clasica("bhuman", s, 0.8)),
              ("NAOqi (0.12)", lambda s: correr_clasica("naoqi", s, 0.8))]
+    if (ROOT / "policies/rl_v1.2/model.zip").exists():     # fase M2: motores <= 80 % del par continuo
+        casos.insert(4, ("rl_v1.2 (vx 0.45)", lambda s: correr_rl(ROOT / "policies/rl_v1.2/model.zip", 0.45, s, 0.8)))
     salida = []
     for nombre, fn in casos:
         for s in (1000, 1001, 1002):
