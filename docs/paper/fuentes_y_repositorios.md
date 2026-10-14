@@ -21,7 +21,7 @@ flowchart TB
     SH["SabanaHerons2026<br/>(código del equipo, basado en B-Human)"] -->|"motor de movimiento original"| PS
     PS["PenaltyStack (Luis Mario)<br/>REPO FINAL del equipo"] -->|"7 oct: mismo RSI3 → modelo V6"| NAO
     PS -->|"8 oct: contrato de articulaciones,<br/>sensores, baseline B-Human"| NAO
-    NAO["Este repo: CamiloGomezB/NAO<br/>(RL de la caminata)"] -->|"9 oct: rama de cámara<br/>sobre el commit 4ca136d"| NL
+    NAO["Este repo: CamiloGomezB/nao-v6-rl-race<br/>(RL de la caminata)"] -->|"9 oct: rama de cámara<br/>sobre el commit 4ca136d"| NL
     NL["nao_linea (Daniel)<br/>visión de carril + 3 carriles"] -->|"10 oct: integrado en main (paso 40)"| NAO
     NAO -->|"Fase N: política exportada"| PS
 ```

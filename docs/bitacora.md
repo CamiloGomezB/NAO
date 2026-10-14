@@ -1794,3 +1794,20 @@ sin salida y cómo se resolvieron. Tiene tres usos:
     ganaba a la del navegador. En claude.ai no pasaba, porque su página fuerza `[hidden] { display: none }`.
   - **Solución:** esa misma regla en `scripts/dashboard/pagina.html` y en el estilo de `scripts/dashboard.py`.
   - **Verificado en el navegador:** se ve una sola sección por pestaña.
+
+### 2026-10-13 — Repositorio renombrado a `nao-v6-rl-race`
+- **Autor:** Camilo (renombre en GitHub, Settings → Repository name); Claude Code actualizó las referencias.
+- **Motivo:** el nombre `NAO` no decía de qué es el repo. `nao-v6-rl-race` dice el robot, el método y la tarea.
+- **Qué se cambió:**
+  - URL: `github.com/CamiloGomezB/NAO` → `github.com/CamiloGomezB/nao-v6-rl-race`. GitHub redirige la vieja;
+  - README: los 3 bloques de `git clone` y `cd`;
+  - `docs/paper/fuentes_y_repositorios.md`: el nombre del repo en el diagrama;
+  - `PLAN.md` (paso 4) y `docs/paper/historial_pasos.md` (paso 4): se deja el nombre original, que es registro
+    histórico, con la nota del renombre;
+  - nombre del proyecto Python en `pyproject.toml`: `nao-rl-walking` → `nao-v6-rl-race`; `uv.lock` regenerado con
+    `uv lock` (solo cambia ese nombre, las 62 versiones siguen iguales) y `requirements.txt` con el mismo
+    `uv export` de su cabecera;
+  - remoto local: `git remote set-url origin https://github.com/CamiloGomezB/nao-v6-rl-race.git`, verificado con
+    `git ls-remote` (HEAD `b3ad586`).
+- **No se cambia:** la carpeta local sigue llamándose `NAO`. No afecta nada.
+- **Siguiente:** sin cambios. Paso 63, ronda 3 con los 5 mejores, cuando Camilo lo decida.

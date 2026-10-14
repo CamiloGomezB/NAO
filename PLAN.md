@@ -26,7 +26,7 @@ Regla: cada paso termina con una **confirmación**, una **entrada en la bitácor
 - [x] **1. Estructura del repo y `.gitignore`** — ✅ Carpetas visibles en VSCode
 - [x] **2. Entorno virtual con `uv` + `pyproject.toml` con versiones fijadas** — ✅ `uv sync` sin errores
 - [x] **3. Instalar MuJoCo y abrir el visor con un modelo de prueba** — ✅ Se abre la ventana 3D
-- [x] **4. Push a GitHub** — ✅ Visible en github.com/CamiloGomezB/NAO
+- [x] **4. Push a GitHub** — ✅ Visible en github.com/CamiloGomezB/NAO (renombrado a [`CamiloGomezB/nao-v6-rl-race`](https://github.com/CamiloGomezB/nao-v6-rl-race) el 2026-10-13)
 
 ## Fase B — Modelo del NAO
 - [x] **5. Buscar el modelo NAO V6 y revisar licencia** — ✅ Fuente y licencia acordadas

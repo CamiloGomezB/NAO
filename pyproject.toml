@@ -1,5 +1,5 @@
 [project]
-name = "nao-rl-walking"
+name = "nao-v6-rl-race"
 version = "0.1.0"
 description = "Politica de caminata con Reinforcement Learning (PPO) para NAO V6 en MuJoCo"
 requires-python = ">=3.12,<3.13"

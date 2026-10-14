@@ -387,7 +387,7 @@ wheels = [
 ]
 
 [[package]]
-name = "nao-rl-walking"
+name = "nao-v6-rl-race"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

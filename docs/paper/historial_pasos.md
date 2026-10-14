@@ -55,7 +55,7 @@ sprint de 48 horas.
 | 1 | Estructura de carpetas y `.gitignore` | Carpetas visibles en VSCode | `cd92f6d` |
 | 2 | Entorno virtual con `uv` y versiones fijadas en `pyproject.toml` / `uv.lock` | `uv sync` sin errores | `7338885` |
 | 3 | Instalación de MuJoCo y visor con un modelo de prueba | Se abre la ventana 3D | `007ba4e` |
-| 4 | Repositorio en GitHub | Visible en github.com/CamiloGomezB/NAO | — |
+| 4 | Repositorio en GitHub | Visible en github.com/CamiloGomezB/NAO (renombrado a `nao-v6-rl-race` el 2026-10-13) | — |
 
 ### Fase B — Modelo del NAO (pasos 5–10)
 

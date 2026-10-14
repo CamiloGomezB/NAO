@@ -180,8 +180,8 @@ política descubrió sola. Detalles y comparación de variantes en la [sección 
 Requiere Python 3.12, Git y [uv](https://docs.astral.sh/uv/getting-started/installation/). No hace falta entrenar: el modelo viene incluido.
 
 ```bash
-git clone https://github.com/CamiloGomezB/NAO.git
-cd NAO
+git clone https://github.com/CamiloGomezB/nao-v6-rl-race.git
+cd nao-v6-rl-race
 uv sync
 uv run python -m src.evaluate --model checkpoints/best_model.zip --episodes 2 --render
 ```
@@ -216,8 +216,8 @@ Probado en Windows 11 (Ryzen 7 5800H, 14 GB de RAM utilizable). Las dependencias
 ### Opción A: con [uv](https://docs.astral.sh/uv/) (recomendada)
 
 ```bash
-git clone https://github.com/CamiloGomezB/NAO.git
-cd NAO
+git clone https://github.com/CamiloGomezB/nao-v6-rl-race.git
+cd nao-v6-rl-race
 uv sync
 ```
 
@@ -227,8 +227,8 @@ Todos los comandos siguientes se ejecutan con el prefijo `uv run`.
 ### Opción B: con pip
 
 ```bash
-git clone https://github.com/CamiloGomezB/NAO.git
-cd NAO
+git clone https://github.com/CamiloGomezB/nao-v6-rl-race.git
+cd nao-v6-rl-race
 python -m venv .venv
 # Windows:      .venv\Scripts\activate
 # Linux/macOS:  source .venv/bin/activate
