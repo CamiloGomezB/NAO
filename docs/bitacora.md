@@ -1903,3 +1903,68 @@ sin salida y cómo se resolvieron. Tiene tres usos:
 - **Siguiente:** paso 62g cuando Camilo avise:
   `uv run python scripts/barrido_esfuerzo.py --nombre esfuerzo_v12 --agentes 0.5:instante 1.0:media 0.3:instante 0.8:instante --pasos 4000000 --checkpoints 4`.
   Después, 62h: `rl_v1.2`, benchmark, motores, dashboard y documentación.
+
+### 2026-10-14 — Paso 62g: barrido de esfuerzo (4 agentes × 4M); ninguno pasa del todo → 62g2
+- **Autor:** Claude Code. Camilo dio el aviso para entrenar ("Continua") y dejó el proceso corriendo de noche.
+- **Revisión de documentación al empezar:** el commit `cee48ff` de Camilo ya incluye la fase M2 hasta el 62f. Se
+  corrigió un `\n` literal en el texto de uso de `barrido_esfuerzo.py`.
+- **Qué se hizo:**
+  `scripts/barrido_esfuerzo.py --nombre esfuerzo_v12 --agentes 0.5:instante 1.0:media 0.3:instante 0.8:instante --pasos 4000000 --checkpoints 4`,
+  de 02:39 a 04:22 (~25 min de entrenamiento + ~4 min de evaluación por agente).
+- **Resultado** (`results/barridos/esfuerzo_v12/tabla.md`; faltas de 44 / peor esfuerzo / tiempo medio):
+
+| Agente | Castigo (modo, peso) | 1M | 2M | 3M | 4M | Elegido |
+|---|---|---|---|---|---|---|
+| `agente_000` | `instante`, −0.5 | 44 / 106 % / 12.50 s | 44 / 96 % / 11.68 s | 41 / 96 % / 11.82 s | **2 / 105 % / 11.63 s** | 4M: 1 caída (salida −25°, μ 1.0, a 1.4 s) + 1 corrida al 80.x % |
+| `agente_001` | `media`, −1.0 | 44 / 108 % | 44 / 102 % | 44 / 101 % | 44 / 103 % | No baja |
+| `agente_002` | `instante`, −0.3 | 44 / 106 % | 44 / 110 % | 44 / 102 % | 44 / 105 % | No baja |
+| `agente_003` | `instante`, −0.8 | 44 / 113 % / 12.54 s | 44 / 88 % / 12.59 s | 15 / 94 % / 12.54 s | 21 / 110 % / 12.57 s | Oscila; más lento |
+
+Cada celda: faltas de 44 (con el filtro del 80 %) / peor esfuerzo / tiempo medio. Base `rl_v1.1`: 44 / 109 % / 11.26 s.
+
+- **Lectura:**
+  - el modo `media` y el peso −0.3 no bajan el esfuerzo;
+  - `instante` −0.5 deja rodillas y tobillos en 63–76 % de media, a 11.63 s;
+  - `instante` −0.8 oscila y es más lento.
+- **Problemas:** el 62g no cumple el criterio y queda `[!]`. No se guarda una `rl_v1.2` que no cumpla.
+- **Decisión:** paso nuevo **62g2**. `agente_000` sigue 3M pasos desde su checkpoint de 4M, con el mismo castigo, y se
+  evalúa cada 0.5M. Es lo mismo que funcionó en la ronda 2 (E54), y el agente seguía mejorando (41 → 2 faltas
+  entre 3M y 4M). `barrido_esfuerzo.py` acepta ahora `--base <checkpoint.zip>`; la config sale de
+  `runs/<run>/config.yaml` y la semilla se cambia (+1000).
+- **Siguiente:**
+  `scripts/barrido_esfuerzo.py --nombre esfuerzo_v12_cont --agentes 0.5:instante --pasos 3000000 --checkpoints 6 --base runs/esfuerzo_esfuerzo_v12_000/checkpoints/model_4000000_steps.zip`,
+  lanzado a las 04:25. Si un checkpoint cumple, 62h (`rl_v1.2`).
+
+### 2026-10-14 — Pasos 62g2 y 62h: `rl_v1.2` lista, con todos los motores ≤ 80 %
+- **Autor:** Claude Code (Camilo dejó el proceso corriendo de noche).
+- **62g2:**
+  - comando: `scripts/barrido_esfuerzo.py --nombre esfuerzo_v12_cont --agentes 0.5:instante --pasos 3000000 --checkpoints 6 --base runs/esfuerzo_esfuerzo_v12_000/checkpoints/model_4000000_steps.zip`,
+    de 04:25 a 04:43;
+  - resultado: pasan los checkpoints de 2M (peor 76.0 %, 11.79 s) y 3M (peor 78.8 %, 11.52 s; puntaje 11.78 s). Se
+    elige el de 3M por la regla de la sección 11.4;
+  - la reevaluación del punto de partida dio idéntico (2 faltas, 105.1 %, 11.63 s).
+- **62h:**
+  - `scripts/guardar_politica.py --run esfuerzo_esfuerzo_v12_cont_000 --nombre rl_v1.2 --cual 3000000` →
+    `policies/rl_v1.2/`;
+  - benchmark: `scripts/eval_carrera.py --modelo policies/rl_v1.2/model.zip --vx 0.45 --semillas 5 --solo-vision --salida results/carrera/rl_v1.2/benchmark_vx0.45`.
+    Da 25/25 metas en 10.91 s (10.71–11.0), 0 faltas, 0/25 corridas sobre el 80 % (peor 77 %) y desvío máximo de
+    11–18 cm (`rl_v1.1`: 5–7 cm);
+  - `scripts/riesgo_motores.py` (ahora incluye `rl_v1.2`): rodillas 70/72 % y tobillos 60/65 % (`rl_v1.1`: 101/97 % y
+    100/105 %). Además, la rodilla pasa menos tiempo fuera de la curva par–velocidad (2.9/7.5 % contra 10.7/16.4 %)
+    y la energía baja a 49.7 J/m (antes 57.4). Empeora el impacto del pie (2.58 × peso, antes 2.32). Las corridas de
+    las otras caminatas dan idéntico al análisis anterior;
+  - visor: `carrera_vivo.py` usa `rl_v1.2` por defecto. Se probó con `--captura`: a los 8 s el RL va en 3.6 m con la
+    cámara renderizada;
+  - dashboard: v1.2 en el resumen (tarjeta y texto), en Versiones, en el benchmark y en Motores. La gráfica "Calor"
+    tiene la línea del 80 %. Se corrigió E58 (barras con ancho negativo);
+  - README (estado, tabla de 3 carriles con `rl_v1.1` y `rl_v1.2`, mapa), `PLAN.md`, capítulo de RL (12g), diseño
+    (6.9), historial y registro de errores.
+- **Decisiones:**
+  - se elige el checkpoint de 3M por la regla de selección. El de 2M (peor 76 %, 0.27 s más lento) queda como
+    alternativa con más margen;
+  - el informe PDF de riesgo (`results/riesgo_motores/riesgo_motores_nao_v6.pdf`) sigue siendo el del 2026-10-13, con
+    v1.0 y v1.1. Los números de la v1.2 están en `riesgo.json` y en el dashboard.
+- **Pendiente para Camilo:**
+  - revisión visual en el visor: `uv run python demo/caminatas/carrera_vivo.py --rl-vx 0.45`;
+  - decidir lo siguiente: los pasos 63–65 siguen pospuestos, y quedan pendientes un RL más pesado de motores
+    (corriente en la observación y límite de velocidad articular) y la portabilidad (66+) con `rl_v1.2`.

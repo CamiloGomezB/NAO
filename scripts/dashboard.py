@@ -44,6 +44,10 @@ VERSIONES = [
     ("1.1", "RL v1.1", "2026-10-12", 6, "Ronda de 100 agentes con pesos sorteados y luego los 20 mejores con 5M pasos más; se elige el mejor checkpoint",
      "Buscar qué pesos de la recompensa hacen la caminata más rápida sin faltas", "La más rápida: premiar la velocidad y castigar cambios bruscos ayuda"),
 ]
+# Fase M2: solo aparece cuando existen policies/rl_v1.2 y su benchmark (resultado: se completa al elegirla).
+VERSION_12 = ("1.2", "RL v1.2", "2026-10-14", 7, "Castigo al esfuerzo de los motores (par RMS / par continuo) y filtro duro: ninguna articulación sobre el 80 %",
+              "Rodillas y tobillos de v1.0 y v1.1 trabajaban al 96–110 % del par continuo del motor real (calor en las prácticas)",
+              "Todas las articulaciones ≤ 80 % (peor 77–79 %); 0.2 s más lenta que v1.1 y menos recta (desvío de hasta 18 cm)")
 EXPLICACION_PESOS = {
     "seguimiento_vx": "Premio por ir a la velocidad pedida", "barrera_margen": "Castigo por acercarse a la línea (< 10 cm)",
     "cambio_accion": "Castigo por cambios bruscos de los motores", "salida_carril": "Castigo por salirse del carril",
@@ -104,6 +108,9 @@ def datos():
     comp = ROOT / "results/barridos/ronda2/comparacion_3_carriles"
     bench += filas_resumen(leer(comp / "eval_model_vx0.45.json")["resumen"], "RL v1.0")
     bench += filas_resumen(leer(comp / "eval_model_3000000_steps_vx0.45.json")["resumen"], "RL v1.1")
+    v12 = ROOT / "results/carrera/rl_v1.2/benchmark_vx0.45/eval_model_vx0.45.json"   # fase M2 (motores <= 80 %)
+    if v12.exists():
+        bench += filas_resumen(leer(v12)["resumen"], "RL v1.2")
     for v in ("carrera_v01", "carrera_v02"):
         bench += filas_resumen(leer(ROOT / f"results/carrera/{v}/benchmark_vx0.45/eval_model_vx0.45_arranque.json")["resumen"], v)
     for f in bench:
@@ -116,7 +123,8 @@ def datos():
                 f"{sum(f['metas'] for f in con)}/{sum(f['n'] for f in con)}")
 
     vers = []
-    for orden, (ver, nombre, fecha, pasos, cambio, porque, resultado) in enumerate(VERSIONES):
+    lista = VERSIONES + ([VERSION_12] if v12.exists() else [])
+    for orden, (ver, nombre, fecha, pasos, cambio, porque, resultado) in enumerate(lista):
         t, metas = t_bench(nombre)
         vers.append(dict(orden=orden, version=ver, politica=nombre, fecha=fecha, pasos_M=pasos, t_benchmark_s=t, metas=metas,
                          que_cambio=cambio, por_que=porque, resultado=resultado))

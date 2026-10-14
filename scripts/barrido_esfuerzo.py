@@ -14,7 +14,8 @@ Es REANUDABLE. Antes evalua la base (rl_v1.1) con la misma bateria, como referen
 
 Uso:
     uv run python scripts/barrido_esfuerzo.py --nombre esfuerzo_prueba --agentes 1.0 --pasos 1000000 --checkpoints 1
-    uv run python scripts/barrido_esfuerzo.py --nombre esfuerzo_v12 --agentes 0.5:instante 1.0:media 0.3:instante \n        0.8:instante --pasos 4000000 --checkpoints 4
+    uv run python scripts/barrido_esfuerzo.py --nombre esfuerzo_v12 --agentes 0.5:instante 1.0:media 0.3:instante 0.8:instante \
+        --pasos 4000000 --checkpoints 4
 """
 
 import argparse
@@ -56,10 +57,9 @@ def escribir_tabla(carpeta: Path) -> None:
     L = [f"# Barrido de esfuerzo `{carpeta.name}` (fase M2)", "",
          "Ajuste fino de `rl_v1.1` con el castigo `esfuerzo_motor`. Bateria completa (44 corridas). Filtro duro: caida, "
          "salida o una articulacion con par RMS > 80 % del par continuo = falta. Puntaje = tiempo medio + 1 sigma.", ""]
-    base = carpeta / "base_rl_v1.1.json"
-    if base.exists():
+    for base in sorted(carpeta.glob("base_*.json")):
         b = json.loads(base.read_text(encoding="utf-8"))
-        L += [f"**Base `rl_v1.1`:** faltas {b['puntaje']['faltas']}/44 (con el filtro del 80 %), esfuerzo maximo "
+        L += [f"**Base `{base.stem[5:]}`:** faltas {b['puntaje']['faltas']}/44 (con el filtro del 80 %), esfuerzo maximo "
               f"{b['esfuerzo']['peor_pct']:.0f} % ({b['esfuerzo']['peor_articulacion']}), tiempo medio "
               f"{b['t_medio']:.2f} s.", ""]
     L += ["| # | Agente | Peso (modo) | Checkpoint | Pasa | Faltas | Sobre 80 % | Puntaje [s] | t medio [s] | Peor esfuerzo |",
@@ -95,21 +95,29 @@ def main() -> int:
     ap.add_argument("--checkpoints", type=int, default=3, help="cuantos checkpoints evaluar por agente")
     ap.add_argument("--n-envs", type=int, default=16)
     ap.add_argument("--eval-vx", type=float, default=0.45)
+    ap.add_argument("--base", type=Path, default=BASE,
+                    help="politica de partida: carpeta de policies/ (default rl_v1.1) o checkpoint .zip de un run "
+                         "(paso 62g2: seguir al mejor agente; su config sale de runs/<run>/config.yaml)")
     a = ap.parse_args()
+    base = a.base if a.base.is_absolute() else ROOT / a.base
+    es_zip = base.suffix == ".zip"
+    modelo_base = base if es_zip else base / "model.zip"
+    cfg_path = base.parents[1] / "config.yaml" if es_zip else base / "config.yaml"
+    nombre_base = "rl_v1.1" if base == BASE else "continua"
 
     carpeta = ROOT / "results" / "barridos" / a.nombre
     carpeta.mkdir(parents=True, exist_ok=True)
     barrido.no_suspender()
-    (carpeta / "barrido.yaml").write_text(yaml.safe_dump(vars(a) | {"base": BASE.relative_to(ROOT).as_posix(),
+    (carpeta / "barrido.yaml").write_text(yaml.safe_dump(vars(a) | {"base": base.relative_to(ROOT).as_posix(),
                                                                       "umbral_esfuerzo": UMBRAL}, sort_keys=False),
                                           encoding="utf-8")
-    base_json = carpeta / "base_rl_v1.1.json"
+    base_json = carpeta / f"base_{nombre_base}.json"
     if not base_json.exists():
-        print("base rl_v1.1: bateria completa", flush=True)
-        fs = evaluar_completa(BASE / "model.zip", a.eval_vx)
+        print(f"base {nombre_base}: bateria completa", flush=True)
+        fs = evaluar_completa(modelo_base, a.eval_vx)
         base_json.write_text(json.dumps({"puntaje": barrido.puntaje(fs), "esfuerzo": resumen_esfuerzo(fs),
                                          "t_medio": t_medio(fs), "corridas": fs}, indent=1), encoding="utf-8")
-    cfg_base = yaml.safe_load((BASE / "config.yaml").read_text(encoding="utf-8"))
+    cfg_base = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
 
     for i, spec in enumerate(a.agentes):
         w, _, modo = spec.partition(":")
@@ -122,7 +130,7 @@ def main() -> int:
         dir_ag.mkdir(exist_ok=True)
         cfg = json.loads(json.dumps(cfg_base))
         cfg["experiment"] = f"esfuerzo_{a.nombre}"
-        cfg["seed"] = int(cfg_base["seed"]) + i
+        cfg["seed"] = int(cfg_base["seed"]) + i + (1000 if es_zip else 0)
         cfg["total_timesteps"] = a.pasos
         cfg["n_envs"] = a.n_envs
         cfg["checkpoint_every"] = max(a.pasos // a.checkpoints, 1)
@@ -141,7 +149,7 @@ def main() -> int:
                 shutil.rmtree(ROOT / "runs" / run)
             print(f"{ag}: entrenando {a.pasos:,} pasos con esfuerzo_motor = {w} ({modo})", flush=True)
             r = subprocess.run([PY, "-m", "src.train", "--config", str(dir_ag / "config.yaml"), "--run-name", run,
-                                "--continuar", str(BASE)], cwd=ROOT, capture_output=True, text=True)
+                                "--continuar", str(base)], cwd=ROOT, capture_output=True, text=True)
             (dir_ag / "entrenamiento.log").write_text(r.stdout + r.stderr, encoding="utf-8")
             if r.returncode != 0 or not modelo.exists():
                 print(f"{ag}: ERROR al entrenar (ver {dir_ag.relative_to(ROOT)}/entrenamiento.log)")
@@ -162,7 +170,7 @@ def main() -> int:
                "checkpoint_elegido": ck_el.relative_to(ROOT).as_posix(), "pasos_elegidos": pasos_el,
                "checkpoints": [{"pasos": x[0], "puntaje": x[3], "sobre_80": x[4]["corridas_sobre_80"],
                                 "peor_pct": x[4]["peor_pct"], "t_medio": t_medio(x[2])} for x in evals],
-               "pasos": a.pasos, "continua_de": BASE.relative_to(ROOT).as_posix(), "eval_vx": a.eval_vx,
+               "pasos": a.pasos, "continua_de": base.relative_to(ROOT).as_posix(), "eval_vx": a.eval_vx,
                "bateria": "completa (44 corridas)", "puntaje": p, "esfuerzo": e, "t_medio": t_medio(filas),
                "corridas": filas, "seg": round(time.time() - t0, 1)}
         (dir_ag / "resultado.json").write_text(json.dumps(res, indent=1), encoding="utf-8")

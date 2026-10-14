@@ -1036,3 +1036,20 @@ para la visión, el trabajo de Daniel en [danielpaya/nao_linea](https://github.c
   porque usó `--pesos -1.0`, un número puro.
 - **Solución:** se pasa la magnitud sin signo (`0.5:instante`) y el script usa peso = −magnitud. No se perdió nada:
   el barrido no llegó a crear su carpeta ni a entrenar.
+
+### E58 — Dashboard: barras con ancho negativo en la consola del navegador
+- **Fecha / paso:** 2026-10-14, ~04:47, paso 62h (dashboard con la v1.2).
+- **Síntoma:** al revisar el dashboard local en el navegador, la consola mostró:
+  ```
+  [error] Error: <rect> attribute width: A negative value is not valid. ("-6.572501381258398")
+  [error] Error: <rect> attribute width: A negative value is not valid. ("-3.1222769448287266")
+  [error] Error: <rect> attribute width: A negative value is not valid. ("-3.1195666349807922")
+  [error] Error: <rect> attribute width: A negative value is not valid. ("-3.0328367198466566")
+  [error] Error: <rect> attribute width: A negative value is not valid. ("-2.900031537297515")
+  [error] Error: <rect> attribute width: A negative value is not valid. ("-2.956948044104294")
+  ```
+  Las gráficas se veían bien.
+- **Causa:** las barras se dibujan con ancho `x(valor) − margen`. Si una gráfica se dibuja cuando su caja todavía no
+  tiene ancho (al cambiar de pestaña o al cargar), la escala queda invertida y el ancho sale negativo.
+- **Solución:** `Math.max(0, …)` en los cuatro anchos de barra de `scripts/dashboard/pagina.html`, como ya hacía el
+  histograma. Después de recorrer las 6 pestañas, la consola no muestra errores.

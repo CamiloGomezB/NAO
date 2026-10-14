@@ -3,7 +3,7 @@
 Stack: **MuJoCo + Stable-Baselines3 (PPO)**, Windows nativo, entrenamiento en CPU.
 Regla: cada paso termina con una **confirmación**, una **entrada en la bitácora** ([`docs/bitacora.md`](docs/bitacora.md)) y un **commit**.
 
-> **Paso actual: 62g, esperando el aviso de Camilo** (fase M2, `rl_v1.2` con todos los motores ≤ 80 %; 63–65 pospuestos; pendientes de revisión del usuario: 49, 56, 58 y 58b; silbato pospuesto en 68b) · Objetivo vigente: **caminata por RL para la Carrera Individual de la Copa NAO CCM MX 2026 (3 de noviembre de 2026)**,
+> **Paso actual: fase M2 terminada (`rl_v1.2`); revisión visual de Camilo y decidir lo siguiente** (fase M2, `rl_v1.2` con todos los motores ≤ 80 %; 63–65 pospuestos; pendientes de revisión del usuario: 49, 56, 58 y 58b; silbato pospuesto en 68b) · Objetivo vigente: **caminata por RL para la Carrera Individual de la Copa NAO CCM MX 2026 (3 de noviembre de 2026)**,
 > más rápida que las caminatas de **B-Human** y **NAOqi** (tres carriles de comparación), con visión de carril y portable al repo final **PenaltyStack**.
 > Diseño: [`docs/plan_rl_carrera.md`](docs/plan_rl_carrera.md) · Repo final: [`docs/integracion_penaltystack.md`](docs/integracion_penaltystack.md) · Historial, errores y soluciones: [`docs/bitacora.md`](docs/bitacora.md).
 
@@ -251,11 +251,28 @@ del equipo.
     (`rl_v1.1`: 109 %). 0 caídas en la batería; en el entrenamiento empiezan salidas de carril. Se cumple la segunda
     rama del criterio: no baja lo suficiente, así que se ajusta. Se agrega el modo `instante` (castigo por paso de
     24 ms: Σ max(0, x − u²), con señal más directa) y el 62g prueba los dos modos con varios pesos.
-- [ ] **62g. Barrido pequeño** (4 agentes × 4M pasos: `media` −1.0 e `instante` −0.3, −0.5 y −0.8; ~2 h 20 min)
+- [!] **62g. Barrido pequeño** (4 agentes × 4M pasos: `media` −1.0 e `instante` −0.3, −0.5 y −0.8; ~2 h 20 min)
   con selección por checkpoint y el filtro del 80 %. **Se lanza cuando Camilo avise** — ✅ Al menos un agente con 0 faltas y todas sus articulaciones ≤ 80 % en la batería completa
-- [ ] **62h. `rl_v1.2`**: guardar en `policies/rl_v1.2/`; batería del benchmark de 3 carriles, análisis de motores y
+  - Hecho (2026-10-14, 02:39–04:22; `results/barridos/esfuerzo_v12/tabla.md`): **criterio no cumplido**. Ningún
+    agente pasa el filtro completo. El mejor, `agente_000` (`instante` −0.5), en su checkpoint de 4M tiene solo
+    2/44 faltas: una caída en la salida de −25° y una corrida al 80.x %. Sus rodillas quedan al 74–76 % en
+    promedio (antes 96–97 %) y el tiempo en 11.63 s (`rl_v1.1`: 11.26 s). Seguía mejorando: tenía 41 faltas en
+    3M. El modo `media` y el peso −0.3 no bajan el esfuerzo; el −0.8 oscila y es más lento (12.5 s).
+- [x] **62g2. Seguir entrenando al mejor del 62g**: `agente_000`, 3M pasos más desde su checkpoint de 4M, con el
+  mismo castigo (`instante` −0.5), evaluando cada 0.5M con la batería completa (`scripts/barrido_esfuerzo.py
+  --base`) — ✅ Un checkpoint con 0 faltas y todas las articulaciones ≤ 80 % en las 44 corridas
+  - Hecho (2026-10-14, 04:25–04:43; `results/barridos/esfuerzo_v12_cont/tabla.md`): **cumple**. Pasan los checkpoints
+    de 2M (peor 76.0 %, 11.79 s) y 3M (peor 78.8 %, 11.52 s; puntaje 11.78 s). Se elige el de 3M por la regla de la
+    sección 11.4 (menor puntaje). El de 2M queda anotado como alternativa con más margen. Los de 0.5M, 1.5M y 2.5M
+    tienen faltas: la política oscila, como en E48 y E54.
+- [x] **62h. `rl_v1.2`**: guardar en `policies/rl_v1.2/`; batería del benchmark de 3 carriles, análisis de motores y
   dashboard actualizados; README, bitácora y `docs/paper/` — ✅ 0 faltas y **todas las articulaciones ≤ 80 % en las
   25 corridas** (no solo en promedio); tiempo comparado con `rl_v1.1`, B-Human y NAOqi
+  - Hecho (2026-10-14, 04:44–04:50): `policies/rl_v1.2/`. **Batería del benchmark** (`results/carrera/rl_v1.2/benchmark_vx0.45/`):
+    25/25 metas, 0 caídas, 0 salidas, **0/25 corridas sobre el 80 %** (peor 77 %, RHipPitch), 10.91 s de media
+    (10.71–11.0), contra 10.7 s de `rl_v1.1` y 16.2–18.3 s de B-Human. Desvío máximo 11–18 cm (`rl_v1.1`: 5–7 cm).
+    `riesgo_motores.py`: rodillas 70–72 % y tobillos 60–65 % (`rl_v1.1`: 97–105 %). Dashboard con la v1.2 y la línea
+    del 80 %. Visor: `uv run python demo/caminatas/carrera_vivo.py --rl-vx 0.45` (usa `rl_v1.2` por defecto).
 
 - [ ] **63. Ronda 3: 5 agentes** *(pospuesto el 2026-10-13 hasta tener `rl_v1.2`)* (~20M pasos) con domain randomization completa, cámara renderizada y escena de 3 carriles con vecinos → campeón — ✅ Campeón con 0 faltas en la batería y tiempo comparado con B-Human y NAOqi
 - [ ] **64. Ciclo de generaciones** *(pospuesto el 2026-10-13)*: lo aprendido define nuevos rangos y una nueva base — ✅ Cada generación documentada en la bitácora y en la tabla del README

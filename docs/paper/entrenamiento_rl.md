@@ -654,6 +654,78 @@ media de 1 s, a la política le cuesta saber qué acción causó el castigo. Por
 Comando:
 `uv run python scripts/barrido_esfuerzo.py --nombre esfuerzo_v12 --agentes 0.5:instante 1.0:media 0.3:instante 0.8:instante --pasos 4000000 --checkpoints 4`.
 
+**Resultado del barrido (paso 62g, 2026-10-14, 02:39–04:22)** [`results/barridos/esfuerzo_v12/tabla.md`], con la
+batería completa (44 corridas: perturbaciones, salidas torcidas, `vx_cmd` 0.45) en cada checkpoint:
+
+| Agente | Castigo (modo, peso) | 1M | 2M | 3M | 4M | Elegido |
+|---|---|---|---|---|---|---|
+| `agente_000` | `instante`, −0.5 | 44 / 106 % / 12.50 s | 44 / 96 % / 11.68 s | 41 / 96 % / 11.82 s | **2 / 105 % / 11.63 s** | 4M: 1 caída (salida −25°, μ 1.0, a 1.4 s) + 1 corrida al 80.x % |
+| `agente_001` | `media`, −1.0 | 44 / 108 % | 44 / 102 % | 44 / 101 % | 44 / 103 % | No baja |
+| `agente_002` | `instante`, −0.3 | 44 / 106 % | 44 / 110 % | 44 / 102 % | 44 / 105 % | No baja |
+| `agente_003` | `instante`, −0.8 | 44 / 113 % / 12.54 s | 44 / 88 % / 12.59 s | 15 / 94 % / 12.54 s | 21 / 110 % / 12.57 s | Oscila; más lento |
+
+Cada celda: faltas de 44 (con el filtro del 80 %) / peor esfuerzo / tiempo medio. Base `rl_v1.1`: 44 / 109 % / 11.26 s.
+
+**Lectura:**
+- el modo `media` no sirve, igual que en la prueba: la política no asocia el castigo con sus acciones;
+- con el modo `instante`, el peso decide:
+  - −0.3 es muy débil;
+  - −0.5 baja rodillas y tobillos a 63–76 % de media, perdiendo solo 0.4 s;
+  - −0.8 baja el esfuerzo antes (88 % en 2M), pero oscila y la marcha se vuelve más lenta (12.5 s);
+- `agente_000` en 4M, esfuerzo medio por articulación (%): LKneePitch 74.4, RKneePitch 76.1, LAnklePitch 71.3,
+  RAnklePitch 62.9, LHipPitch 55.5, RHipPitch 65.2 y el resto bajo 46. Máximo de la batería: 105 % (RAnklePitch), en
+  la corrida que se cae a los 1.4 s; con tan poco tiempo, el arranque pesa mucho en el RMS;
+- ningún agente pasa el filtro completo, así que el 62g queda `[!]`. Como en la ronda 2, se sigue entrenando al mejor
+  (paso 62g2).
+
+**Continuación del mejor (paso 62g2, 2026-10-14, 04:25–04:43)** [`results/barridos/esfuerzo_v12_cont/tabla.md`]:
+`agente_000`, 3M pasos más desde su checkpoint de 4M, con el mismo castigo (`instante` −0.5) y la semilla +1000,
+evaluado cada 0.5M con la batería completa. Primero se reevaluó su checkpoint de 4M y dio idéntico (2 faltas,
+105.1 %, 11.63 s): la evaluación es reproducible.
+
+| Checkpoint (sobre los 4M) | Faltas / 44 | Corridas > 80 % | Peor esfuerzo | Tiempo medio | Puntaje |
+|---|---|---|---|---|---|
+| 0.5M | 5 | 5 | 104.7 % | 11.74 s | — |
+| 1.0M | 1 | 1 | 86.7 % | 11.78 s | — |
+| 1.5M | 7 | 1 | 84.1 % | 11.66 s | — |
+| **2.0M** | **0** | **0** | **76.0 %** | 11.79 s | 12.07 s |
+| 2.5M | 4 | 2 | 82.9 % | 11.69 s | — |
+| **3.0M (elegido)** | **0** | **0** | **78.8 %** | **11.52 s** | **11.78 s** |
+
+La política sigue oscilando entre checkpoints (E48, E54), y por eso se evalúa cada uno. Por la regla de la sección
+11.4 se elige el de 3M (menor puntaje). El de 2M tiene más margen (76 %) y es 0.27 s más lento: queda como
+alternativa. **Total sobre `rl_v1.1`: 7M pasos** (4M + 3M), ~45 min de entrenamiento.
+
+**`rl_v1.2` (paso 62h)** = checkpoint de 3M de `runs/esfuerzo_esfuerzo_v12_cont_000`, en `policies/rl_v1.2/`.
+- Batería del benchmark (con visión, sin perturbaciones, μ 0.4–1.2 × 5 semillas, `vx_cmd` 0.45): 25/25 metas en
+  10.91 s de media (10.71–11.0), 0 faltas, **0/25 sobre el 80 %** (peor 77 %, RHipPitch).
+- **Costo en rectitud:** desvío máximo de 11–18 cm, contra 5–7 cm de `rl_v1.1`. No se sale (le quedan ~17 cm al pie),
+  pero va menos recta. Es la principal pérdida de esta versión.
+
+Comparación de motores (`results/riesgo_motores/riesgo.json`, regenerado el 2026-10-14; las corridas anteriores dan
+idéntico, con diferencia 0.0 en el par RMS, así que el cambio de `_paso_fisica` no alteró la física):
+
+| Medida (μ 0.8, sin perturbaciones, 3 semillas; `riesgo_motores.py`) | `rl_v1.1` | **`rl_v1.2`** | B-Human |
+|---|---|---|---|
+| Calor: par RMS / par continuo, rodillas (izq. / der.) | 101 / 97 % | **70 / 72 %** | 70 / 67 % |
+| Calor: tobillos pitch (izq. / der.) | 100 / 105 % | **60 / 65 %** | 44 / 40 % |
+| Calor: caderas pitch (izq. / der.) | 66 / 63 % | **60 / 74 %** | 53 / 55 % |
+| Velocidad p99 de las rodillas (máximo del motor: 6.96 rad/s) | 7.4 / 7.9 rad/s | 5.9 / 7.3 rad/s | 4.9 / 4.7 rad/s |
+| % del tiempo de la rodilla fuera de la curva par–velocidad | 10.7 / 16.4 % | 2.9 / 7.5 % | 0.1 / 0 % |
+| Impacto pico del pie | 2.32 × peso | 2.58 × peso | 2.05 × peso |
+| Energía mecánica por metro | 57.4 J/m | 49.7 J/m | 36.0 J/m |
+| Hombro izquierdo a < 3° de su tope | 94 % | 95 % | 0 % |
+| Tiempo en 5 m | 10.68 s | 10.94 s | 16.4 s |
+
+Lectura:
+- el castigo hace lo pedido: el calor de rodillas y tobillos baja a niveles de B-Human;
+- además mejoran, sin que se pidiera, la velocidad de la rodilla, el tiempo fuera de la curva del motor y la
+  energía;
+- empeora el impacto del pie (2.3 → 2.6 × peso);
+- el hombro izquierdo sigue apoyado contra su tope (pendiente desde el análisis del 2026-10-13);
+- la rodilla derecha todavía pasa la velocidad máxima del motor en el p99 (7.3 contra 6.96 rad/s): queda para un RL
+  más pesado, con el límite de velocidad.
+
 ## 13. Fallos y callejones de este entrenamiento
 
 | ID | Qué pasó | Qué se hizo |

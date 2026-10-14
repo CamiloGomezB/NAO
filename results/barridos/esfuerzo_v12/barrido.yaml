@@ -1,0 +1,12 @@
+nombre: esfuerzo_v12
+agentes:
+- 0.5:instante
+- 1.0:media
+- 0.3:instante
+- 0.8:instante
+pasos: 4000000
+checkpoints: 4
+n_envs: 16
+eval_vx: 0.45
+base: policies/rl_v1.1
+umbral_esfuerzo: 0.75

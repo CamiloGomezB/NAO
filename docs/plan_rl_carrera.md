@@ -422,6 +422,10 @@ B-Human queda en 67–71 % y NAOqi en ≤ 61 %. Una carrera de 10 s no daña el 
 **En la selección** (`scripts/barrido.py`, `puntaje`): una corrida con alguna articulación > 80 % es **falta**, igual
 que una caída o una salida. Descarta al agente.
 
+**Resultado (2026-10-14):** `rl_v1.2` cumple. En el benchmark tiene 0/25 corridas sobre el 80 % (peor 77 %), llega en
+10.9 s (`rl_v1.1`: 10.7 s) y tiene un desvío de hasta 18 cm. Se usa el modo `instante` con peso −0.5: el modo `media`
+no bajó el esfuerzo. Detalle en `docs/paper/entrenamiento_rl.md`, sección 12g.
+
 **Qué queda para después.** Esta primera versión es liviana y la decidió Camilo así: ajuste fino de `rl_v1.1`, solo
 castigo, misma observación de 54 valores. Para un RL más pesado quedan:
 - la corriente de los motores en la observación (contrato v2; el NAO la entrega por ALMemory);

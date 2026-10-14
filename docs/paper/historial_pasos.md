@@ -474,7 +474,7 @@ noviembre de 2026.
   - en la batería del benchmark, 10.7 s contra 16.2–18.3 s de B-Human;
   - ganan los pesos `seguimiento_vx`, `barrera_margen`, `cambio_accion` y `salida_carril`.
 
-### Fase M2 — `rl_v1.2`: motores ≤ 80 % del par continuo (2026-10-13, en curso)
+### Fase M2 — `rl_v1.2`: motores ≤ 80 % del par continuo (2026-10-13 y 14)
 - **Motivo:** en simulación, `rl_v1.0` y `rl_v1.1` llevan rodillas y tobillos al 96–110 % del par continuo del motor
   real, contra B-Human (≤ 71 %) y NAOqi (≤ 61 %). Camilo decidió sacrificar velocidad para cuidar el robot en las
   prácticas. Versión liviana: solo castigo y filtro, en ajuste fino de `rl_v1.1`.
@@ -487,7 +487,16 @@ noviembre de 2026.
   - verificación: coincide exactamente con `riesgo_motores.py` (E56) y `check_race_env.py` da OK (E55).
 - **Paso 62f (prueba, 1M pasos, peso −1.0 sobre la media de 1 s):** el castigo bajó de −1.7 a −1.45 por paso, pero el
   peor motor sigue en 108 %. Se agrega el modo `instante` (castigo por paso de 24 ms).
-- **Errores:** E55, E56 y E57.
+- **Paso 62g (barrido, 4 agentes × 4M) `[!]`:** ninguno pasa el filtro completo. El mejor, `instante` −0.5, queda en
+  2/44 faltas. El modo `media` y el peso −0.3 no bajan el esfuerzo; el −0.8 oscila.
+- **Paso 62g2 (continuación del mejor, 3M):** cumple en los checkpoints de 2M y 3M; se elige el de 3M (peor 78.8 %,
+  puntaje 11.78 s).
+- **Paso 62h (`rl_v1.2`):**
+  - resultado: benchmark 25/25 en 10.91 s, 0/25 sobre el 80 % (peor 77 %); rodillas 70–72 % y tobillos 60–65 %
+    (`rl_v1.1`: 97–105 %); desvío de hasta 18 cm;
+  - verificación: benchmark, `riesgo_motores.py` y visor con la cámara renderizada (`carrera_vivo.py --captura`);
+  - commit: pendiente (lo hace Camilo).
+- **Errores:** E55, E56, E57 y E58.
 
 ## Trabajo de documentación (sin número de paso, 2026-10-10)
 
