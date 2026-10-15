@@ -2033,3 +2033,138 @@ Cada celda: faltas de 44 (con el filtro del 80 %) / peor esfuerzo / tiempo medio
   - revisión visual: `uv run python demo/caminatas/carrera_vivo.py --rl-vx 0.45`. Ver que llegue al centro de su
     carril, como B-Human, y que no pise fuerte;
   - decidir lo siguiente.
+
+### 2026-10-15 — Visor de la carrera: tecla R para reiniciar
+- **Autor:** Claude Code, a pedido de Camilo ("agregame un boton R para reiniciar").
+- **Qué se hizo:** en `demo/caminatas/carrera_vivo.py`, la tecla **R** reinicia la carrera sin cerrar el visor. Los
+  3 robots vuelven a la salida con las mismas opciones (versión del RL, `--rl-vx`, `--mu`, semilla, visión). El
+  callback del visor (`key_callback` de `mujoco.viewer.launch_passive`) solo marca el pedido, porque corre en el hilo
+  del visor. El bucle principal vuelve a crear los corredores y los mapas de la escena y pone el reloj en 0. ESPACIO
+  sigue pausando.
+- **Verificación:**
+  - con un visor simulado, se oprimió R a mitad de la prueba. El RL, que ya estaba en la meta (x = 4.97 m), volvió a
+    x = 0.02 m y corrió otra vez hasta la meta en 11.7 s;
+  - `--captura` sigue funcionando.
+- **Siguiente:** sin cambios. Revisión visual de `rl_v1.2.1` por Camilo y decidir lo siguiente.
+
+### 2026-10-15 — Perfiles de velocidad de los motores (gráfica y dashboard)
+- **Autor:** Claude Code, a pedido de Camilo ("perfiles de velocidad de los motores?" y "dámelo para el dashboard").
+- **Qué se hizo:**
+  - `scripts/perfiles_velocidad.py` registra la velocidad de rodillas y tobillos (pitch) cada 2 ms, con el mismo
+    mecanismo que `riesgo_motores.py`. Corre `rl_v1.2.1`, B-Human y `rl_v1.1` con μ 0.8, semilla 1000, visión y el RL a
+    0.45 m/s;
+  - guarda 2 s de marcha estable y el resumen de toda la corrida (p99, máximo y % del tiempo sobre la velocidad máxima
+    del motor, 6.96 rad/s) en `results/esfuerzo_motores/perfiles_velocidad.{json,png}`. La paleta es la validada de la
+    guía de visualización;
+  - dashboard, pestaña Motores: tarjeta "Perfiles de velocidad de rodillas y tobillos" con 4 paneles (líneas por
+    caminata, líneas del máximo del motor, cruz con tooltip de los valores en cada instante) y una tabla con el resumen.
+- **Resultado** (p99 en rad/s / % del tiempo sobre el máximo del motor):
+  - rodillas: `rl_v1.1` 7.4–7.9 / 2.9–7.2 %; `rl_v1.2.1` 5.0–5.2 / 0–0.1 %; B-Human 4.6–5.0 / 0 %;
+  - tobillos: los tres entre 3.6 y 4.4, sin pasar el máximo (salvo 0.2 % de `rl_v1.2.1` en el tobillo derecho).
+- **Arreglo de paso:** en una ventana angosta, la tabla "Motores reales del NAO V6" desbordaba la página a lo ancho. Se
+  envolvió en `.nx-wrap` y los elementos de las cuadrículas llevan `min-width: 0`. Verificado: sin desborde y sin errores
+  en la consola.
+- **Siguiente:** sin cambios. Revisión visual de `rl_v1.2.1` por Camilo.
+
+### 2026-10-15 — Visor de la carrera: panel para cambiar los datos sin volver a ejecutar
+- **Autor:** Claude Code, a pedido de Camilo ("poder cambiar datos sin tener que ejecutar una nueva línea de código").
+- **Qué se hizo:**
+  - `demo/caminatas/panel_controles.py`, archivo nuevo: ventana "Controles de la carrera" (tkinter) con:
+    - versión del RL (todas las de `policies/`, de la más nueva a la más vieja);
+    - velocidad pedida (0.15–0.55 m/s), fricción (0.4–1.2) y semilla;
+    - colocación a mano (±15 cm, ±25°);
+    - visión (cámara, simulada o sin visión);
+    - velocidad de reproducción, que se aplica al instante.
+
+    "Aplicar y reiniciar" copia los valores y reinicia; "Reiniciar (R)" repite la carrera con los datos actuales;
+  - `demo/caminatas/carrera_vivo.py`:
+    - la carrera se arma desde un `estado` que empieza con las opciones del comando y que cambia el panel;
+    - el texto del visor muestra la versión y la velocidad del RL;
+    - si se pasa a visión con cámara, se abre la ventana de las cámaras;
+    - `--sin-panel` quita la ventana de controles.
+
+  El panel corre en el hilo principal: el bucle del visor llama a `actualizar()` en cada vuelta, igual que con la ventana
+  de las cámaras.
+- **Verificación:**
+  - con un visor simulado y el panel oculto, a mitad de la carrera se cambió a `rl_v1.1`, 0.50 m/s, μ 0.6, visión
+    simulada y salida a mano +10 cm. Al aplicar, el RL se creó con esos valores (modelo `rl_v1.1`, μ 0.6, `vx_cmd` 0.5,
+    y0 = 9.9 cm) y el texto del visor los mostró;
+  - la reproducción pasó a 2x sin reiniciar. Primero no se aplicaba si el valor cambiaba sin arrastrar el control; se
+    corrigió con `trace_add`;
+  - captura de la ventana revisada.
+- **Siguiente:** sin cambios. Revisión visual de `rl_v1.2.1` por Camilo (ahora puede comparar versiones desde el panel).
+
+### 2026-10-15 — Panel de controles: el número de cada barra no cambiaba
+- **Autor:** Claude Code. Lo reportó Camilo: "los números no cambian, solo se mueven las barritas".
+- **Causa:** el valor de cada barra se actualizaba con el `command` de `ttk.Scale`, que no siempre se llama al
+  arrastrar. La barra se movía, pero el número quedaba quieto.
+- **Solución** (`demo/caminatas/panel_controles.py`):
+  - el valor se actualiza con `trace_add` sobre la variable de la barra, así cambia con cualquier movimiento;
+  - el número va a la izquierda, junto al nombre ("Fricción del piso (μ): 1.20");
+  - aviso nuevo "Sin aplicar: …" cuando lo que muestra el panel todavía no está en la pista;
+  - los valores se redondean a su paso al aplicar.
+- **Verificación:**
+  - se arrastró la barra de fricción con eventos de ratón reales. El número pasó de 1.00 a 1.20, apareció "Sin aplicar:
+    fricción" y, al aplicar, el estado quedó en 1.2 y el aviso se borró;
+  - la prueba completa del visor (cambio de versión, velocidad, fricción, visión y colocación) sigue dando OK.
+
+### 2026-10-15 — Visor: arranca quieto y flujo Aplicar → Reiniciar → Iniciar
+- **Autor:** Claude Code, a pedido de Camilo.
+- **Pedido:**
+  - que baste con ejecutar el archivo (sin `--rl-vx 0.45` ni otras opciones), porque los valores del comando confundían
+    con los del panel y "no se aplicaban los cambios";
+  - que los robots esperen quietos;
+  - tres botones: aplicar, reiniciar ("en sus marcas") e iniciar ("el arranque").
+- **Qué se hizo:**
+  - `demo/caminatas/carrera_vivo.py`:
+    - `--rl-vx` vale 0.45 por defecto (antes 0.40), así que `uv run python demo/caminatas/carrera_vivo.py` ya abre como
+      en las pruebas;
+    - con el panel, la carrera abre **quieta**: el reloj no avanza hasta "Iniciar";
+    - "Reiniciar" (o R) pone a los robots en la salida, también quietos;
+    - el texto del visor dice "EN SUS MARCAS: Iniciar en el panel";
+    - con `--sin-panel` arranca sola, como antes.
+  - `demo/caminatas/panel_controles.py`:
+    - botones **1. Aplicar** (guarda los valores, no toca a los robots), **2. Reiniciar (R)** y **3. Iniciar**. Iniciar
+      solo se activa en sus marcas;
+    - cuatro líneas de estado: la fase (EN SUS MARCAS / CORRIENDO / TERMINADA), lo que está **en pista**, lo
+      **aplicado que falta reiniciar** (azul) y lo **sin aplicar** (naranja);
+    - al aplicar, la terminal imprime lo aplicado.
+- **Verificación** (visor simulado, con la ventana de cámaras abierta pero oculta, para probar las dos ventanas de
+  tkinter juntas):
+  - abre en sus marcas sin avanzar;
+  - fricción a 0.4 → "Sin aplicar: fricción";
+  - Aplicar → "Aplicado, falta Reiniciar" y en pista sigue μ 1.00;
+  - Reiniciar → el RL se crea con μ 0.4, en pista μ 0.40, fase "EN SUS MARCAS";
+  - Iniciar → "CORRIENDO".
+
+  Se corrigió que después de Reiniciar la fase quedaba en "REINICIANDO…". Captura de la ventana revisada.
+
+### 2026-10-15 — Panel del visor: "Aplicar" no tomaba los cambios (E60), corregido
+- **Autor:** Claude Code. Lo reportó Camilo, con la salida de su terminal.
+- **Problema:** cada "Aplicar" tomaba los valores iniciales (μ 1.00, 0.45 m/s) aunque se movieran las barras.
+- **Causa y solución (E60):** las variables de tkinter del panel se creaban en el `Tk` de la ventana de las cámaras
+  (matplotlib), no en el del panel. Ahora todas llevan `master` explícito.
+- **Verificación:**
+  - con una figura de matplotlib abierta antes del panel, se arrastraron la fricción y la velocidad y se cambió la
+    versión, y "Aplicar" tomó rl_v1.1, 0.34 m/s y μ 0.45;
+  - el código anterior, en la misma prueba, reproduce el error;
+  - la prueba completa Aplicar → Reiniciar → Iniciar sigue en OK.
+
+### 2026-10-15 — Visor: la cámara de NAOqi no se veía en la ventana de cámaras
+- **Autor:** Claude Code. Lo reportó Camilo: "la visión del NAOqi siempre está apagada" en la ventana, aunque el robot sí
+  corregía con ella.
+- **Diagnóstico:**
+  - en una prueba del visor completo, la cámara de NAOqi sí funciona y se dibuja;
+  - con el nuevo flujo (en sus marcas hasta "Iniciar"), B-Human y NAOqi no tomaban foto hasta caminar, y su panel decía
+    "sin camara (vision apagada o simulada)". Era un mensaje engañoso;
+  - ninguna ventana tenía posición fija, así que el visor 3D de MuJoCo, que se abre después, podía tapar el panel de la
+    derecha (NAOqi) de la ventana de cámaras.
+- **Qué se hizo** (`demo/caminatas/carrera_vivo.py`, `demo/caminatas/panel_controles.py`):
+  - B-Human y NAOqi toman su primera foto al colocarse, así que las 3 cámaras se ven desde "en sus marcas";
+  - mensajes: "vision apagada o simulada: no hay imagen" solo cuando lo está, y "esperando la primera foto..." si
+    todavía no hay;
+  - la ventana de cámaras va arriba a la izquierda (x 8–1358) y el panel a la derecha (x 1448–1907), sin taparse.
+- **Efecto secundario:** la foto inicial consume un número aleatorio más del ruido de pose de la cámara, así que en el
+  visor las corridas de B-Human y NAOqi cambian un poco respecto a antes. El benchmark no cambia: es otro script.
+- **Verificación:** con el visor completo, antes de "Iniciar" las 3 cámaras tienen imagen, y corriendo también (NAOqi
+  con su estimación de d y psi).

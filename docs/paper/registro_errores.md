@@ -1096,3 +1096,27 @@ para la visión, el trabajo de Daniel en [danielpaya/nao_linea](https://github.c
     (`rl_v1.1` 8.4 cm, `rl_v1.2` 17.7 cm); en la batería del benchmark, sin perturbaciones, cada corrida con
     desvío ≤ 10 cm, ≤ 80 % y meta;
   - ajuste fino desde un checkpoint recto, con un castigo de centrado más fuerte → `rl_v1.2.1` (al principio se llamó `rl_v1.3`; Camilo la renombró).
+
+### E60 — Panel de controles del visor: "Aplicar" siempre tomaba los valores iniciales
+- **Fecha / paso:** 2026-10-15, herramienta del visor (`demo/caminatas/panel_controles.py`), sin número de paso. Lo vio
+  Camilo: "se queda la primera opción que uno eligió".
+- **Síntoma:** por más que se movieran las barras, cada "Aplicar" imprimía lo mismo:
+  ```
+  Aplicado: rl_v1.2.1 · 0.45 m/s · μ 1.00 · semilla 1000 · visión camara. Pulsa Reiniciar para ponerlo en pista.
+  Aplicado: rl_v1.2.1 · 0.45 m/s · μ 1.00 · semilla 1000 · visión camara. Pulsa Reiniciar para ponerlo en pista.
+  Aplicado: rl_v1.2.1 · 0.45 m/s · μ 1.00 · semilla 1000 · visión camara. Pulsa Reiniciar para ponerlo en pista.
+  ```
+  Antes, con el panel de un solo botón, los números junto a las barras tampoco cambiaban.
+- **Causa:** en el programa hay dos `Tk`: la ventana de las cámaras (matplotlib, que se crea primero) y el panel. Las
+  variables de tkinter (`DoubleVar`, `StringVar`, …) creadas sin `master` van al **primer** `Tk` del programa, que es
+  el de matplotlib. Las barras del panel escribían en el `Tk` del panel y el código leía del de matplotlib, donde los
+  valores nunca cambiaban.
+  - Las pruebas anteriores no lo vieron: o no había ventana de cámaras, o cambiaban los valores por código.
+  - Reproducido con el código anterior y una figura de matplotlib abierta antes del panel: después de arrastrar la
+    barra de fricción, `Aplicado: … μ 1.00`.
+- **Solución:** todas las variables del panel llevan `master=r`, la raíz del panel.
+- **Verificación:** con una figura de matplotlib abierta antes, se arrastraron con eventos de ratón reales la fricción
+  y la velocidad y se eligió otra versión en la lista. Resultado: `Aplicado: rl_v1.1 · 0.34 m/s · μ 0.45 · …`. La prueba
+  completa del visor (Aplicar → Reiniciar → Iniciar) sigue dando OK.
+- **Lección:** con más de un `Tk` en el mismo programa, toda variable de tkinter necesita su `master` explícito. Las
+  pruebas de una interfaz tienen que usar la misma configuración que el uso real (aquí, con la ventana de cámaras).

@@ -17,6 +17,7 @@
   .nx-tile .big { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; }
   .nx-tile .sub { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
   .nx-grid { display: grid; gap: var(--cds-gap-md); grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); }
+  .nx-grid > *, .nx-perfiles > * { min-width: 0; }   /* que una tabla ancha no estire la columna (scroll dentro de .nx-wrap) */
   .nx-card h2 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0 0 var(--cds-gap-xs); text-wrap: balance; }
   .nx-card p.note { margin: 0 0 var(--cds-gap-sm); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
   .nx-chart { position: relative; min-height: 260px; }
@@ -32,6 +33,9 @@
   .nx-table td.num, .nx-table th.num { text-align: right; }
   .nx-pill { display: inline-block; padding: 0 var(--cds-pad-xs); border-radius: var(--cds-radius); font-size: var(--cds-font-size-caption); border: 1px solid currentColor; }
   .nx-pill.ok { color: var(--color-ok); } .nx-pill.warn { color: var(--color-warn); } .nx-pill.bad { color: var(--color-bad); }
+  .nx-perfiles { display: grid; gap: var(--cds-gap-md); grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); }
+  .nx-perfiles .nx-chart { min-height: 220px; }
+  .nx-perfiles h3 { margin: 0 0 var(--cds-gap-xs); font-size: var(--cds-font-size-body); font-weight: var(--cds-font-weight-medium); }
   .nx-legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin-bottom: var(--cds-gap-xs); }
   .nx-legend span::before { content: ""; display: inline-block; width: .7rem; height: .7rem; border-radius: 2px; margin-right: .3rem; vertical-align: -1px; background: var(--sw); }
   .nx-risk { display: grid; gap: var(--cds-gap-xs); }
@@ -170,6 +174,20 @@
       <div class="nx-legend" id="lg-calor" data-source="riesgo"></div>
       <div class="nx-chart" id="ch-calor" data-source="riesgo"></div>
     </div>
+    <div class="nx-card" id="card-perfiles">
+      <h2>Perfiles de velocidad de rodillas y tobillos</h2>
+      <p class="note">Velocidad de cada articulación en 2 s de marcha estable (fricción 0.8, semilla 1000, con visión; RL a 0.45 m/s). Línea roja: velocidad máxima del motor real sin carga; por encima, el motor no puede seguir la orden. Pasa el ratón para ver los valores.</p>
+      <div class="nx-legend" id="lg-perfiles" data-source="perfiles_vel"></div>
+      <div class="nx-perfiles" id="ch-perfiles" data-source="perfiles_vel"></div>
+      <div class="nx-wrap" style="margin-top: var(--cds-gap-md)">
+        <table class="nx-table" id="tb-perfiles" data-source="perfiles_vel_resumen">
+          <thead><tr><th data-field="caminata">Caminata</th><th data-field="articulacion">Articulación</th>
+            <th class="num" data-field="p99_rad_s">Vel. p99 [rad/s]</th><th class="num" data-field="max_rad_s">Vel. máx. [rad/s]</th>
+            <th class="num" data-field="pct_sobre_max">% del tiempo sobre el máx. del motor</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
     <div class="nx-grid">
       <div class="nx-card" id="card-vel">
         <h2>Velocidad de las articulaciones pitch</h2>
@@ -179,12 +197,14 @@
       <div class="nx-card" id="card-motores-reales">
         <h2>Motores reales del NAO V6</h2>
         <p class="note">Par en la articulación sin la pérdida del engranaje: el real es algo menor.</p>
-        <table class="nx-table" data-source="motores_reales" data-row-key="articulaciones" id="tb-motores">
-          <thead><tr><th data-field="articulaciones">Articulaciones</th><th data-field="motor">Motor</th><th class="num" data-field="reductora">Reductora</th>
-            <th class="num" data-field="par_parada_Nm">Parada [N·m]</th><th class="num" data-field="par_continuo_Nm">Continuo [N·m]</th>
-            <th class="num" data-field="vel_max_rad_s">Vel. máx. [rad/s]</th></tr></thead>
-          <tbody></tbody>
-        </table>
+        <div class="nx-wrap">
+          <table class="nx-table" data-source="motores_reales" data-row-key="articulaciones" id="tb-motores">
+            <thead><tr><th data-field="articulaciones">Articulaciones</th><th data-field="motor">Motor</th><th class="num" data-field="reductora">Reductora</th>
+              <th class="num" data-field="par_parada_Nm">Parada [N·m]</th><th class="num" data-field="par_continuo_Nm">Continuo [N·m]</th>
+              <th class="num" data-field="vel_max_rad_s">Vel. máx. [rad/s]</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
     </div>
     <div class="nx-card" id="card-riesgo-tabla">
@@ -594,12 +614,62 @@
     svg2.append('text').attr('x', x2(w0) - 4).attr('y', 8).attr('text-anchor', 'end').text(`máx. del motor ${nx.fmt2(w0)} rad/s`);
   }
 
+  function perfiles() {
+    const pv = dash.data('perfiles_vel'), pr = dash.data('perfiles_vel_resumen'), pm = dash.data('perfiles_vel_meta');
+    const box = document.getElementById('ch-perfiles');
+    if (pr.status === 'ok') {
+      nx.fill(document.querySelector('#tb-perfiles tbody'), pr.data, [['caminata'], ['articulacion'], ['p99_rad_s', 1, nx.fmt2],
+        ['max_rad_s', 1, nx.fmt2], ['pct_sobre_max', 1, nx.fmt1]]);
+    }
+    if (!visible('ch-perfiles') || pv.status !== 'ok' || !pv.data.length || pm.status !== 'ok') return;
+    const { w0_rad_s: w0, t0_s: t0, dt_s: dt } = pm.data[0];
+    const cams = [...new Set(pv.data.map((r) => r.caminata))];
+    const J = ['LKneePitch', 'RKneePitch', 'LAnklePitch', 'RAnklePitch'];
+    document.getElementById('lg-perfiles').replaceChildren(...cams.map((s) => { const e = document.createElement('span'); e.style.setProperty('--sw', COL[s]); e.textContent = s; return e; }));
+    const lim = Math.max(w0 * 1.15, 1.08 * d3.max(pv.data, (r) => d3.max(r.w, Math.abs)));
+    box.replaceChildren();
+    J.forEach((j) => {
+      const cel = document.createElement('div');
+      const h3 = document.createElement('h3'); h3.textContent = j;
+      const ch = document.createElement('div'); ch.className = 'nx-chart';
+      cel.append(h3, ch); box.appendChild(cel);
+      const series = cams.map((c) => ({ c, w: (pv.data.find((r) => r.caminata === c && r.articulacion === j) || { w: [] }).w }));
+      const n = d3.max(series, (s) => s.w.length);
+      const h = 220, W = ch.clientWidth, svg = nx.svg(ch, h);
+      const ml = 40, mr = 10, mt = 14, mb = 24;
+      const x = d3.scaleLinear([t0, t0 + (n - 1) * dt], [ml, Math.max(ml + 10, W - mr)]);
+      const y = d3.scaleLinear([-lim, lim], [h - mb, mt]);
+      svg.append('g').attr('transform', `translate(${ml},0)`).call(d3.axisLeft(y).ticks(5).tickSize(-(W - ml - mr)))
+        .attr('font-size', null).attr('font-family', null)
+        .call((g) => g.select('.domain').remove()).call((g) => g.selectAll('line').attr('stroke', 'var(--cds-chart-grid)'));
+      svg.append('g').attr('transform', `translate(0,${h - mb})`).call(d3.axisBottom(x).ticks(5).tickFormat((d) => `${d} s`))
+        .attr('font-size', null).attr('font-family', null).call((g) => g.select('.domain').attr('stroke', 'var(--cds-chart-axis)'));
+      [w0, -w0].forEach((v) => svg.append('line').attr('x1', ml).attr('x2', W - mr).attr('y1', y(v)).attr('y2', y(v))
+        .attr('stroke', 'var(--cds-chart-status-critical)').attr('stroke-dasharray', '4 3').attr('stroke-width', 1.5));
+      svg.append('text').attr('x', W - mr).attr('y', y(w0) - 4).attr('text-anchor', 'end').text(`máx. del motor ±${nx.fmt2(w0)} rad/s`);
+      const linea = d3.line().x((v, i) => x(t0 + i * dt)).y((v) => y(v));
+      series.forEach((s) => svg.append('path').attr('d', linea(s.w)).attr('fill', 'none').attr('stroke', COL[s.c])
+        .attr('stroke-width', 2).attr('stroke-linejoin', 'round'));
+      // Cruz y tooltip: el valor de cada caminata en el instante bajo el raton.
+      const cruz = svg.append('line').attr('y1', mt).attr('y2', h - mb).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-width', 1).style('display', 'none');
+      const tip = nx.tip(ch);
+      svg.append('rect').attr('x', ml).attr('y', mt).attr('width', Math.max(0, W - ml - mr)).attr('height', h - mt - mb).attr('fill', 'transparent')
+        .on('mousemove', (ev) => {
+          const [px] = d3.pointer(ev);
+          const i = Math.max(0, Math.min(n - 1, Math.round((x.invert(px) - t0) / dt)));
+          cruz.attr('x1', x(t0 + i * dt)).attr('x2', x(t0 + i * dt)).style('display', null);
+          tip.show(ev, [`${j} · ${nx.fmt2(t0 + i * dt)} s`, ...series.map((s) => `${s.c}: ${s.w[i] === undefined ? '—' : nx.fmt2(s.w[i])} rad/s`)]);
+        })
+        .on('mouseleave', () => { cruz.style('display', 'none'); tip.hide(); });
+    });
+  }
+
   function simulacion() {
     const s = dash.data('simulacion');
     if (s.status !== 'ok') return;
     nx.fill(document.querySelector('#tb-sim tbody'), s.data, [['grupo'], ['parametro'], ['valor'], ['por_que']]);
   }
 
-  window.nxDraw = () => { resumen(); benchmark(); versiones(); agentes(); motores(); simulacion(); };
+  window.nxDraw = () => { resumen(); benchmark(); versiones(); agentes(); motores(); perfiles(); simulacion(); };
   dash.onData(window.nxDraw);
 </script>

@@ -21,7 +21,11 @@ robots vecinos (demo/caminatas/choques.py, paso 48b). Con --vision camara (por d
 corrige su rumbo con SU camara renderizada y la vision de carril/; con --vision simulada se usa el modelo de
 error medido (sigma 1.6 cm y 1.2 deg), como en el benchmark.
 
-En el visor: ESPACIO pausa. Para reiniciar, cierra y vuelve a correr. Con el raton se mueve la camara.
+Uso normal: `uv run python demo/caminatas/carrera_vivo.py` (sin opciones). Abre con los 3 robots QUIETOS en sus marcas
+y la ventana "Controles de la carrera" (demo/caminatas/panel_controles.py), donde se elige version del RL, velocidad
+pedida, friccion, semilla, colocacion y vision. Paso a paso: 1. Aplicar, 2. Reiniciar (o tecla R) y 3. Iniciar. La
+velocidad de reproduccion se aplica al instante. Las opciones del comando solo cambian los valores iniciales;
+con --sin-panel no hay ventana de controles y la carrera arranca sola. ESPACIO pausa; con el raton se mueve la camara.
 macOS: usar `uv run mjpython -m demo.caminatas.carrera_vivo`.
 """
 import os
@@ -67,6 +71,8 @@ class CorredorClasico(object):
         rng = np.random.RandomState(seed + 7)
         self.vis = {"camara": lambda: VisionCamara(m, self.sim.d, self.sim.torso, pista, rng),
                     "simulada": lambda: VisionSimulada(rng), "no": lambda: None}[vision]()
+        if vision == "camara":
+            self.vis.medir()          # primera foto ya en sus marcas: la ventana de camaras la muestra antes de Iniciar
         self.resultado, self.t_fin = None, None
 
     @property
@@ -318,12 +324,19 @@ class VentanaCamaras(object):
         self.fig.tight_layout()
         if interactiva:
             plt.show(block=False)
+            try:                      # arriba a la izquierda: que el visor 3D y el panel no la tapen
+                self.fig.canvas.manager.window.wm_geometry("+0+0")
+            except Exception:  # noqa: BLE001  (otro backend de matplotlib)
+                pass
 
     def actualizar(self):
         for nombre, c in self.corredores.items():
             vis = c.vis
-            if vis is None or getattr(vis, "imagen", None) is None:
-                self.txt[nombre].set_text("sin camara (vision apagada o simulada)")
+            if vis is None or not hasattr(vis, "imagen"):
+                self.txt[nombre].set_text("vision apagada o simulada: no hay imagen")
+                continue
+            if vis.imagen is None:
+                self.txt[nombre].set_text("esperando la primera foto...")
                 continue
             self.im[nombre].set_data(vis.imagen)
             if vis.puntos is not None:
@@ -359,11 +372,12 @@ def agregar_argumentos(ap):
                     help="colocacion de los 3: girados a la izquierda (+) o derecha (-) [grados]")
     ap.add_argument("--velocidad", type=float, default=1.0, help="1 = tiempo real, 2 = el doble de rapido")
     ap.add_argument("--sin-camaras", action="store_true", help="no abrir la ventana 'Lo que ve cada NAO'")
+    ap.add_argument("--sin-panel", action="store_true", help="no abrir la ventana 'Controles de la carrera'")
     ap.add_argument("--rl", default=None,
                     help="modelo .zip de la politica de carrera (NaoRace-v0) para el carril central; por defecto "
                          "la politica de carrera mas nueva en policies/ (rl_v1.2.1, rl_v1.2, rl_v1.1, rl_v1.0, carrera_v02 o v01), si no la politica del sprint (checkpoints/)")
-    ap.add_argument("--rl-vx", type=float, default=0.40,
-                    help="vx_cmd de la politica de carrera [m/s] (perilla de seguridad; 0.40 = sin faltas en la bateria)")
+    ap.add_argument("--rl-vx", type=float, default=0.45,
+                    help="vx_cmd inicial de la politica de carrera [m/s] (0.45 = la de las baterias de rl_v1.1 en adelante)")
     ap.add_argument("--captura", default=None,
                     help="(pruebas, sin pantalla) guarda <ruta>.png del visor y <ruta>_camaras.png a los 8 s")
 
@@ -377,29 +391,40 @@ def main(argv=None):
     vision = "no" if a.sin_vision else a.vision
 
     from demo.caminatas.benchmark import inicio
-    d0, psi0 = inicio(a.semilla)
-    if a.inicio_d is not None:
-        d0 = a.inicio_d / 100.0
-    if a.inicio_psi is not None:
-        psi0 = math.radians(a.inicio_psi)
     pista = build_scene.build(build_scene.config_from_args(a))     # colores de config/pista.yaml (+ opciones)
-
-    print("Preparando los 3 robots (vision: %s, mu = %.2f, colocacion d = %+.1f cm, psi = %+.1f grados)..."
-          % (vision, a.mu, 100 * d0, math.degrees(psi0)))
     rl = a.rl or next((ROOT / "policies" / g / "model.zip" for g in ("rl_v1.2.1", "rl_v1.2", "rl_v1.1", "rl_v1.0", "carrera_v02", "carrera_v01")
                        if (ROOT / "policies" / g / "model.zip").exists()), ROOT / "policies" / "carrera_v01" / "model.zip")
-    if Path(rl).exists():                                      # politica de carrera con su propia camara (paso 58b)
-        print("RL: politica de carrera %s" % rl)
-        corredores = [CorredorRLCarrera(rl, a.mu, d0, psi0, vision, pista, a.semilla, a.rl_vx)]
-    else:                                                      # politica del sprint con el truco del giroscopio
-        print("RL: politica del sprint (checkpoints/best_model.zip)")
-        corredores = [CorredorRL(a.mu, d0, psi0, vision, pista, a.semilla)]   # primero el RL: importa torch antes que OpenGL
+    # Estado de la carrera: arranca con las opciones del comando y lo cambia el panel de controles.
+    estado = dict(rl=str(rl), vx=a.rl_vx, mu=a.mu, semilla=a.semilla, inicio_d=a.inicio_d, inicio_psi=a.inicio_psi,
+                  vision=vision, velocidad=a.velocidad)
+
+    def crear_corredores():
+        """Los 3 robots en la salida con los datos de `estado`. Se llama al empezar, con R y con el panel."""
+        e = estado
+        d0, psi0 = inicio(e["semilla"])
+        if e["inicio_d"] is not None:
+            d0 = e["inicio_d"] / 100.0
+        if e["inicio_psi"] is not None:
+            psi0 = math.radians(e["inicio_psi"])
+        print("Preparando los 3 robots (RL %s a %.2f m/s, vision: %s, mu = %.2f, colocacion d = %+.1f cm, psi = %+.1f grados)..."
+              % (Path(e["rl"]).parent.name, e["vx"], e["vision"], e["mu"], 100 * d0, math.degrees(psi0)))
+        if Path(e["rl"]).exists():                              # politica de carrera con su propia camara (paso 58b)
+            cs = [CorredorRLCarrera(e["rl"], e["mu"], d0, psi0, e["vision"], pista, e["semilla"], e["vx"])]
+        else:                                                    # politica del sprint con el truco del giroscopio
+            print("RL: politica del sprint (checkpoints/best_model.zip)")
+            cs = [CorredorRL(e["mu"], d0, psi0, e["vision"], pista, e["semilla"])]   # primero el RL: torch antes que OpenGL
+        return cs + [CorredorClasico(n, e["mu"], d0, psi0, e["vision"], pista, e["semilla"]) for n in ("bhuman", "naoqi")]
+
+    corredores = crear_corredores()
     import mujoco
-    corredores += [CorredorClasico(n, a.mu, d0, psi0, vision, pista, a.semilla) for n in ("bhuman", "naoqi")]
     m = escena_tres(mujoco)
     d = mujoco.MjData(m)
-    mapas = {c.nombre: mapa_qpos(mujoco, (c.env.model if c.nombre == "rl" else c.sim.m), m, PREFIJO[c.nombre])
-             for c in corredores}
+
+    def crear_mapas():
+        return {c.nombre: mapa_qpos(mujoco, (c.env.model if c.nombre == "rl" else c.sim.m), m, PREFIJO[c.nombre])
+                for c in corredores}
+
+    mapas = crear_mapas()
 
     from demo.caminatas.choques import DetectorChoques
     detector = DetectorChoques(m)
@@ -422,16 +447,18 @@ def main(argv=None):
                 c.paso()
 
     def textos(t):
-        izq = ["Carrera 5 m", "vision", "friccion", "tiempo", ""]
-        der = ["", vision, "%.1f" % a.mu, "%.1f s" % t, ""]
+        e = estado
+        izq = ["Carrera 5 m" if corriendo else "EN SUS MARCAS: Iniciar en el panel", "RL", "vision", "friccion", "tiempo", ""]
+        der = ["", "%s a %.2f m/s" % (Path(e["rl"]).parent.name, e["vx"]), e["vision"], "%.2f" % e["mu"], "%.1f s" % t, ""]
         for c in sorted(corredores, key=lambda c: ORDEN_VENTANA.index(c.nombre)):
             izq.append(NOMBRES[c.nombre])
             der.append("%s %.1f s" % (c.resultado, c.t_fin) if c.resultado else "%.2f m" % c.pose()[0])
         return "\n".join(izq), "\n".join(der)
 
+    corriendo = True                   # el visor lo pone en False si hay panel (esperan en sus marcas)
     dibujar()
     if a.captura:                                              # modo de prueba sin pantalla
-        ventana = VentanaCamaras(corredores, interactiva=False) if vision == "camara" else None
+        ventana = VentanaCamaras(corredores, interactiva=False) if estado["vision"] == "camara" else None
         avanzar_hasta(8.0)
         dibujar()
         r = mujoco.Renderer(m, 540, 960)
@@ -449,14 +476,51 @@ def main(argv=None):
 
     ventana = VentanaCamaras(corredores) if (vision == "camara" and not a.sin_camaras) else None
     from mujoco import viewer as mj_viewer
-    with mj_viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False) as v:
+    pedido = {"reiniciar": False, "iniciar": False}
+    panel = None
+    if not a.sin_panel:
+        from demo.caminatas.panel_controles import PanelControles
+        panel = PanelControles(estado, pedido)
+    corriendo = panel is None          # con panel, los robots esperan en sus marcas hasta "Iniciar"
+    fase_mostrada = None
+
+    def tecla(codigo):
+        """Se llama desde el hilo del visor: solo marca el pedido; el reinicio se hace en el bucle principal."""
+        if codigo in (ord("R"), ord("r")):
+            pedido["reiniciar"] = True
+
+    with mj_viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False, key_callback=tecla) as v:
         v.cam.lookat[:] = [1.2, 0.0, 0.15]
         v.cam.distance, v.cam.azimuth, v.cam.elevation = 4.6, 15, -28    # desde atras de la salida, mirando a la meta
-        print("Listo: corriendo. Cierra el visor para terminar.")
+        print("Listo. En la ventana 'Controles de la carrera': 1. Aplicar, 2. Reiniciar (o R), 3. Iniciar. "
+              "Cierra el visor para terminar." if panel is not None else "Listo: corriendo. R reinicia la carrera.")
         t_sim, ultimo, ultimo_cam = 0.0, time.time(), 0.0
         while v.is_running():
+            if pedido["reiniciar"]:
+                pedido["reiniciar"] = False
+                print("Reiniciando la carrera...")
+                corredores[:] = crear_corredores()        # la misma lista: dibujar(), textos() y avanzar la ven
+                mapas.clear()
+                mapas.update(crear_mapas())
+                if ventana is None and estado["vision"] == "camara" and not a.sin_camaras:
+                    ventana = VentanaCamaras(corredores)  # se paso a vision con camara desde el panel
+                if ventana is not None:
+                    ventana.corredores = {c.nombre: c for c in corredores}
+                if panel is not None:
+                    panel.en_pista_nuevo(estado)
+                t_sim, ultimo = 0.0, time.time()
+                v.cam.lookat[0] = 1.2
+                corriendo = panel is None                 # sin panel no hay boton Iniciar: arranca solo
+                fase_mostrada = None                      # que el panel vuelva a mostrar "en sus marcas"
+                pedido["iniciar"] = False
+            if pedido["iniciar"]:
+                pedido["iniciar"] = False
+                if not corriendo:
+                    corriendo, ultimo = True, time.time()
+                    print("Carrera iniciada.")
             ahora = time.time()
-            t_sim += min(0.1, ahora - ultimo) * a.velocidad
+            if corriendo:
+                t_sim += min(0.1, ahora - ultimo) * estado["velocidad"]
             ultimo = ahora
             avanzar_hasta(t_sim)
             dibujar()
@@ -467,6 +531,13 @@ def main(argv=None):
             except Exception:  # noqa: BLE001  (versiones viejas del visor no tienen textos)
                 pass
             v.sync()
+            if panel is not None:
+                fase = ("en sus marcas" if not corriendo else
+                        "terminada" if all(c.resultado for c in corredores) else "corriendo")
+                if fase != fase_mostrada:
+                    panel.poner_fase(fase)
+                    fase_mostrada = fase
+                panel.actualizar()
             if ventana is not None and ahora - ultimo_cam > 0.1 and ventana.abierta():
                 ventana.actualizar()
                 ultimo_cam = ahora

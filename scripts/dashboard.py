@@ -12,7 +12,8 @@ Fuentes de cada pestana:
                 results/carrera/carrera_v0{1,2}/benchmark_vx0.45/
     Versiones   lo anterior + la descripcion de cada version (abajo, VERSIONES)
     100 agentes results/barridos/ronda{1,2}/agente_*/resultado.json y base_carrera_v03.json
-    Motores     results/riesgo_motores/riesgo.json (scripts/riesgo_motores.py)
+    Motores     results/riesgo_motores/riesgo.json (scripts/riesgo_motores.py) y
+                results/esfuerzo_motores/perfiles_velocidad.json (scripts/perfiles_velocidad.py)
     Simulacion  docs/plan_rl_carrera.md, seccion 6.8 (valores de src/envs/nao_race_env.py)
 La pagina esta en scripts/dashboard/pagina.html.
 """
@@ -204,6 +205,19 @@ def datos():
                             energia_J_m=round(float(np.mean([r["energia_por_m"] for r in rs])), 1),
                             choque_piernas_pct=round(float(np.mean([r["pct_choque_piernas"] for r in rs])), 2)))
     D["riesgo"], D["riesgo_resumen"], D["motores_reales"] = riesgo, resumen, MOTORES_REALES
+
+    # Perfiles de velocidad de rodillas y tobillos (scripts/perfiles_velocidad.py): 2 s de marcha cada 4 ms.
+    pv = ROOT / "results/esfuerzo_motores/perfiles_velocidad.json"
+    D["perfiles_vel"], D["perfiles_vel_resumen"] = [], []
+    if pv.exists():
+        p = leer(pv)
+        D["perfiles_vel_meta"] = [dict(w0_rad_s=round(p["w0_rad_s"], 3), t0_s=p["ventana_s"][0], dt_s=2 * p["dt_s"])]
+        for c in p["caminatas"].values():
+            for j, w in c["ventana"].items():
+                D["perfiles_vel"].append(dict(caminata=c["nombre"], articulacion=j, w=w[::2]))
+                r = c["resumen"][j]
+                D["perfiles_vel_resumen"].append(dict(caminata=c["nombre"], articulacion=j, p99_rad_s=r["p99_abs"],
+                                                     max_rad_s=r["max_abs"], pct_sobre_max=r["pct_sobre_w0"]))
     D["simulacion"] = [dict(grupo=g, parametro=p, valor=v, por_que=w) for g, p, v, w in SIMULACION]
     return D
 

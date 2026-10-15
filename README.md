@@ -74,7 +74,7 @@ Cada archivo tiene su enlace y una línea que dice qué contiene. Se mantiene al
 |---|---|
 | [`results/dashboard/index.html`](results/dashboard/index.html) | **Dashboard del avance**, generado con `uv run python scripts/dashboard.py` (página en `scripts/dashboard/pagina.html`). Se abre con doble clic |
 | [`results/riesgo_motores/`](results/riesgo_motores/) | **Riesgo físico de la caminata para los motores del NAO V6**: informe en PDF y mediciones por articulación (`riesgo.json`, de `scripts/riesgo_motores.py`) |
-| [`results/esfuerzo_motores/`](results/esfuerzo_motores/) | **Fase M2 (motores ≤ 80 %)**: línea base del esfuerzo de cada motor (par RMS ÷ par continuo del motor real) de `rl_v1.0`, `rl_v1.1`, B-Human, NAOqi y el robot quieto (`linea_base.md`, paso 62b) y el diagnóstico de por qué `rl_v1.2` llega torcida (`diagnostico_rectitud.md`, E59), más la rectitud de `rl_v1.2.1` con la cámara renderizada (`rectitud_camara_renderizada_v121.json`) |
+| [`results/esfuerzo_motores/`](results/esfuerzo_motores/) | **Fase M2 (motores ≤ 80 %)**: línea base del esfuerzo de cada motor (par RMS ÷ par continuo del motor real) de `rl_v1.0`, `rl_v1.1`, B-Human, NAOqi y el robot quieto (`linea_base.md`, paso 62b) y el diagnóstico de por qué `rl_v1.2` llega torcida (`diagnostico_rectitud.md`, E59), más la rectitud de `rl_v1.2.1` con la cámara renderizada (`rectitud_camara_renderizada_v121.json`) y los **perfiles de velocidad** de rodillas y tobillos de `rl_v1.2.1`, B-Human y `rl_v1.1` (`perfiles_velocidad.png` y `.json`, de `scripts/perfiles_velocidad.py`; también en la pestaña Motores del dashboard) |
 | [`results/carrera/resumen.md`](results/carrera/resumen.md) | **Tabla de todas las evaluaciones** de las políticas de carrera (metas, caídas, salidas, tiempo, desvío) con la referencia de B-Human |
 | [`results/carrera/carrera_v01/`](results/carrera/carrera_v01/), [`carrera_v02/`](results/carrera/carrera_v02/) y [`carrera_v03/`](results/carrera/carrera_v03/) | Por generación (en `benchmark_vx0.45/`, `v01` y `v02` con la batería del benchmark): cada evaluación de cada checkpoint (`eval_*.md` legible y `.json` con cada corrida), las **curvas completas del entrenamiento** (`curvas_entrenamiento.csv` y `.png`), pruebas con la cámara renderizada, la prueba de rectitud de 100 episodios (`rectitud_58/`) y la batería de selección (`seleccion_100/`) |
 | [`results/carrera/rl_v1.2.1/benchmark_vx0.45/`](results/carrera/rl_v1.2.1/benchmark_vx0.45/eval_model_vx0.45.md) | `rl_v1.2.1` con la batería del benchmark (25 corridas), con el esfuerzo de cada motor y el desvío por corrida |
@@ -166,6 +166,8 @@ Se actualiza con cada resultado:
 - B-Human (verde, izquierda, baseline 2);
 - RL (azul, centro);
 - NAOqi (naranja, derecha, baseline 1).
+
+**Visor de la carrera con controles:** `uv run python demo/caminatas/carrera_vivo.py` (sin opciones). Abre con los 3 robots quietos en sus marcas y la ventana **"Controles de la carrera"**, donde se elige versión del RL, velocidad pedida, fricción, semilla, colocación y visión. Paso a paso: **1. Aplicar**, **2. Reiniciar** (o tecla R) y **3. Iniciar**. La velocidad de reproducción cambia al instante.
 
 Aparte se abre la ventana **"Lo que ve cada NAO"**, con la cámara de cada robot. Solo el RL con panel de
 controles: `--live --solo-rl`. Guía completa: [`docs/camara_y_carriles.md`](docs/camara_y_carriles.md).
