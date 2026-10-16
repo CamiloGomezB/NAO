@@ -111,8 +111,17 @@ desactualizado. Esa revisión se registra en la bitácora como parte del paso. L
     giroscopio, acelerómetro, orientación y 8 FSR en kg. Nada de velocidad lineal ni posición global.
   - Las articulaciones usan los nombres y el orden de B-Human (`third_party/penaltystack/motion_contract.py`).
   - La política actúa en múltiplos del ciclo de 12 ms (24 ms).
-  - La inferencia exportada debe correr en Python 2.7 a bordo, sin torch.
-  - El arranque es por el táctil frontal de la cabeza (0.25 s) y el paro por el botón del pecho (0.3 s).
+  - **Inferencia a bordo (desde el 2026-10-15, fase N2):** la política corre en C++ dentro de `bhuman` (framework
+    B-Human en `bhuman/`, módulo `CopaRLWalkEngine`), exportada con `scripts/exportar_politicas_robot.py`. Toda
+    política o cambio de la visión que vaya al robot tiene que pasar `uv run python scripts/check_paridad_robot.py`
+    sin fallos. `robot/race_nao.py` (carril NAOqi) sigue en Python 2.7, sin torch.
+  - **Arranque y paro en `bhuman`** (los gestos de PenaltyStack): arranque por un toque al botón medio de la cabeza
+    (el silbato es opcional); paro manual por el pecho mantenido 0.3 s o por el botón trasero de la cabeza mantenido
+    0.5 s. En `robot/race_nao.py` siguen el táctil frontal 0.25 s y el pecho 0.3 s.
+  - **Despliegue:** solo con `DeployCarreraNAO.bat` o `deploy/robot_deploy.py` (Wi-Fi apagado, hash verificado,
+    colores desde `config/pista_robot.json`). Guía: `docs/GUIA_DESPLIEGUE_ROBOT_FISICO.md`.
+  - **`bhuman/`** es una copia con procedencia (`bhuman/PROVENANCE.json`): los originales de B-Human solo se
+    modifican si hace falta, y `uv run python scripts/compilar_bhuman.py --check-originals` los lista.
 - **Versiones de políticas (`rl_vX.Y`):** desde el 2026-10-13, las políticas que se entregan son
   `policies/rl_v1.0/` (= `carrera_v03`), `policies/rl_v1.1/` (= `agente_071` de la ronda 2), `rl_v1.2`… Un
   **arreglo pequeño** de una versión, que corrige un efecto secundario sin cambiar su objetivo, lleva un tercer

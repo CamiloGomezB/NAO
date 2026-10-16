@@ -1120,3 +1120,80 @@ para la visión, el trabajo de Daniel en [danielpaya/nao_linea](https://github.c
   completa del visor (Aplicar → Reiniciar → Iniciar) sigue dando OK.
 - **Lección:** con más de un `Tk` en el mismo programa, toda variable de tkinter necesita su `master` explícito. Las
   pruebas de una interfaz tienen que usar la misma configuración que el uso real (aquí, con la ventana de cámaras).
+
+### E61 — Un heredoc anidado de bash no cerraba al escribir `deployCopaRace`
+- **Fecha / paso:** 2026-10-15, paso 68c (herramientas de despliegue). Error de herramienta del asistente.
+- **Síntoma:** el script de despliegue se escribía desde bash con un heredoc que a su vez contenía otro heredoc (el
+  texto de ayuda `usage` y el manifiesto JSON) y comillas simples. bash no encontró el cierre:
+  ```
+  Exit code 2
+  /usr/bin/bash: -c: line 183: unexpected EOF while looking for matching `''
+  ```
+  Más tarde, editando archivos con un script de Python dentro de un heredoc, los `\n` y `\\` del texto a reemplazar
+  llegaron cambiados y el reemplazo no encontró el texto:
+  ```
+  Traceback (most recent call last):
+    File "<stdin>", line 13, in <module>
+  AssertionError: stream
+  ```
+- **Causa:** comillas y barras invertidas dentro de un heredoc anidado. Bash (y la capa que pasa el comando) las
+  interpreta antes de que lleguen al archivo.
+- **Solución:** los archivos con comillas, heredocs o barras invertidas se escriben con la herramienta de escritura
+  de archivos (LF exacto, sin pasar por bash), y los reemplazos con la herramienta de edición. Los scripts de bash
+  que corren en el robot se revisan después con `--dry-run`.
+
+### E62 — Advertencias de comparación de enums en los `static_assert` de la marcha RL
+- **Fecha / paso:** 2026-10-15, paso 67b (`CopaRLWalkEngine`).
+- **Síntoma:** al compilar para el NAO, los `static_assert` que comprueban que el orden de articulaciones del núcleo
+  (`CopaRace::Articulacion`) es el de B-Human (`Joints::Joint`) dieron advertencias:
+  ```
+  Src/Modules/MotionControl/CopaRLWalkEngine/CopaRLWalkEngine.cpp:23:38: warning: comparison of different enumeration types ('Joints::Joint' and 'CopaRace::Articulacion') is deprecated [-Wdeprecated-enum-compare]
+  Src/Modules/MotionControl/CopaRLWalkEngine/CopaRLWalkEngine.cpp:23:92: warning: comparison of different enumeration types ('Joints::Joint' and 'CopaRace::Articulacion') is deprecated [-Wdeprecated-enum-compare]
+  Src/Modules/MotionControl/CopaRLWalkEngine/CopaRLWalkEngine.cpp:24:36: warning: comparison of different enumeration types ('Joints::Joint' and 'CopaRace::Articulacion') is deprecated [-Wdeprecated-enum-compare]
+  ```
+- **Causa:** C++20 depreca comparar enumeradores de dos `enum` distintos.
+- **Solución:** una función `constexpr indice()` convierte los dos a entero antes de comparar. La compilación quedó
+  sin advertencias en el código nuevo. La comprobación sigue en tiempo de compilación: si alguien cambia el orden,
+  no compila.
+
+### E63 — Los despliegues en paralelo chocaban al copiar la llave SSH
+- **Fecha / paso:** 2026-10-15, paso 68c (simulacro con dos robots a la vez).
+- **Síntoma:** el despliegue terminó bien, pero uno de los robots mostró:
+  ```
+  [loki] cp: cannot create regular file '/tmp/id_rsa_nao': File exists
+  ```
+  y todos repetían un aviso de coreutils 9.4:
+  ```
+  [loki] cp: warning: behavior of -n is non-portable and may change in future; use --update=none instead
+  ```
+- **Causa:** `Make/Common/setupSSH` (original de B-Human) copia la llave a `/tmp/id_rsa_nao` con `cp -n … || true`.
+  Dos despliegues en paralelo lo hacen al mismo tiempo: uno crea el archivo y el otro falla, sin consecuencias (el
+  `|| true` lo absorbe). El aviso es de la versión de `cp` de Ubuntu 24.04.
+- **Solución:** sin tocar el original:
+  - `deploy/robot_deploy.py` prepara la llave una sola vez (`prepare_ssh`) antes de lanzar los despliegues en
+    paralelo, en la ventana y en la línea de comandos;
+  - el aviso de `cp -n` se filtra del registro, porque confundía al operador.
+
+  En el siguiente simulacro con dos robots en paralelo no apareció ninguno de los dos mensajes: cuando arrancan los
+  despliegues, la llave ya está en `/tmp`.
+
+### E64 — La visión en modo color o con línea clara no llegaba al robot ni tenía prueba de paridad
+- **Fecha / paso:** 2026-10-15, paso 68c. Hallado al revisar el despliegue contra la regla de colores del repo; no
+  hubo salida de consola.
+- **Síntoma:** el núcleo C++ ya tenía los tres modos de la visión de Daniel (`oscura`, `clara` y `color`). Pero:
+  - el módulo `CopaLanePerceptor` solo exponía `lightLine`, sin la referencia de color;
+  - la ventana solo pasaba la polaridad;
+  - la prueba de paridad solo tenía imágenes de cinta negra sobre madera.
+
+  Si la organización avisaba colores que `scripts/cambiar_colores.py` resuelve en modo color (por ejemplo, cinta
+  verde sobre madera), el robot habría buscado la línea por brillo y no la habría visto.
+- **Causa:** el modo color se agregó a la visión en el paso 48, y el puerto a C++ solo se probó con la pista
+  actual.
+- **Solución:**
+  - `CopaLanePerceptor` tiene `colorMode`, `colorAxis` y `colorMean`;
+  - `deployCopaRace` acepta `--color-ref`;
+  - `robot_deploy.py` y la ventana toman la polaridad y el `color_ref` de `config/pista_robot.json` (opción
+    *Visión: según config/pista_robot.json*, por defecto);
+  - la paridad suma 6 imágenes: cinta blanca sobre piso oscuro y cinta verde sobre madera en modo color, con el
+    `color_ref` calculado con la fórmula de `demo/build_scene.py`. El resultado es `revisiones=19947 fallos=0`;
+  - un simulacro con un `pista_robot.json` de prueba en modo color escribe `colorMode = true` con los mismos ejes.

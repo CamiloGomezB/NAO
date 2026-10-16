@@ -24,6 +24,7 @@ flowchart TB
     NAO["Este repo: CamiloGomezB/nao-v6-rl-race<br/>(RL de la caminata)"] -->|"9 oct: rama de cámara<br/>sobre el commit 4ca136d"| NL
     NL["nao_linea (Daniel)<br/>visión de carril + 3 carriles"] -->|"10 oct: integrado en main (paso 40)"| NAO
     NAO -->|"Fase N: política exportada"| PS
+    PS -->|"15 oct: framework B-Human y despliegue<br/>(rama despliegue/copa-nao-ccm-2026)"| NAO
 ```
 
 ---
@@ -134,6 +135,43 @@ flowchart TB
 - **Decisión del 2026-10-08:** al principio se copiaron también archivos de penales. El usuario indicó que
   **solo se usa lo de la caminata**, así que se borraron y quedó solo el contrato de articulaciones.
 
+### 3.1 Despliegue en el NAO real (fase N2, 2026-10-15)
+
+- **Qué se tomó:** las herramientas de despliegue de la rama `despliegue/copa-nao-ccm-2026` de PenaltyStack
+  (commits `c8aadf8` y `17b5c03`, `17b5c039…`), que Luis Mario escribió para el penal. Se adaptaron a la carrera:
+  - `tools/import_robot_framework.py` → `scripts/importar_framework_bhuman.py` (mismo subconjunto; destino `bhuman/`);
+  - `tools/robot_build.py` → `scripts/compilar_bhuman.py` (árbol en WSL `~/.cache/nao-race/bhuman`; mismo toolchain);
+  - `tools/check_module_graph.py` → `scripts/check_grafo_modulos.py` (escenario `CopaNAORace`);
+  - `robot/Make/Common/deployCopaPenalty` → `bhuman/Make/Common/deployCopaRace` (carril, política, `vx_cmd`,
+    visión);
+  - `deploy/robot_deploy.py`, `deploy/deploy_dialog.py` y `DeployCopaNAO.bat` → los mismos nombres en `deploy/`, y
+    `DeployCarreraNAO.bat`;
+  - el controlador de gestos (`CopaPenaltyController`) → `CopaRaceController`, con las mismas fases y gestos más el
+    paro por el pecho.
+- **Por qué:** es el mecanismo del repo final. Usar el mismo hace que la integración del paso 78 sea copiar módulos
+  y que el equipo opere todos los robots igual.
+- **Qué no se tomó:** nada del penal (pelota, portería, patada, portero, políticas de tiro).
+
+### 3.2 Framework B-Human 2023 (vía SabanaHerons2026) para el robot
+
+- **Qué es:** el código de RoboCup de B-Human (Code Release 2023), con los cambios del equipo Sabana Herons
+  ([juanulloa2050/SabanaHerons2026](https://github.com/juanulloa2050/SabanaHerons2026), commit
+  `2360ab1100ad28f70e190c893f6b095651ff0bbc`). Corre en el NAO como el proceso `bhuman`: hilos de cámara (Lower y
+  Upper), Cognition y Motion (12 ms, LoLA), un grafo de módulos que proveen "representaciones" y un archivo de
+  configuración por módulo.
+- **Qué se tomó:** el subconjunto que hace falta para compilar y desplegar `bhuman` en el NAO V6 (4994 archivos;
+  SHA-256 de cada uno en `bhuman/PROVENANCE.json`), más los submódulos
+  [CompiledNN](https://github.com/bhuman/CompiledNN) `091512e` y el Eigen de
+  [SimRobot](https://github.com/bhuman/SimRobot) `732794c`. Sin SimRobot, escenas ni binarios de escritorio.
+- **Por qué:**
+  - el WalkingEngine original de B-Human es el baseline 2 en el robot real (paso 73);
+  - el hilo Motion manda los ángulos cada 12 ms, que es lo que necesita la política RL (contrato v1);
+  - los robots del equipo ya tienen instalado este sistema.
+- **Qué se le cambió:** 15 originales: los 14 `threads.cfg` (dos representaciones por defecto) y
+  `SkillBehaviorControl.h` (la opción de la carrera). El resto son 30 archivos nuevos. La lista sale de
+  `uv run python scripts/compilar_bhuman.py --check-originals`.
+- **Licencia:** la de B-Human (`bhuman/License.md`), como en SabanaHerons2026.
+
 ---
 
 ## 4. nao_linea: la visión de carril, que salió de este repo
@@ -211,6 +249,13 @@ flowchart TB
 - Stable-Baselines3 2.9.0;
 - PyTorch 2.14.0 (CPU).
 
+**Software del despliegue en el NAO (fase N2):**
+- toolchain de compilación cruzada, paquetes de Ubuntu 24.04 (archivo oficial de Ubuntu) instalados en el perfil del
+  usuario de WSL por `scripts/compilar_bhuman.py --install-toolchain`: `clang-18`, `mold`, `cmake`, `ccache`,
+  `ninja-build` y sus dependencias. Es el mismo directorio (`~/.local/penaltystack-toolchain`) que usa PenaltyStack;
+- [nlohmann/json](https://github.com/nlohmann/json) 3.11.3 (MIT), `tests/robot_paridad/json.hpp`: copiado de
+  PenaltyStack (`native/bhuman_motion/dependencies/`) para leer los datos de paridad en el arnés C++.
+
 ---
 
 ## 6. Tabla de procedencia de archivos
@@ -227,3 +272,8 @@ flowchart TB
 | `results/camara/modelo_error.md`, `lazo_cerrado.md` | nao_linea | `f8e0cc6` | Del equipo |
 | `checkpoints/best_model.zip` | Este repo, sprint inicial (V2 brazos) | Entrenado en el modelo V5 | Del equipo |
 | Modelo V5 (histórico, reemplazado) | one_policy_to_run_them_all `nao_v5` | `7c18194` | MIT |
+| `bhuman/` (framework, salvo los archivos `Copa*`, `LanePercept*` y `NeuralNets/CopaRace/`) | SabanaHerons2026 (B-Human Code Release 2023) + CompiledNN + Eigen de SimRobot | `2360ab1`, `091512e`, `732794c`; SHA-256 por archivo en `bhuman/PROVENANCE.json` | B-Human |
+| `bhuman/Src/Tools/CopaRace/CopaRace.h` | Puerto a C++ de `src/race/contract.py`, `carril/lane_estimator_puro.py`, `carril/lane_filter.py`, `carril/controller.py` y de `random.Random` (MT19937) de Python | Paridad con `scripts/check_paridad_robot.py` | Del equipo |
+| `bhuman/Src/Modules/*/Copa*`, `bhuman/Make/Common/deployCopaRace`, `scripts/compilar_bhuman.py`, `scripts/importar_framework_bhuman.py`, `scripts/check_grafo_modulos.py`, `deploy/` | Adaptados de PenaltyStack, rama `despliegue/copa-nao-ccm-2026` | `17b5c03` | Del equipo |
+| `bhuman/Config/NeuralNets/CopaRace/*.cfg` | Exportados por `scripts/exportar_politicas_robot.py` desde `policies/` | SHA-256 en `politicas.json` | Del equipo |
+| `tests/robot_paridad/json.hpp` | nlohmann/json, vía PenaltyStack | 3.11.3 | MIT |

@@ -182,7 +182,13 @@ giroscopio de la política, y con señales grandes se invierte (E37).
 - en el entrenamiento, la cámara se **simula** sin renderizar: valor real + ruido gaussiano (σ = 1.6 cm y
   1.2°, hasta 3 veces más) + retardo + pérdidas, a 10 Hz;
 - en la demo y en la selección de agentes se usa la cámara renderizada (paso 58b);
-- en el NAO real, `robot/race_nao.py`;
+- en el NAO real:
+  - `robot/race_nao.py` en el carril NAOqi;
+  - **desde el 2026-10-15, dentro de `bhuman`** en los carriles RL y B-Human: el módulo `CopaLanePerceptor` corre
+    el mismo estimador portado a C++ (`bhuman/Src/Tools/CopaRace/CopaRace.h`) sobre la cámara inferior a 10 FPS, con
+    los intrínsecos calibrados de B-Human y la pose real de la cámara. La paridad con el código Python es exacta
+    (10⁻¹²) en 16 imágenes sintéticas que cubren los tres modos: oscura, clara y color
+    ([`docs/despliegue/02_PLAN_E_IMPLEMENTACION.md`](../despliegue/02_PLAN_E_IMPLEMENTACION.md), sección 3.2);
 - **la señal es la misma en los tres lugares** (sección 6.7 del diseño).
 
 ---
@@ -191,7 +197,10 @@ giroscopio de la política, y con señales grandes se invierte (E37).
 
 - **Todo está medido en simulación.** Falta medir la precisión en una pista réplica con el robot y una cinta
   métrica (paso 70, guía en [`robot/LUNES.md`](../../robot/LUNES.md)).
-- El tiempo de la visión a bordo y su compatibilidad real con Python 2.7 están por verificar (paso 69).
+- El tiempo de la visión a bordo y su compatibilidad real con Python 2.7 están por verificar (paso 69). En
+  `bhuman` la visión es C++; falta medir su tiempo en el robot (paso 68d).
+- Los colores llegan al robot desde `config/pista_robot.json` en el despliegue: polaridad y, en modo color, el
+  `color_ref` (E64).
 - Con un robot vecino tapando una línea, el error sube a σ(`d`) = 4.8 cm.
 - Las caminatas de los baselines en simulación son réplicas del esquema de NAOqi y de B-Human, no el código
   original.

@@ -63,8 +63,8 @@ noviembre de 2026**, Tec de Monterrey campus Ciudad de México.
 | Clasificación | **Menor tiempo**; si no llega en 3 min, mayor distancia | Caer o salirse casi siempre pierde contra una marcha más lenta y segura |
 | Salida | Ambos pies en la franja de salida, colocados a mano | Hay error de colocación de unos cm y grados: la cámara lo corrige |
 | Meta | Franja de 30 cm; el tiempo para cuando un pie la pisa | No hace falta frenar |
-| Activación | Por un sensor del NAO, ≤ **10 s** después del silbato | Táctil frontal de la cabeza 0.25 s, como en PenaltyStack |
-| Paro manual | Obligatorio, con un sensor que **no esté en las piernas** | Botón del pecho 0.3 s, como en PenaltyStack |
+| Activación | Por un sensor del NAO, ≤ **10 s** después del silbato | En `bhuman` (fase N2, desde el 2026-10-15): toque al botón medio de la cabeza, como el penal de PenaltyStack. En `robot/race_nao.py` (carril NAOqi): táctil frontal 0.25 s |
+| Paro manual | Obligatorio, con un sensor que **no esté en las piernas** | Botón del pecho mantenido 0.3 s (en `bhuman` también el botón trasero de la cabeza 0.5 s) |
 | Robot | NAO de cualquier versión, sin modificaciones | **NAO V6 con NAOqi 2.8** |
 
 ### 1.2 Faltas y cómo pesan en el RL
@@ -339,7 +339,9 @@ garantiza que, sea cual sea el peso, ninguna política con faltas pase.
   - normalización de observaciones y recompensas;
   - semilla fija por agente.
 - **Tamaño de la red:** 256×256 de partida. Se baja a 128×128 o 64×64 si la inferencia en Python 2.7 a bordo
-  no cabe en los 24 ms, junto con la visión **(a medir en el paso 69)**.
+  no cabe en los 24 ms, junto con la visión **(a medir en el paso 69)**. Desde la fase N2 (2026-10-15) la inferencia
+  es C++ dentro de `bhuman`: ~65 µs por decisión en el PC, así que el tamaño ya no es una restricción esperable
+  (falta medirlo en el robot, paso 68d).
 
 ### 6.7 Cómo llegan `d` y `psi` a la política (igual en entrenamiento, demo y robot)
 
@@ -670,8 +672,12 @@ quieto. En la carrera no se pausa, pero se arranca desde quieto. Por eso el epis
 2. **Identificar los servos** y llevarlos al simulador.
 3. **Primero dentro de PenaltyStack:** la política corre en su simulador junto a la caminata original de
    B-Human.
-4. **A bordo:** ejecutor con la visión en Python puro y la política exportada, con START, ABORT, ciclo de
-   24 ms y paro por inclinación.
+4. **A bordo:** ejecutor con la visión y la política exportada, con START, ABORT, ciclo de 24 ms y paro por
+   inclinación. **Cambio del 2026-10-15 (fase N2):** el ejecutor no es Python 2.7 con NAOqi sino un módulo en C++
+   dentro de `bhuman` (framework B-Human), en el hilo Motion de 12 ms, con la visión y la política portadas a C++ y
+   comprobadas contra Python. Motivos y arquitectura en
+   [`docs/despliegue/01_AUDITORIA.md`](despliegue/01_AUDITORIA.md#4-decisión-la-política-rl-corre-en-c-dentro-de-bhuman)
+   y [`02_PLAN_E_IMPLEMENTACION.md`](despliegue/02_PLAN_E_IMPLEMENTACION.md).
 5. **Pruebas escalonadas:** suspendido → arnés → 1 m → 5 m, con `vx_cmd` creciente.
 6. **Comparación real de los tres carriles:** NAOqi, B-Human y RL en la misma pista réplica.
 
@@ -710,6 +716,6 @@ quieto. En la carrera no se pausa, pero se arranca desde quieto. Por eso el epis
 | La fricción real es distinta a la simulada | Entrenamiento en [0.4, 1.2], batería de 5 valores, medición de la duela real |
 | Salida del carril o choque con un robot vecino | Barrera de margen + terminación + filtro duro en la selección + escena de 3 carriles |
 | Las piernas chocan en el V6 | HipRoll asimétrico, castigo por choque, diagnóstico (paso 45) |
-| La red y la visión no caben en el tiempo a bordo | Medir en la sesión 1; red más chica; visión con numpy si existe |
+| La red y la visión no caben en el tiempo a bordo | Medir en la sesión 1; red más chica; visión con numpy si existe. Desde la fase N2 ambas son C++ dentro de `bhuman` (~65 µs por decisión en el PC) |
 | El cómputo de 100 agentes no alcanza en un solo PC | Base común + rondas cortas en cola nocturna; reducir pasos o agentes |
 | No llegar a tiempo | Las caminatas de B-Human y NAOqi con visión ya llegan siempre en simulación: son el plan B |

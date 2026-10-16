@@ -3,7 +3,7 @@
 Stack: **MuJoCo + Stable-Baselines3 (PPO)**, Windows nativo, entrenamiento en CPU.
 Regla: cada paso termina con una **confirmación**, una **entrada en la bitácora** ([`docs/bitacora.md`](docs/bitacora.md)) y un **commit**.
 
-> **Paso actual: fase M3 terminada (`rl_v1.2.1`, recta y motores ≤ 80 %); revisión visual de Camilo y decidir lo siguiente** ( fase M2, `rl_v1.2` con todos los motores ≤ 80 %; 63–65 pospuestos; pendientes de revisión del usuario: 49, 56, 58 y 58b; silbato pospuesto en 68b) · Objetivo vigente: **caminata por RL para la Carrera Individual de la Copa NAO CCM MX 2026 (3 de noviembre de 2026)**,
+> **Paso actual: fase N2 (despliegue en el NAO con el framework B-Human) lista en software el 2026-10-15; siguen la prueba con el robot suspendido (68d) y la revisión de Camilo y Luis Mario (68e).** Antes: fase M3 terminada (`rl_v1.2.1`, recta y motores ≤ 80 %), con la revisión visual de Camilo pendiente ( fase M2, `rl_v1.2` con todos los motores ≤ 80 %; 63–65 pospuestos; pendientes de revisión del usuario: 49, 56, 58 y 58b; silbato pospuesto en 68b) · Objetivo vigente: **caminata por RL para la Carrera Individual de la Copa NAO CCM MX 2026 (3 de noviembre de 2026)**,
 > más rápida que las caminatas de **B-Human** y **NAOqi** (tres carriles de comparación), con visión de carril y portable al repo final **PenaltyStack**.
 > Diseño: [`docs/plan_rl_carrera.md`](docs/plan_rl_carrera.md) · Repo final: [`docs/integracion_penaltystack.md`](docs/integracion_penaltystack.md) · Historial, errores y soluciones: [`docs/bitacora.md`](docs/bitacora.md).
 
@@ -310,10 +310,41 @@ del equipo.
 
 ## Fase N — Portabilidad a PenaltyStack
 - [ ] **66. Exportar la política** (pesos y normalización en JSON o `.npz` + versión del contrato) y módulo de inferencia compatible con Python 2.7 y 3 — ✅ Diferencia con SB3 < 1e-5; tiempo de inferencia medido en PC
+  - 2026-10-15: la inferencia a bordo pasó a C++ dentro de `bhuman` (fase N2, decisión en la bitácora). El criterio
+    numérico se cumple en el paso 66c (4.6 × 10⁻⁷, ~65 µs en PC). El módulo en Python 2.7 no se escribió; este paso
+    se cierra o se descarta en la revisión 68e.
 - [ ] **67. Correr la política dentro del simulador de PenaltyStack**, junto a la caminata original de B-Human — ✅ Camina 5 m; comparación directa en el mismo simulador
 - [ ] **68. Ejecutor a bordo**: visión en Python puro + política exportada, START (táctil frontal 0.25 s), ABORT (pecho 0.3 s), ciclo de 24 ms, paro por inclinación y **paro por temperatura de los motores** (fase M2), desplegado con el mecanismo de PenaltyStack — ✅ Probado en seco y revisado por el autor de PenaltyStack
+  - 2026-10-15: reemplazado por el ejecutor en C++ de la fase N2 (pasos 67b–68e): arranque por el botón medio de la
+    cabeza (los gestos de PenaltyStack) y paro por el pecho mantenido 0.3 s o por el botón trasero 0.5 s.
 
 - [ ] **68b. Silbato (pospuesto)**: decidir con Luis Mario si el NAO arranca solo al escuchar el silbato o se queda el arranque manual por el táctil de la cabeza (lo actual, reglamentario). PenaltyStack (`9c08a41`) solo trae la estructura de datos `Whistle` de B-Human, sin detector. Pospuesto el 2026-10-11 hasta hablar con él — ✅ Decisión documentada; si es automático, detector a bordo con táctil de respaldo y prueba con ruido de público
+  - 2026-10-15: el escenario `CopaNAORace` trae el detector de silbato de B-Human (`WhistleRecognizer`) como
+    **opción** de la ventana de despliegue, apagada por defecto (arranque por botón). Falta la decisión y la prueba
+    con ruido.
+
+## Fase N2 — Despliegue con el framework B-Human (pasos 66b–68e)
+
+Pedida el 2026-10-15 por Luis Mario (autor de PenaltyStack): el mismo despliegue que hizo para el penal en
+PenaltyStack (rama `despliegue/copa-nao-ccm-2026`), con la carrera. La política RL corre en C++ dentro de `bhuman`,
+en el hilo Motion (12 ms), y el mismo binario trae el carril B-Human. Documentos:
+[auditoría](docs/despliegue/01_AUDITORIA.md), [plan e implementación](docs/despliegue/02_PLAN_E_IMPLEMENTACION.md),
+[operación](docs/despliegue/03_OPERACION.md) y [guía para otra persona](docs/GUIA_DESPLIEGUE_ROBOT_FISICO.md).
+
+- [x] **66b. Framework B-Human 2023 en `bhuman/`** (SabanaHerons2026 `2360ab1`) y compilación cruzada para el NAO V6 en WSL — ✅ Binario Release compilado; originales modificados listados con `--check-originals`
+  - Hecho: 4994 archivos con su SHA-256 en `bhuman/PROVENANCE.json` (+ CompiledNN `091512e` y Eigen de SimRobot
+    `732794c`). 15 originales modificados (14 `threads.cfg` y `SkillBehaviorControl.h`) y 30 archivos nuevos. Binario
+    sha256 `94766ce0…`.
+- [x] **66c. Políticas y núcleo en C++**: las 6 políticas a `.cfg` de B-Human (`scripts/exportar_politicas_robot.py`) y `bhuman/Src/Tools/CopaRace/CopaRace.h` (contrato v1, política, visión con sus 3 modos, filtro y controlador) — ✅ Paridad con Python sin fallos; diferencia de la acción con SB3 < 1e-5; tiempo de inferencia medido en PC
+  - Hecho: `scripts/check_paridad_robot.py` → `revisiones=19947 fallos=0`, diferencia máxima con SB3 4.6 × 10⁻⁷,
+    ~65 µs por decisión en el PC.
+- [x] **67b. Escenario `CopaNAORace`**: visión (`CopaLanePerceptor`), control de la carrera sin GameController (`CopaRaceController`), táctica de los dos carriles (`CopaRaceTactics`) y marcha RL (`CopaRLWalkEngine`, paros por inclinación y temperatura) — ✅ Grafo de módulos sin errores y compilación sin advertencias en el código nuevo
+  - Hecho: `scripts/check_grafo_modulos.py` → `CopaNAORace/Default: 136 modulos, 0 errores`.
+- [x] **68c. Herramientas de despliegue**: `bhuman/Make/Common/deployCopaRace`, `deploy/robot_deploy.py` y la ventana `DeployCarreraNAO.bat` (robots en red, carril, política RL, `vx_cmd`, arranque, visión desde `config/pista_robot.json`, Wi-Fi apagado) — ✅ Simulacro con 2 robots: `DEPLOY_OK` y la configuración esperada en cada uno
+  - Hecho: simulacro de `falcanao` (RL) y `loki` (B-Human, `vx_cmd` 0.40) desde la ventana y por línea de comandos;
+    modo color de la visión probado con un `pista_robot.json` de prueba.
+- [ ] **68d. Primera prueba en un NAO real, suspendido**: arranque, gestos, paro por el pecho y el botón trasero, paro por inclinación, visión (`d`, `psi` en el log) — ✅ La lista de la sección 6 de la guía se cumple; datos en `data/real/sesion_NN/`
+- [ ] **68e. Revisión del cambio de diseño** por Camilo y Luis Mario: inferencia en C++ a bordo en vez de Python 2.7, gestos de PenaltyStack, cierre o descarte de los pasos 66 y 68 — ✅ Decisión anotada en la bitácora
 
 ## Fase O — Robot real
 - [ ] **69. Sesión real #1** (robot suspendido): Python y numpy a bordo; tiempo de inferencia + visión; respuesta de los servos; ruido de IMU y FSR; deriva de `AngleZ`; **μ de la duela** (plano inclinado); ALMotion vs LoLA; **corriente y temperatura de cada motor** (escala y ruido de la corriente, para el contrato v2 de la fase M2) — ✅ Datos en `data/real/sesion_01/` y decisiones documentadas

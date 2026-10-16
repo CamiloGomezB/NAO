@@ -1,0 +1,58 @@
+{
+  "version": "copa_race_politicas_v1",
+  "carriles": {
+    "rl": "Politica RL a nivel de articulaciones (CopaRLWalkEngine, cada 24 ms).",
+    "bhuman": "WalkingEngine de B-Human + vision de carril (LaneFilter y LaneController de Daniel)."
+  },
+  "politicas": {
+    "rl_v1.2.1": {
+      "estado": "recomendada",
+      "vx_cmd": 0.45,
+      "descripcion": "Version actual: motores <= 80 % y recta (desvio max. 6.5 cm), 11.7 s en el benchmark.",
+      "archivo": "rl_v1.2.1.cfg",
+      "sha256": "2f3475f84cf9469c1d864a88e3041478d9ad7c8d587ea7e644d383e9ca60a00d",
+      "fuente": "policies/rl_v1.2.1"
+    },
+    "rl_v1.2": {
+      "estado": "alternativa",
+      "vx_cmd": 0.45,
+      "descripcion": "Motores <= 80 %, 10.9 s, pero se desvia hasta 23 cm (E59).",
+      "archivo": "rl_v1.2.cfg",
+      "sha256": "f87cf2aeec5760f4536d7ca3254635c640b75197c55967971f35d03fcbd41c64",
+      "fuente": "policies/rl_v1.2"
+    },
+    "rl_v1.1": {
+      "estado": "rapida",
+      "vx_cmd": 0.45,
+      "descripcion": "La mas rapida (10.7 s), con motores sobre el 80 % del par continuo (97-105 %).",
+      "archivo": "rl_v1.1.cfg",
+      "sha256": "1c2b546aa4525ccf398f7454b9d6c4f9c401d25c7acda2181b6607a406d2da7f",
+      "fuente": "policies/rl_v1.1"
+    },
+    "rl_v1.0": {
+      "estado": "anterior",
+      "vx_cmd": 0.4,
+      "descripcion": "carrera_v03: corrige salidas torcidas hasta +-25 grados; 12.8 s.",
+      "archivo": "rl_v1.0.cfg",
+      "sha256": "b98c2335be87262d0fe4c6c789b5195a07634b5e87c15323cfc787a0e703a2c8",
+      "fuente": "policies/rl_v1.0"
+    },
+    "carrera_v02": {
+      "estado": "anterior",
+      "vx_cmd": 0.4,
+      "descripcion": "Mas perdida de vision en el entrenamiento; 13.0 s a 0.40 m/s.",
+      "archivo": "carrera_v02.cfg",
+      "sha256": "7d9a8c86985428cdf60a84a8ba13159378799f138660791bd0e4d1f126626025",
+      "fuente": "policies/carrera_v02"
+    },
+    "carrera_v01": {
+      "estado": "anterior",
+      "vx_cmd": 0.4,
+      "descripcion": "Primera politica de carrera; 10.5 s con vision a 0.5 m/s.",
+      "archivo": "carrera_v01.cfg",
+      "sha256": "79f8c9f12c26a429d2cf34f40b1219ff17a2df4bd88c255bb2d359c1b10e7a39",
+      "fuente": "policies/carrera_v01"
+    }
+  },
+  "por_defecto": "rl_v1.2.1"
+}

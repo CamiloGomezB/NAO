@@ -6,7 +6,17 @@ articulares programadas a mano.
 
 ## Proyecto actual: Carrera Individual — Copa NAO CCM MX 2026
 
-> **Estado (2026-10-14, mediodía):** **`rl_v1.2.1` cuida los motores y camina recto**: todas las articulaciones ≤ 80 %
+> **Estado (2026-10-15):** **listo el despliegue en el NAO real con el framework B-Human** (fase N2 del `PLAN.md`).
+> La política RL corre en C++ dentro de `bhuman` cada 24 ms. El mismo binario trae la visión de carril y el carril
+> B-Human. Se despliega por cable con la ventana `DeployCarreraNAO.bat`, que elige robots, carril, política y
+> `vx_cmd`. Verificado sin robot:
+> - paridad con Python: 19 947 revisiones, 0 fallos;
+> - grafo de módulos sin errores;
+> - simulacro de despliegue.
+>
+> **Falta la primera prueba en un robot físico (paso 68d)**. Guía: [`docs/GUIA_DESPLIEGUE_ROBOT_FISICO.md`](docs/GUIA_DESPLIEGUE_ROBOT_FISICO.md).
+>
+> **Antes (2026-10-14, mediodía):** **`rl_v1.2.1` cuida los motores y camina recto**: todas las articulaciones ≤ 80 %
 > del par continuo y desvío máximo de 6.5 cm en el benchmark (`rl_v1.2`: 23 cm, E59). Llega 25/25 en **11.7 s**
 > (B-Human 16.2–18.3 s). Fase M3 del `PLAN.md`; verla: `uv run python demo/caminatas/carrera_vivo.py --rl-vx 0.45`.
 >
@@ -58,6 +68,19 @@ Cada archivo tiene su enlace y una línea que dice qué contiene. Se mantiene al
 | [`docs/camara_y_carriles.md`](docs/camara_y_carriles.md) | La cámara y la demo de 3 carriles: cómo se usan |
 | [`docs/variables_rl.md`](docs/variables_rl.md) | Variables de la **política del sprint inicial** (histórico, sin cámara). Para la de carrera, ver el capítulo del entrenamiento |
 
+**Despliegue en el NAO real** (fase N2)
+
+| Archivo o carpeta | Qué tiene |
+|---|---|
+| [`docs/GUIA_DESPLIEGUE_ROBOT_FISICO.md`](docs/GUIA_DESPLIEGUE_ROBOT_FISICO.md) | **Guía paso a paso** para que otra persona deje un NAO listo: preparar el PC, compilar, desplegar con la ventana, primera prueba suspendido, protocolo de carrera, ajustes en la sede y problemas frecuentes |
+| [`docs/despliegue/01_AUDITORIA.md`](docs/despliegue/01_AUDITORIA.md) | Qué había en el repo para llegar al robot, qué faltaba, qué exige el reglamento y por qué la política corre en C++ dentro de `bhuman` |
+| [`docs/despliegue/02_PLAN_E_IMPLEMENTACION.md`](docs/despliegue/02_PLAN_E_IMPLEMENTACION.md) | Arquitectura a bordo (módulos, gestos, paros de seguridad), núcleo C++ y su paridad con Python, escenario `CopaNAORace` y verificaciones |
+| [`docs/despliegue/03_OPERACION.md`](docs/despliegue/03_OPERACION.md) | Referencia rápida: comandos, gestos, qué se escribe en cada robot, ajustes y logs |
+| [`DeployCarreraNAO.bat`](DeployCarreraNAO.bat), [`deploy/`](deploy/) | La ventana de despliegue (`deploy_dialog.py`) y la línea de comandos (`robot_deploy.py`) |
+| [`bhuman/`](bhuman/) | Framework B-Human 2023 (SabanaHerons2026 `2360ab1`) con los módulos de la carrera (`Src/Modules/*/Copa*`), el núcleo `Src/Tools/CopaRace/CopaRace.h`, el escenario `Config/Scenarios/CopaNAORace/`, las políticas exportadas (`Config/NeuralNets/CopaRace/`) y `Make/Common/deployCopaRace`. Procedencia en `bhuman/PROVENANCE.json` |
+| [`tests/robot_paridad/`](tests/robot_paridad/) | Arnés C++ y datos de la prueba de paridad (`scripts/check_paridad_robot.py`) |
+| `scripts/compilar_bhuman.py`, `scripts/check_grafo_modulos.py`, `scripts/exportar_politicas_robot.py`, `scripts/importar_framework_bhuman.py` | Compilar para el NAO en WSL, revisar el escenario sin robot, exportar las políticas e importar el framework |
+
 **Material del paper** ([`docs/paper/`](docs/paper/README.md))
 
 | Archivo | Qué tiene |
@@ -108,6 +131,9 @@ Cada archivo tiene su enlace y una línea que dice qué contiene. Se mantiene al
 - `runs/`: cada entrenamiento completo (checkpoints, TensorBoard, log de consola). Lo importante se copia a
   `results/` y `policies/`.
 - `videos/`: videos de las demos y de las pruebas.
+- `bhuman/Build/`, `tests/robot_paridad/build/`, `data/real/logs_robot/` y `deploy/.deploy_dialog_state.json`:
+  compilaciones locales, logs bajados del robot (lo que se conserva va a `data/real/sesion_NN/`) y el estado de la
+  ventana de despliegue.
 
 **Objetivo.** Entrenar por RL una caminata para que un **NAO V6 real** recorra el carril de **5 m × 70 cm**
 de la Carrera Individual **más rápido que los dos baselines, NAOqi (1) y B-Human (2)**, sin salirse del carril y
@@ -173,7 +199,8 @@ Aparte se abre la ventana **"Lo que ve cada NAO"**, con la cámara de cada robot
 controles: `--live --solo-rl`. Guía completa: [`docs/camara_y_carriles.md`](docs/camara_y_carriles.md).
 
 **Material para el paper:** [`docs/paper/`](docs/paper/README.md). Contiene el historial paso a paso, el registro
-de los 37 errores encontrados con su solución, y el capítulo de la visión de carril.
+de todos los errores encontrados con su solución (E01–E64 al 2026-10-15), los capítulos del entrenamiento y de la
+visión de carril, y de dónde sale cada pieza externa.
 
 **Para el equipo:** antes de trabajar, lean [`CLAUDE.md`](CLAUDE.md) (convenciones y protocolo de
 documentación), el paso actual en [`PLAN.md`](PLAN.md) y las últimas entradas de la

@@ -2168,3 +2168,85 @@ Cada celda: faltas de 44 (con el filtro del 80 %) / peor esfuerzo / tiempo medio
   visor las corridas de B-Human y NAOqi cambian un poco respecto a antes. El benchmark no cambia: es otro script.
 - **Verificación:** con el visor completo, antes de "Iniciar" las 3 cámaras tienen imagen, y corriendo también (NAOqi
   con su estimación de d y psi).
+
+### 2026-10-15 — Fase N2 (pasos 66b–68c): despliegue en el NAO real con el framework B-Human
+- **Autor:** Claude Code, a pedido de Luis Mario (autor de PenaltyStack). Laptop; sin robot.
+- **Pedido:** hacer en este repo lo mismo que se hizo en PenaltyStack para el penal (rama
+  `despliegue/copa-nao-ccm-2026`, commits `c8aadf8` y `17b5c03`): auditoría, planeación e implementación del
+  despliegue en robots reales, reutilizando ese trabajo, porque este repo es un fork reducido de PenaltyStack para la
+  caminata.
+- **Revisión de la documentación al empezar:** `PLAN.md` (fase N sin empezar; 68b pospuesto), README (estado de la
+  fase M3), `CLAUDE.md`, `docs/integracion_penaltystack.md` y `docs/plan_rl_carrera.md` (sección 1). Lo que quedaba
+  desactualizado con este cambio se corrigió al final (ver "Documentación").
+- **Auditoría** ([`docs/despliegue/01_AUDITORIA.md`](despliegue/01_AUDITORIA.md)):
+  - la política RL no podía correr a bordo: el paso 66 (exportar) y el 68 (ejecutor en Python 2.7) no se habían
+    empezado;
+  - `ALMotion` no sirve para mandar ángulos cada 12 ms y no puede convivir con `bhuman`;
+  - no había framework B-Human en el repo (el baseline 2 real del paso 73 no tenía cómo correr) ni herramienta de
+    despliegue.
+- **Qué se hizo:**
+  - **66b:** `scripts/importar_framework_bhuman.py` copió a `bhuman/` el subconjunto del framework de SabanaHerons2026
+    `2360ab1` (4994 archivos con su SHA-256 en `bhuman/PROVENANCE.json`). `scripts/compilar_bhuman.py` lo compila
+    para el NAO V6 en WSL con el mismo toolchain de PenaltyStack. `.gitattributes` deja `bhuman/` con LF exacto.
+  - **66c:** `scripts/exportar_politicas_robot.py` exporta las 6 políticas a `bhuman/Config/NeuralNets/CopaRace/` y
+    escribe los datos de paridad. El núcleo `bhuman/Src/Tools/CopaRace/CopaRace.h` porta a C++:
+    - el contrato v1;
+    - la política (MLP + `VecNormalize`);
+    - la visión de Daniel con sus tres modos (oscura, clara y color) y el azar de Python (MT19937) para el RANSAC;
+    - `LaneFilter` y `LaneController`.
+
+    `scripts/check_paridad_robot.py` (arnés en `tests/robot_paridad/`) lo compara con Python.
+  - **67b:** representaciones `LanePercept`, `CopaRaceState`, `CopaRaceDecision`, `CopaRLWalkStatus`; módulos
+    `CopaLanePerceptor` (Lower), `CopaRaceController` y `CopaRaceTactics` (Cognition), `CopaRLWalkEngine` (Motion);
+    opción `HandleCopaNAORace`; escenario `CopaNAORace`. `scripts/check_grafo_modulos.py` revisa el grafo sin robot.
+  - **68c:** `bhuman/Make/Common/deployCopaRace`, `deploy/robot_deploy.py`, `deploy/deploy_dialog.py` y
+    `DeployCarreraNAO.bat`. La ventana es la de PenaltyStack, con columnas de carril, política RL, `vx_cmd` y
+    jugador. La visión sale por defecto de `config/pista_robot.json`.
+- **Resultado:**
+  - compilación Release del NAO V6 sin advertencias en el código nuevo; binario sha256
+    `94766ce0780ff9c6d24e9a5e5b4d6b1d4842e763f7965f943b7fb2d39b893604`;
+  - grafo: `CopaNAORace/Default: 136 modulos, 0 errores` (`Default` sigue en 0);
+  - paridad: `revisiones=19947 fallos=0`; diferencia máxima de la acción con SB3 4.6 × 10⁻⁷; visión idéntica (10⁻¹²)
+    en 16 imágenes sintéticas, que recupera la verdad en ~1 cm y ~0.01 rad; inferencia ~65 µs por decisión en el PC;
+  - simulacro de despliegue de `falcanao` (carril RL) y `loki` (carril B-Human, `vx_cmd` 0.40) en paralelo, desde la
+    ventana y por línea de comandos: `DEPLOY_OK` y la configuración esperada en cada robot. Con un `pista_robot.json`
+    de prueba en modo color, el robot recibe `colorMode = true` con los mismos ejes;
+  - 15 originales de B-Human modificados (14 `threads.cfg` y `SkillBehaviorControl.h`) y 30 archivos nuevos
+    (`compilar_bhuman.py --check-originals`).
+- **Problemas y solución** (E60 es el del visor de Camilo, más arriba):
+  - E61: un heredoc anidado de bash no cerraba al escribir `deployCopaRace`;
+  - E62: advertencias de comparación de enums en los `static_assert` de la marcha RL;
+  - E63: los despliegues en paralelo chocaban al copiar la llave SSH a `/tmp`;
+  - E64: la visión en modo color o con línea clara no llegaba al robot ni tenía prueba de paridad.
+- **Decisiones (las revisan Camilo y Luis Mario en el paso 68e):**
+  - **la política corre en C++ dentro de `bhuman`**, en el hilo Motion (12 ms, LoLA), cada 2 ciclos (24 ms). Motivos:
+    - cumple el contrato v1 tal cual;
+    - un solo proceso maneja los motores;
+    - el mismo binario trae el carril B-Human real (paso 73);
+    - es el mecanismo de PenaltyStack.
+
+    `robot/race_nao.py` sigue siendo el carril NAOqi;
+  - **gestos de PenaltyStack**, para operar todos los robots del equipo igual:
+    - pecho = de pie;
+    - **botón medio de la cabeza = arrancar** (antes: táctil frontal 0.25 s);
+    - **paro = pecho mantenido 0.3 s (el de antes) o botón trasero mantenido 0.5 s**;
+    - delantero = rearmar; delantero 2 s = cambiar de carril; tres botones = sin rigidez.
+
+    Se agregó el paro por el pecho, que en PenaltyStack no existe, para conservar la convención de este repo;
+  - **silbato**: el detector de B-Human queda como opción, apagado por defecto. El paso 68b sigue pendiente de
+    decisión;
+  - **colores**: la ventana no escribe colores. Toma la polaridad y el `color_ref` de `config/pista_robot.json`;
+  - **el carril RL no tiene odometría**: el avance se estima con `vx_cmd`, con tope de 7.5 m y 3 minutos.
+- **Documentación:**
+  - `docs/despliegue/` (auditoría, plan e implementación, operación) y `docs/GUIA_DESPLIEGUE_ROBOT_FISICO.md`;
+  - `PLAN.md`: fase N2 y notas en 66, 68 y 68b;
+  - `CLAUDE.md`: convenciones de arranque, paro e inferencia a bordo;
+  - `docs/integracion_penaltystack.md` (sección 7) y `docs/plan_rl_carrera.md` (tabla 1.1);
+  - README: estado y mapa;
+  - `docs/paper/`: E61–E64, historial, fuentes y `vision_carril.md`;
+  - `.gitignore`: compilaciones locales, estado de la ventana y logs bajados del robot.
+- **Siguiente:** paso 68d, la primera prueba con el robot suspendido, siguiendo la sección 6 de la guía. Luego, la
+  revisión 68e.
+- **Commit:** lo hizo Claude Code en `main` a pedido explícito de Luis Mario ("commitea y sube a remoto"), después de
+  traer el commit `a4d6b37` de Camilo. Excepción a la regla de `CLAUDE.md`, que dice que los commits los hace el
+  usuario.

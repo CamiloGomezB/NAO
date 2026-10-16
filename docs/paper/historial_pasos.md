@@ -507,6 +507,26 @@ noviembre de 2026.
   - verificación: benchmark, `riesgo_motores.py`, cámara renderizada y dashboard sin errores;
   - commit: pendiente (lo hace Camilo).
 
+### Fase N2 — Despliegue en el NAO real con el framework B-Human (2026-10-15)
+- **Motivo:** pedido de Luis Mario (autor de PenaltyStack): el mismo despliegue que hizo para el penal en
+  PenaltyStack, con la carrera. Auditoría, plan y guía en [`docs/despliegue/`](../despliegue/01_AUDITORIA.md).
+- **Decisión de diseño:** la política RL corre en C++ dentro de `bhuman`, en el hilo Motion (12 ms), cada 24 ms, en
+  vez de un ejecutor en Python 2.7 con NAOqi (pasos 66 y 68). Se adoptan los gestos de PenaltyStack (arranque por el
+  botón medio) y se conserva el paro por el pecho. La revisan Camilo y Luis Mario en el paso 68e.
+- **66b:** framework B-Human 2023 de SabanaHerons2026 `2360ab1` en `bhuman/` (4994 archivos con SHA-256) y
+  compilación cruzada en WSL. Verificación: binario Release sin advertencias en el código nuevo (sha256
+  `94766ce0…`); `--check-originals`: 15 originales modificados y 30 archivos nuevos.
+- **66c:** las 6 políticas exportadas a `.cfg` de B-Human y el núcleo `CopaRace.h` (contrato, política, visión con
+  sus 3 modos, filtro y controlador). Verificación: `check_paridad_robot.py` → `revisiones=19947 fallos=0`,
+  diferencia máxima con SB3 4.6 × 10⁻⁷, ~65 µs por decisión en el PC.
+- **67b:** escenario `CopaNAORace` con los módulos de visión, control de la carrera, táctica y marcha RL.
+  Verificación: `check_grafo_modulos.py` → 136 módulos, 0 errores.
+- **68c:** `deployCopaRace`, `deploy/robot_deploy.py` y la ventana `DeployCarreraNAO.bat`. Verificación: simulacro
+  con 2 robots en paralelo (`DEPLOY_OK` y la configuración esperada en cada uno) y simulacro en modo color.
+- **Pendiente:** 68d (primera prueba con el robot suspendido) y 68e (revisión).
+- **Errores:** E61, E62, E63 y E64 (E60 es de Camilo, del visor).
+- **Commit:** hecho por Claude Code a pedido explícito de Luis Mario ("commitea y sube a remoto"), en `main`.
+
 ## Trabajo de documentación (sin número de paso, 2026-10-10)
 
 Pedido por el usuario para el paper. Commits `441dcb0`, `a266095` y el de la revisión previa al paso 41.
@@ -525,4 +545,5 @@ Pedido por el usuario para el paper. Commits `441dcb0`, `a266095` y el de la rev
 
 ## Siguiente
 
-Paso 41, el contrato v1 en código, dentro de la ruta crítica del RL: 41 → 46 → 53–58 → 58b → 59 → 60–63.
+*Actualizado el 2026-10-15.* Paso 68d: la primera prueba de la marcha RL en un NAO real, con el robot suspendido
+([guía](../GUIA_DESPLIEGUE_ROBOT_FISICO.md), sección 6). Después, la revisión 68e y la fase O (sesión real #1, paso 69).

@@ -1,0 +1,220 @@
+#!/bin/bash
+# Repo NAO: despliega la Carrera Individual (Copa NAO CCM MX 2026) en un NAO por Ethernet.
+# Basado en Make/Common/deploy (B-Human 2023 / Sabana Herons) y en deployCopaPenalty de PenaltyStack:
+#  - siempre selecciona el escenario CopaNAORace (ubicacion Default);
+#  - carril, politica RL, vx_cmd, arranque y polaridad de la linea se escriben por robot en una copia de
+#    preparacion de Config (el arbol compartido no se modifica);
+#  - el perfil inalambrico es NONE por defecto: Wi-Fi apagado, regla 2.7 (solo cable);
+#  - deja un manifiesto en el robot y verifica el hash del binario.
+
+set -euo pipefail
+
+usage()
+{
+  cat <<'EOF'
+uso: deployCopaRace <Release|Develop|Debug> <ip> [opciones]
+  -n <nombre>                nombre del robot (para el manifiesto y los mensajes)
+  -p <numero de jugador>     1..20
+  -t <numero de equipo>
+  --lane rl|bhuman           carril al encender (se puede cambiar en el robot esperando)
+  --policy <nombre>          politica RL de Config/NeuralNets/CopaRace/<nombre>.cfg
+  --vx <m/s>                 vx_cmd de la politica (0 = el recomendado de la politica)
+  --start-mode <modo>        buttonOnly | whistleOnly | buttonOrWhistle
+  --light-line on|off        linea clara sobre piso oscuro (off = cinta negra sobre madera)
+  --color-ref <6 numeros>    modo "color" de config/pista_robot.json: ur,ug,ub,mr,mg,mb (none = por brillo)
+  -w <perfil inalambrico>    por defecto NONE (Wi-Fi apagado)
+  -v <volumen>               por defecto 70
+  -b                         (re)iniciar bhuman al terminar
+  -nr                        no comprobar que el robot responda al ping
+  --dry-run                  mostrar los comandos remotos sin ejecutarlos
+EOF
+  exit 1
+}
+
+cd "$(dirname "$(which "$0")")"
+
+[ $# -lt 2 ] && usage
+CONFIG="$1"
+REMOTE="$2"
+shift 2
+case "$CONFIG" in Release|Develop|Debug) ;; *) usage ;; esac
+[[ "$REMOTE" =~ ^[A-Za-z0-9][A-Za-z0-9.:-]*$ ]] || { echo "direccion invalida: $REMOTE" >&2; exit 1; }
+
+NAME="$REMOTE"
+PLAYER=1
+TEAM=
+LANE=rl
+POLICY=rl_v1.2.1
+VX=0
+START_MODE=buttonOnly
+LIGHT_LINE=off
+COLOR_REF=none
+PROFILE=NONE
+VOLUME=70
+RESTART=
+CHECK=1
+DRYRUN=
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -n) shift; NAME="$1" ;;
+    -p) shift; PLAYER="$1" ;;
+    -t) shift; TEAM="$1" ;;
+    --lane) shift; LANE="$1" ;;
+    --policy) shift; POLICY="$1" ;;
+    --vx) shift; VX="$1" ;;
+    --start-mode) shift; START_MODE="$1" ;;
+    --light-line) shift; LIGHT_LINE="$1" ;;
+    --color-ref) shift; COLOR_REF="$1" ;;
+    -w) shift; PROFILE="$1" ;;
+    -v) shift; VOLUME="$1" ;;
+    -b) RESTART=1 ;;
+    -nr) CHECK= ;;
+    --dry-run) DRYRUN=1 ;;
+    -h|--help) usage ;;
+    *) echo "opcion desconocida: $1" >&2; usage ;;
+  esac
+  shift
+done
+
+fail() { echo "error: $*" >&2; exit 1; }
+[[ "$PLAYER" =~ ^[0-9]+$ ]] && (( PLAYER >= 1 && PLAYER <= 20 )) || fail "el numero de jugador debe ser 1..20"
+[ -z "$TEAM" ] || [[ "$TEAM" =~ ^[0-9]+$ ]] || fail "el numero de equipo debe ser numerico"
+[[ "$VOLUME" =~ ^[0-9]+$ ]] && (( VOLUME <= 100 )) || fail "el volumen debe ser 0..100"
+case "$LANE" in rl|bhuman) ;; *) fail "el carril debe ser rl o bhuman" ;; esac
+case "$START_MODE" in buttonOnly|whistleOnly|buttonOrWhistle) ;; *) fail "modo de arranque invalido: $START_MODE" ;; esac
+case "$LIGHT_LINE" in on) LIGHT=true ;; off) LIGHT=false ;; *) fail "--light-line debe ser on u off" ;; esac
+if [ "$COLOR_REF" != none ]; then
+  [[ "$COLOR_REF" =~ ^-?[0-9.]+(,-?[0-9.]+){5}$ ]] || fail "--color-ref necesita 6 numeros separados por comas"
+  IFS=, read -r UR UG UB MR MG MB <<<"$COLOR_REF"
+  LIGHT=true    # en modo color la linea queda clara (carril/lane_estimator_puro.py)
+fi
+POLICY_FILE="../../Config/NeuralNets/CopaRace/$POLICY.cfg"
+[ -f "$POLICY_FILE" ] || fail "no existe la politica $POLICY en Config/NeuralNets/CopaRace"
+[[ "$VX" =~ ^[0-9]*\.?[0-9]+$ ]] || fail "vx debe ser un numero en m/s"
+if awk "BEGIN{exit !($VX == 0)}"; then
+  VX="$(sed -n 's/^vxCmd = \(.*\);/\1/p' "$POLICY_FILE")"
+fi
+awk "BEGIN{exit !($VX > 0 && $VX <= 0.8)}" || fail "vx_cmd fuera de (0, 0.8] m/s: $VX"
+[ -r "../../Install/Profiles/$PROFILE" ] || fail "no existe el perfil inalambrico $PROFILE"
+
+BINARY="../../Build/Linux/Nao/$CONFIG/bhuman"
+ONNX="../../Util/onnxruntime/lib/Linux/libonnxruntime.so.1.10.0"
+[ -x "$BINARY" ] || fail "falta $BINARY: ejecutar uv run python scripts/compilar_bhuman.py --config $CONFIG"
+
+source ../Common/setupSSH
+
+run()
+{
+  echo "+ $*"
+  if [ -z "$DRYRUN" ]; then
+    "$@"
+  fi
+}
+
+remote()
+{
+  run ssh $SSHOPTIONS "nao@$REMOTE" "$@"
+}
+
+if [ -n "$CHECK" ] && [ -z "$DRYRUN" ]; then
+  ping -w 1 -c 1 "$REMOTE" >/dev/null 2>&1 || fail "$REMOTE no responde (cable Ethernet y PC en la subred de los robots?)"
+fi
+
+# Copia de preparacion de Config por robot (enlaces duros; los archivos editados se reemplazan, no se modifican).
+STAGE="$(mktemp -d /tmp/nao-race-deploy.XXXXXX)"
+trap 'rm -rf "$STAGE"' EXIT
+cp -al ../../Config "$STAGE/Config"
+rm -rf "$STAGE/Config/Scenes"
+
+replace()
+{
+  local file="$1"
+  shift
+  sed "$@" "$file" >"$file.new"
+  rm -f "$file"
+  mv "$file.new" "$file"
+}
+
+SETTINGS="$STAGE/Config/settings.cfg"
+SED=(-e "s/^scenario =.*/scenario = CopaNAORace;/" -e "s/^location =.*/location = Default;/"
+     -e "s/^playerNumber =.*/playerNumber = $PLAYER;/")
+[ -n "$TEAM" ] && SED+=(-e "s/^teamNumber =.*/teamNumber = $TEAM;/")
+replace "$SETTINGS" "${SED[@]}"
+SCENARIO="$STAGE/Config/Scenarios/CopaNAORace"
+replace "$SCENARIO/copaRaceController.cfg" -e "s/^lane = .*/lane = $LANE;/" -e "s/^startMode = .*/startMode = $START_MODE;/"
+replace "$SCENARIO/copaRLWalkEngine.cfg" -e "s/^policy = .*/policy = \"$POLICY\";/" -e "s/^vxCmd = [^;]*;/vxCmd = $VX;/"
+replace "$SCENARIO/copaRaceTactics.cfg" -e "s/^rlVxCmd = [^;]*;/rlVxCmd = $VX;/"
+if [ "$COLOR_REF" = none ]; then
+  replace "$SCENARIO/copaLanePerceptor.cfg" -e "s/^lightLine = [^;]*;/lightLine = $LIGHT;/" -e "s/^colorMode = [^;]*;/colorMode = false;/"
+else
+  replace "$SCENARIO/copaLanePerceptor.cfg" -e "s/^lightLine = [^;]*;/lightLine = $LIGHT;/" -e "s/^colorMode = [^;]*;/colorMode = true;/" \
+    -e "s/^colorAxis = .*/colorAxis = {x = $UR; y = $UG; z = $UB;};/" -e "s/^colorMean = .*/colorMean = {x = $MR; y = $MG; z = $MB;};/"
+fi
+
+if [ -n "$DRYRUN" ]; then
+  echo "==> configuracion preparada:"
+  grep -h -E "^(scenario|location|playerNumber|teamNumber) =" "$SETTINGS" | sed 's/^/    settings.cfg: /'
+  grep -h -E "^(lane|startMode) =" "$SCENARIO/copaRaceController.cfg" | sed 's/^/    copaRaceController.cfg: /'
+  grep -h -E "^(policy|vxCmd) =" "$SCENARIO/copaRLWalkEngine.cfg" | sed 's/^/    copaRLWalkEngine.cfg: /'
+  grep -h -E "^rlVxCmd =" "$SCENARIO/copaRaceTactics.cfg" | sed 's/^/    copaRaceTactics.cfg: /'
+  grep -h -E "^(lightLine|colorMode|colorAxis|colorMean) =" "$SCENARIO/copaLanePerceptor.cfg" | sed 's/^/    copaLanePerceptor.cfg: /'
+fi
+
+BINARY_SHA="$(sha256sum "$BINARY" | cut -d' ' -f1)"
+POLICY_SHA="$(sha256sum "$POLICY_FILE" | cut -d' ' -f1)"
+cat >"$STAGE/Config/carrera_deploy.json" <<EOF
+{
+  "robot": "$NAME",
+  "address": "$REMOTE",
+  "configuration": "$CONFIG",
+  "scenario": "CopaNAORace",
+  "player": $PLAYER,
+  "team": "${TEAM:-sin cambio}",
+  "lane": "$LANE",
+  "policy": "$POLICY",
+  "policy_sha256": "$POLICY_SHA",
+  "vx_cmd": $VX,
+  "start_mode": "$START_MODE",
+  "light_line": $LIGHT,
+  "color_ref": "$COLOR_REF",
+  "wireless_profile": "$PROFILE",
+  "bhuman_sha256": "$BINARY_SHA",
+  "deployed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
+EOF
+
+echo "==> deteniendo bhuman"
+remote "systemctl --user stop bhuman.service > /dev/null 2>&1 || true"
+
+echo "==> perfil inalambrico $PROFILE"
+run rsync --del --exclude=.* --exclude=default --chmod=u+rw,go+r,Dugo+x -zrce "ssh $SSHOPTIONS" \
+  ../../Install/Profiles/. "nao@$REMOTE:/home/nao/Profiles"
+if [ -z "$DRYRUN" ]; then
+  RESULT="$(ssh $SSHOPTIONS "nao@$REMOTE" "/home/nao/bin/setprofile $PROFILE" 2>&1 || true)"
+  if [ -n "$RESULT" ] && [ "$PROFILE" != "NONE" ] && ! grep -qi 'no process found' <<<"$RESULT"; then
+    echo "$RESULT" | grep -v usage >&2
+    fail "no se pudo activar el perfil inalambrico $PROFILE"
+  fi
+else
+  echo "+ ssh nao@$REMOTE /home/nao/bin/setprofile $PROFILE"
+fi
+
+echo "==> copiando bhuman y Config ($CONFIG)"
+run rsync --del --exclude=.* --exclude=/Images --exclude=/Logs --exclude=/Scenes \
+  --chmod=u+rw,go+r,Dugo+x -rzce "ssh $SSHOPTIONS" "$BINARY" "$ONNX" "$STAGE/Config/." "nao@$REMOTE:/home/nao/Config"
+
+echo "==> volumen $VOLUME%"
+remote "/home/nao/bin/setvolume $VOLUME 75"
+
+if [ -z "$DRYRUN" ]; then
+  REMOTE_SHA="$(ssh $SSHOPTIONS "nao@$REMOTE" "sha256sum /home/nao/Config/bhuman" | cut -d' ' -f1)"
+  [ "$REMOTE_SHA" = "$BINARY_SHA" ] || fail "el hash del binario en el robot no coincide ($REMOTE_SHA)"
+fi
+
+if [ -n "$RESTART" ]; then
+  echo "==> iniciando bhuman"
+  remote "systemctl --user start bhuman.service > /dev/null"
+fi
+
+echo "DEPLOY_OK $NAME $REMOTE carril=$LANE politica=$POLICY vx=$VX arranque=$START_MODE linea_clara=$LIGHT color=$COLOR_REF wifi=$PROFILE sha256=$BINARY_SHA"

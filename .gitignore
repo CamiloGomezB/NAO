@@ -35,3 +35,13 @@ screenshot*.png
 robot/logs/
 MUJOCO_LOG.TXT
 *.bundle
+
+# Despliegue en el NAO real (B-Human): compilaciones locales y estado de la ventana de despliegue
+bhuman/Build/
+tests/robot_paridad/build/
+deploy/.deploy_dialog_state.json
+data/real/logs_robot/
+# ... pero los originales de B-Human que caen en "logs/" o ".idea/" se versionan (bhuman/PROVENANCE.json los lista)
+!bhuman/Config/Logs/
+!bhuman/Src/Libs/Python/Logs/
+!bhuman/Make/Linux/.idea/

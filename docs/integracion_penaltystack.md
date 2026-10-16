@@ -11,6 +11,11 @@ Este documento resume el análisis de PenaltyStack del 2026-10-08, rama `feat/bh
 `9c08a41`), limitado a la caminata. La única copia de código está en
 [`third_party/penaltystack/`](../third_party/penaltystack/README.md): el orden de articulaciones.
 
+> **Actualización del 2026-10-15 (fase N2):** el despliegue en el robot ya no sigue las secciones 3 (filas "A bordo",
+> "Arranque", "Paro" y "Despliegue") y 6 tal como están escritas. Se tomaron de PenaltyStack el framework B-Human y
+> sus herramientas de despliegue (rama `despliegue/copa-nao-ccm-2026`), y la política corre en C++ dentro de
+> `bhuman`. Ver la [sección 7](#7-actualización-del-2026-10-15-despliegue-con-el-framework-b-human).
+
 ---
 
 ## 1. Qué parte de PenaltyStack nos interesa
@@ -123,3 +128,28 @@ avance de 0.06 m/s (`docs/SIMULACION.md`). Hay que medir el baseline a velocidad
    mecanismo de PenaltyStack.
 
 Estos pasos son la Fase N del [`PLAN.md`](../PLAN.md).
+
+## 7. Actualización del 2026-10-15: despliegue con el framework B-Human
+
+Luis Mario hizo en PenaltyStack el despliegue del penal en robots reales (rama `despliegue/copa-nao-ccm-2026`,
+commits `c8aadf8` y `17b5c03`) y pidió hacer lo mismo aquí con la carrera. Es la fase N2 del `PLAN.md`.
+
+| Tema | Antes (secciones 3 y 6) | Ahora |
+|---|---|---|
+| A bordo | Python 2.7 + NAOqi, inferencia en Python puro | Framework B-Human (`bhuman/`, SabanaHerons2026 `2360ab1`). La política corre en C++ en el hilo Motion (12 ms), cada 24 ms; la visión, en el hilo de la cámara inferior |
+| Exportación | Pesos en JSON o `.npz` | `.cfg` de B-Human en `bhuman/Config/NeuralNets/CopaRace/` (`scripts/exportar_politicas_robot.py`); paridad con SB3 4.6 × 10⁻⁷ |
+| Arranque | Táctil frontal 0.25 s | Toque al botón medio de la cabeza (gestos del penal de PenaltyStack); silbato opcional |
+| Paro | Pecho 0.3 s | Pecho mantenido 0.3 s **o** botón trasero mantenido 0.5 s; además, paros por inclinación y por temperatura |
+| Actuadores | ALMotion o LoLA, por decidir | LoLA a través de `bhuman` (un solo proceso maneja los motores) |
+| Despliegue | Paquete en `/home/nao/PenaltyStack/releases/<hash>` | `bhuman` + `Config` en `/home/nao/Config` por rsync/ssh, con la ventana `DeployCarreraNAO.bat`; Wi-Fi apagado y hash verificado |
+| Baseline 2 en el robot | Por confirmar en la sesión 1 | El mismo binario trae el carril B-Human (WalkingEngine original + visión); se elige al desplegar o con un gesto |
+
+**Lo que no cambia:** el contrato v1 (observación, acción, orden de articulaciones, 24 ms) y los sensores. De
+PenaltyStack sigue sin tomarse nada del penal.
+
+**Para pasarlo a PenaltyStack (paso 78):** los módulos de la carrera (`bhuman/Src/Modules/*/Copa*`, las
+representaciones y `Tools/CopaRace/CopaRace.h`) usan el mismo framework que `robot/` de PenaltyStack, así que se
+copian como módulos, con un escenario propio junto a `CopaNAOPenalty`.
+
+Documentos: [auditoría](despliegue/01_AUDITORIA.md), [plan e implementación](despliegue/02_PLAN_E_IMPLEMENTACION.md),
+[operación](despliegue/03_OPERACION.md) y [guía](GUIA_DESPLIEGUE_ROBOT_FISICO.md).
